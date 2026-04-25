@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/core/audit-entry.schema.json",
+  "title": "AuditEntry",
+  "description": "Immutable audit log entry. Written once by the domain service, never updated. DOMAIN INVARIANT: every work item state change must produce an AuditEntry (who, what, when, previous state, new state). Enforced in domain services — not in adapters. changedFields values are UNMASKED: the audit log is the authoritative unmasked record, access-controlled by audit query roles. Application logs (Loki) are masked. PostgreSQL index: (workItemId, timestamp).",
+  "type": "object",
+  "required": [
+    "id", "tenantId", "workItemId", "correlationId",
+    "eventType", "newState", "actorUserId", "actorRole", "timestamp"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workItemId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "FK to WorkItem. Audit trail queried as: SELECT * FROM audit_entries WHERE work_item_id = ? ORDER BY timestamp."
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Same as the WorkItem's correlationId at time of event. Allows correlation of audit entries with distributed traces in Tempo."
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "STATE_TRANSITION",
+        "FIELD_UPDATE",
+        "ASSIGNMENT",
+        "INGESTION",
+        "MAKER_CHECKER_APPROVAL",
+        "GROUP_REASSIGNMENT",
+        "CHILD_WORKFLOW_CREATED",
+        "ATTACHED_TO_EXISTING_CHILD",
+        "DEPENDENCY_RESOLVED",
+        "ROUTING_FALLBACK",
+        "SLA_WARNING",
+        "SLA_BREACH",
+        "DUPLICATE_INGESTION_DISCARDED",
+        "TRANSITION_FAILED"
+      ],
+      "description": "ROUTING_FALLBACK distinguishes catch-all defaultGroup routing from a matched-rule routing. TRANSITION_FAILED written when an action with onFailure=ROLLBACK_TRANSITION fails and the item is returned to fromState."
+    },
+    "previousState": {
+      "type": ["string", "null"],
+      "description": "Null on INGESTION event (no prior state). Required on all other events."
+    },
+    "newState": {
+      "type": "string",
+      "description": "The state after this event. On INGESTION this is the initialState."
+    },
+    "transitionName": {
+      "type": ["string", "null"],
+      "description": "The named workflow transition that produced this event (e.g. close-as-resolved, forward-to-compliance). Set on STATE_TRANSITION events. Null for system-generated events (SLA_BREACH, INGESTION, etc.)."
+    },
+    "changedFields": {
+      "type": "array",
+      "description": "Field-level changes recorded for this event. Values are UNMASKED. The audit log is the authoritative record of what changed and by how much.",
+      "items": {
+        "type": "object",
+        "required": ["fieldPath", "previousValue", "newValue"],
+        "additionalProperties": false,
+        "properties": {
+          "fieldPath": {
+            "type": "string",
+            "description": "Dot-notation path into WorkItem.fields (e.g. trade.notionalAmount.amount, counterparty.name)."
+          },
+          "previousValue": {
+            "description": "Value before the change. Type mirrors the field's declared type in field-type-registry. Null if the field did not exist before."
+          },
+          "newValue": {
+            "description": "Value after the change. Type mirrors the field's declared type in field-type-registry."
+          }
+        }
+      }
+    },
+    "actorUserId": {
+      "type": "string",
+      "description": "userId of the human or service account that triggered this event."
+    },
+    "actorRole": {
+      "type": "string",
+      "description": "Role of the actor at the time of the event (as declared in user-role-config)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp. The ordering dimension for the audit trail."
+    },
+    "idempotencyKey": {
+      "type": ["string", "null"],
+      "description": "Same idempotency key as the triggering event. Allows deduplication of audit writes in the event of retry."
+    }
+  }
+}

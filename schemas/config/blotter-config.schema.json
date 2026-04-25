@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/blotter-config.schema.json",
+  "title": "BlotterConfig",
+  "description": "Defines column layout, field visibility, and masking rules for the ag-Grid list view. Optimised for rendering many items efficiently. Contains no knowledge of the WorkItem data model — references WorkItem.fields by dot-notation path only, resolved by FieldPathResolver at runtime. Data classification is authoritative in field-type-registry only — this config cannot override classification (security constraint).",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "columns", "defaultSort", "active", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "workflowType": {
+      "type": "string",
+      "description": "Links this config to WorkItems of this type."
+    },
+    "columns": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered array of column definitions. Column order determines display order in the blotter.",
+      "items": {
+        "type": "object",
+        "required": ["field", "header", "visible"],
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Dot-notation path into WorkItem.fields (e.g. trade.ref, counterparty.name) or a top-level WorkItem property (e.g. status, priorityLevel, assignedGroup). Resolved by FieldPathResolver. For filter operations, the path must be declared searchable:true in field-type-registry — validateConfigs enforces this."
+          },
+          "header": {
+            "type": "string",
+            "description": "Display label shown in the column header."
+          },
+          "visible": {
+            "type": "boolean",
+            "description": "Default column visibility. Users can toggle visibility in the blotter."
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 50,
+            "description": "Default column width in pixels."
+          },
+          "sortable": {
+            "type": "boolean",
+            "description": "Whether the column can be sorted. Requires a PostgreSQL index on this field path."
+          },
+          "filterable": {
+            "type": "boolean",
+            "description": "Whether the column can be filtered. Requires searchable:true in field-type-registry — validateConfigs enforces this."
+          },
+          "maskingRoles": {
+            "type": "array",
+            "description": "Roles that see this field unmasked. Users with other roles see *** instead. Masking applied based on field-type-registry.dataClassification — this list refines which roles bypass masking for this column in context.",
+            "items": { "type": "string" }
+          },
+          "formatter": {
+            "type": "string",
+            "enum": ["CURRENCY", "DATE", "DATETIME", "PERCENTAGE", "TEXT", "BADGE"],
+            "description": "Display format override for this column. If absent, defaults to the formatter declared in field-type-registry for this path."
+          }
+        }
+      }
+    },
+    "defaultSort": {
+      "type": "object",
+      "description": "Default sort applied when the blotter loads.",
+      "required": ["field", "direction"],
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Dot-notation path. Must match a field in the columns array."
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["ASC", "DESC"]
+        }
+      }
+    },
+    "quickFilters": {
+      "type": "array",
+      "description": "Preset filter combinations surfaced as one-click buttons in the blotter toolbar (e.g. My Items, CRITICAL Priority, Overdue).",
+      "items": {
+        "type": "object",
+        "required": ["label", "filters"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["field", "operator", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "field": { "type": "string" },
+                "operator": {
+                  "type": "string",
+                  "enum": ["EQ", "NEQ", "IN", "NOT_IN", "GT", "GTE", "LT", "LTE", "CONTAINS"]
+                },
+                "value": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "active": { "type": "boolean" },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}

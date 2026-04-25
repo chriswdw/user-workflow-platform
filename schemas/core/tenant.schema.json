@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/core/tenant.schema.json",
+  "title": "Tenant",
+  "description": "Authoritative tenant definition. All other schema documents carry tenantId as a FK to this entity. Stores operational metadata including timezone (for SLA clock calculations) and locale (for display formatting). Suspended tenants cannot ingest new work items or trigger transitions.",
+  "type": "object",
+  "required": ["id", "code", "displayName", "owner", "timezone", "locale", "status", "active", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique tenant identifier. This is the tenantId referenced as a FK across all other schemas."
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]{1,16}$",
+      "description": "Short uppercase identifier. Used in Prometheus metric labels, Loki MDC context, and Grafana dashboard filters. Max 16 chars, alphanumeric and underscore only. Example: BARCLAYS, ACME_CORP."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Full human-readable tenant name."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description of the tenant."
+    },
+    "owner": {
+      "type": "object",
+      "description": "Primary account owner.",
+      "required": ["name", "email"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      }
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Operational contacts. Multiple contacts per role are allowed.",
+      "items": {
+        "type": "object",
+        "required": ["role", "name", "email"],
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["TECHNICAL", "BUSINESS", "COMPLIANCE", "ONCALL"]
+          },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" }
+        }
+      }
+    },
+    "timezone": {
+      "type": "string",
+      "description": "IANA timezone identifier (e.g. Europe/London, Asia/Tokyo). Required for SLA clock calculations. warnAfterMinutes and escalateAfterMinutes in slaRules are measured in business-calendar minutes within this timezone. A work item created at 17:00 London time with a 2-hour SLA warns at 09:00 the next business day, not 19:00 the same day."
+    },
+    "locale": {
+      "type": "string",
+      "description": "BCP 47 locale tag (e.g. en-GB, ja-JP). Drives currency symbol placement and date format in the blotter and detail view.",
+      "examples": ["en-GB", "en-US", "ja-JP", "de-DE"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ACTIVE", "SUSPENDED", "DECOMMISSIONED"],
+      "description": "SUSPENDED: cannot ingest new work items or trigger transitions. DECOMMISSIONED: permanently inactive."
+    },
+    "active": {
+      "type": "boolean",
+      "description": "Mirrors status==ACTIVE for consistent querying pattern across all config documents."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

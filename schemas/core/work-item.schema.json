@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/core/work-item.schema.json",
+  "title": "WorkItem",
+  "description": "Central instance entity. Contains only instance-level data — nothing that is the same for all work items of the same workflow type. Type-level metadata (field classification, SLA rules, states, routing rules, display config) lives in config documents referenced by workflowType. All cross-cutting references to fields use dot-notation paths resolved by FieldPathResolver in platform-domain. WorkItem.fields is stored as a PostgreSQL JSONB column with a GIN index for containment queries and expression indexes for paths declared searchable in field-type-registry.",
+  "type": "object",
+  "required": [
+    "id", "tenantId", "workflowType", "correlationId",
+    "source", "sourceRef", "idempotencyKey", "configVersionId",
+    "status", "assignedGroup", "routedByDefault", "fields",
+    "priorityScore", "priorityLevel", "priorityLastCalculatedAt",
+    "version", "makerUserId", "createdAt", "updatedAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "System-generated UUID."
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "FK to Tenant. Required on every row for shared-table isolation."
+    },
+    "workflowType": {
+      "type": "string",
+      "description": "FK to WorkflowTypeDefinition. Combined with tenantId identifies the active config (workflow-config, routing-config, field-type-registry, blotter-config, detail-view-config) for this item."
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Propagated through all trace spans and Loki MDC context. Every work item carries this ID in all spans across Kafka headers, HTTP headers, and async boundaries."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["KAFKA", "DB_POLL", "FILE_UPLOAD"],
+      "description": "Ingestion source type."
+    },
+    "sourceRef": {
+      "type": "string",
+      "description": "Opaque string identifying the originating record or message in the source system (e.g. Kafka offset, DB row PK, file row number)."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "description": "Computed by the ingestion adapter using the strategy declared in field-type-registry (COMPOSITE_HASH or EXPLICIT_FIELD). A PostgreSQL unique index on (tenantId, workflowType, idempotencyKey) enforces deduplication at the database level. Duplicate ingestion is a no-op — logged as DUPLICATE_INGESTION_DISCARDED, no error."
+    },
+    "configVersionId": {
+      "type": "string",
+      "description": "The WorkflowTypeDefinition.version active at ingestion time. Ensures routing and workflow engines evaluate this item under the rules that were active at creation, not the current rules. Critical for regulatory auditability of routing decisions."
+    },
+    "status": {
+      "type": "string",
+      "description": "Current workflow state name. Not an enum — value is config-driven and must match a state name declared in the active workflow-config for this (tenantId, workflowType)."
+    },
+    "assignedGroup": {
+      "type": "string",
+      "description": "Resolution group id. DOMAIN INVARIANT: never null after ingestion. The routing engine guarantees assignment via routing-config.defaultGroup if no rule matches. An unrouted work item is not permitted."
+    },
+    "routedByDefault": {
+      "type": "boolean",
+      "description": "True if the item was routed by the catch-all defaultGroup rather than a matched routing rule. Operational signal that routing rules may need updating. Triggers an alert if routing-config.alertOnDefault is true."
+    },
+    "fields": {
+      "type": "object",
+      "description": "Nested JSON object tree carrying the upstream payload. Structure is config-driven and preserves the original upstream shape. Example: { 'trade': { 'ref': 'TRD-001', 'notionalAmount': { 'amount': '1234567.89', 'currency': 'GBP' } }, 'counterparty': { 'name': 'Barclays', 'lei': '213800...' } }. Monetary values use { amount: string, currency: string } inline — amount is a string to preserve BigDecimal precision across JSON serialisation. All cross-cutting references use dot-notation paths (e.g. trade.notionalAmount.amount) resolved by FieldPathResolver.",
+      "additionalProperties": true
+    },
+    "priorityScore": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Computed by the priority scoring engine from workflow-config.priorityConfig. Recalculated on ingestion, on every transition or field update, and periodically by the recalculation job. PostgreSQL index on (tenantId, workflowType, status, priorityScore DESC) is the primary index for blotter ordering."
+    },
+    "priorityLevel": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+      "description": "Derived from priorityScore mapped against workflow-config.priorityConfig.priorityLevels. Stored as a denormalised column (not computed on read) to allow efficient GROUP BY and filter. Updated whenever priorityScore changes."
+    },
+    "priorityLastCalculatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the most recent priority score calculation. Used by the recalculation job to detect stale scores and by monitoring to alert if recalculation is falling behind."
+    },
+    "pendingCheckerId": {
+      "type": ["string", "null"],
+      "description": "Set when a maker-checker transition has been triggered and is awaiting a second approver. Cleared on approval or rejection. The second approver's userId must differ from makerUserId."
+    },
+    "pendingCheckerTransition": {
+      "type": ["string", "null"],
+      "description": "The name of the transition awaiting maker-checker approval. Cleared alongside pendingCheckerId."
+    },
+    "createdByWorkItemId": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Set when this work item was spawned by another work item's CREATE_CHILD_WORKFLOW action. Null for top-level work items. Display context only — NOT the authoritative blocking relationship. The authoritative dependency is in WorkItemDependency."
+    },
+    "createdByWorkflowType": {
+      "type": ["string", "null"],
+      "description": "Stored alongside createdByWorkItemId for display context (e.g. 'this SSI setup was raised from settlement exception #X') without requiring a join."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optimistic lock field (@Version in JPA). Incremented on every update. Concurrent modification throws OptimisticLockException."
+    },
+    "makerUserId": {
+      "type": "string",
+      "description": "userId of the user who created or last transitioned this item. Required for maker-checker enforcement — the second approver's userId must differ from this value."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

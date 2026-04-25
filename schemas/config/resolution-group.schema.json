@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/resolution-group.schema.json",
+  "title": "ResolutionGroup",
+  "description": "Defines a resolution group — the unit of ownership for work items. Every work item must be assigned to exactly one group at all times (domain invariant). Groups control which users see which items: members see items assigned to their group; visibleRoles see all items in the group regardless of membership (for oversight roles like SUPERVISOR). The fallback/default group for a workflow type is declared in routing-config.defaultGroup, not on the group itself, because a group may serve as default for some workflow types but not others.",
+  "type": "object",
+  "required": ["id", "tenantId", "name", "membershipSource", "maxUnactionedAlertMinutes", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable group name (e.g. Settlement Team - EMEA, SSI Setup Queue, Compliance Review)."
+    },
+    "description": {
+      "type": "string"
+    },
+    "members": {
+      "type": "array",
+      "description": "Explicit group members. May be empty if membership is managed externally via LDAP/AD (see membershipSource).",
+      "items": {
+        "type": "object",
+        "required": ["userId", "joinedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "userId": { "type": "string" },
+          "joinedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "membershipSource": {
+      "type": "string",
+      "enum": ["STATIC", "LDAP", "AD"],
+      "description": "STATIC: members array is authoritative. LDAP/AD: membership is resolved from an external directory at runtime; the members array may be empty or used as an override."
+    },
+    "visibleRoles": {
+      "type": "array",
+      "description": "Roles that can see ALL items assigned to this group without being explicit members (e.g. SUPERVISOR, COMPLIANCE_OFFICER). Items in this group are NOT visible to all authenticated users — only to members and to roles listed here. Role names must be declared in user-role-config.",
+      "items": { "type": "string" }
+    },
+    "maxUnactionedAlertMinutes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Alert threshold: fire an alert if any work item has been assigned to this group without a state transition for longer than this duration (in minutes). Required — especially critical for groups used as routing-config.defaultGroup to ensure unrouted items are detected promptly."
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

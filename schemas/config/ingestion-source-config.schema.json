@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/ingestion-source-config.schema.json",
+  "title": "IngestionSourceConfig",
+  "description": "Defines how a data source connects to a workflow type and how its native format (JSON, CSV, DB rows) is mapped to WorkItem.fields. All source-format handling is in the ingestion adapter — the domain only ever receives a normalised WorkItem. The mapping is config-driven: no hardcoded column-to-field logic in code. A workflow type can have multiple active ingestion sources (e.g. Kafka AND a DB poll simultaneously) — this config references the workflow type; the WorkflowTypeDefinition does not enumerate its sources.",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "sourceType", "sourceName", "fieldMappings", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflowType": {
+      "type": "string",
+      "description": "All items from this source become work items of this workflow type."
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["KAFKA", "DB_POLL", "FILE_UPLOAD"]
+    },
+    "sourceName": {
+      "type": "string",
+      "description": "Human-readable identifier used in monitoring dashboards and error audit entries."
+    },
+    "kafkaConfig": {
+      "type": "object",
+      "description": "Required when sourceType=KAFKA.",
+      "required": ["topic", "consumerGroup", "messageFormat"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": { "type": "string" },
+        "consumerGroup": { "type": "string" },
+        "messageFormat": {
+          "type": "string",
+          "enum": ["JSON", "AVRO", "PROTOBUF"]
+        }
+      }
+    },
+    "dbPollConfig": {
+      "type": "object",
+      "description": "Required when sourceType=DB_POLL. Uses structured table reference (not raw SQL) to prevent SQL injection risks when config is user-editable.",
+      "required": ["dataSourceId", "tableName", "watermarkColumn", "watermarkStrategy", "pollIntervalSeconds"],
+      "additionalProperties": false,
+      "properties": {
+        "dataSourceId": {
+          "type": "string",
+          "description": "Reference to a registered JDBC datasource. Connection details managed outside this config."
+        },
+        "schemaName": {
+          "type": ["string", "null"],
+          "description": "Database schema name. Null means default schema."
+        },
+        "tableName": {
+          "type": "string",
+          "description": "Table name. The adapter builds the query from this and watermarkColumn — no raw SQL accepted."
+        },
+        "watermarkColumn": {
+          "type": "string",
+          "description": "Column used for incremental polling (e.g. UPDATED_AT, SEQUENCE_ID)."
+        },
+        "watermarkStrategy": {
+          "type": "string",
+          "enum": ["TIMESTAMP", "SEQUENCE_ID"]
+        },
+        "processedFlagColumn": {
+          "type": ["string", "null"],
+          "description": "If set, the adapter updates this column to processedFlagValue after ingestion."
+        },
+        "processedFlagValue": {
+          "type": ["string", "null"],
+          "description": "Value written to processedFlagColumn after ingestion (e.g. Y, true, 1)."
+        },
+        "pollIntervalSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "fileUploadConfig": {
+      "type": "object",
+      "description": "Required when sourceType=FILE_UPLOAD.",
+      "required": ["fileFormat", "encoding", "headerRow"],
+      "additionalProperties": false,
+      "properties": {
+        "fileFormat": {
+          "type": "string",
+          "enum": ["CSV", "XLSX"]
+        },
+        "delimiter": {
+          "type": "string",
+          "description": "Column delimiter for CSV. Default: comma.",
+          "default": ","
+        },
+        "encoding": {
+          "type": "string",
+          "description": "Character encoding (e.g. UTF-8, ISO-8859-1).",
+          "default": "UTF-8"
+        },
+        "headerRow": {
+          "type": "boolean",
+          "description": "Whether the first row contains column headers."
+        },
+        "sheetName": {
+          "type": ["string", "null"],
+          "description": "XLSX only. Sheet to read. Null means the first sheet."
+        },
+        "unknownColumnPolicy": {
+          "type": "string",
+          "enum": ["IGNORE", "WARN", "REJECT"],
+          "description": "How to handle source columns not present in fieldMappings. REJECT causes the entire file to be rejected."
+        }
+      }
+    },
+    "fieldMappings": {
+      "type": "array",
+      "description": "Maps source columns/paths to WorkItem.fields dot-notation paths. Nested target paths (e.g. counterparty.name) cause the adapter to build nested objects automatically from flat source columns. All source types use this same structure.",
+      "items": {
+        "type": "object",
+        "required": ["targetField"],
+        "additionalProperties": false,
+        "properties": {
+          "sourceColumn": {
+            "type": "string",
+            "description": "Source column header (CSV/XLSX) or DB column name. Mutually exclusive with sourceJsonPath."
+          },
+          "sourceJsonPath": {
+            "type": "string",
+            "description": "JSON path for KAFKA sources with JSON/AVRO messages. Mutually exclusive with sourceColumn. If omitted for KAFKA, the full message payload maps to fields directly."
+          },
+          "targetField": {
+            "type": "string",
+            "description": "Dot-notation path in WorkItem.fields (e.g. trade.ref, counterparty.name, address.city). Must be declared in field-type-registry.fieldDeclarations for this workflowType."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "If true and source value missing, the record is rejected and an error AuditEntry is written."
+          },
+          "defaultValue": {
+            "description": "Used when value is absent and required:false."
+          },
+          "transformation": {
+            "type": "string",
+            "enum": ["TRIM", "UPPERCASE", "LOWERCASE", "DATE_ISO8601"],
+            "description": "Optional value transformation applied after reading. DATE_ISO8601 requires a sourceFormat hint in transformationConfig."
+          },
+          "transformationConfig": {
+            "type": "object",
+            "description": "Additional config for transformations that need parameters.",
+            "additionalProperties": true,
+            "properties": {
+              "sourceFormat": {
+                "type": "string",
+                "description": "For DATE_ISO8601: the source date format pattern (e.g. dd/MM/yyyy, yyyyMMdd)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/field-type-registry.schema.json",
+  "title": "FieldTypeRegistry",
+  "description": "Declares the metadata for every field in a WorkItem's fields payload for a given workflow type. Central config consumed by: ingestion adapter (type coercion, BigDecimal for MONETARY), routing engine (comparison semantics for GT/LT/GTE/LTE), blotter (default formatting), audit log (field-level data classification). Kept separate from workflow-config because it is consumed by more modules and versioned independently. The idempotencyKey strategy declared here is used by the ingestion adapter to compute WorkItem.idempotencyKey.",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "idempotencyKey", "fieldDeclarations", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflowType": {
+      "type": "string",
+      "description": "Links this registry to a WorkflowTypeDefinition."
+    },
+    "idempotencyKey": {
+      "type": "object",
+      "description": "Defines how the work item's idempotency key is composed. The ingestion adapter uses this to compute WorkItem.idempotencyKey. A PostgreSQL unique index on (tenantId, workflowType, idempotencyKey) enforces deduplication at the database level.",
+      "required": ["strategy"],
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["COMPOSITE_HASH", "EXPLICIT_FIELD"],
+          "description": "COMPOSITE_HASH: SHA-256 hash of concatenated field values (joined with | separator). EXPLICIT_FIELD: the value of a single field used directly as the key."
+        },
+        "fields": {
+          "type": "array",
+          "description": "Required for COMPOSITE_HASH. Ordered array of dot-notation paths whose values are concatenated and hashed.",
+          "items": { "type": "string" }
+        },
+        "explicitField": {
+          "type": "string",
+          "description": "Required for EXPLICIT_FIELD. Dot-notation path to the field whose value is used directly as the idempotency key."
+        },
+        "hashAlgorithm": {
+          "type": "string",
+          "enum": ["SHA-256"],
+          "description": "Hash algorithm for COMPOSITE_HASH. Only SHA-256 is supported; present for future-proofing."
+        }
+      }
+    },
+    "fieldDeclarations": {
+      "type": "array",
+      "description": "Metadata declarations for fields in WorkItem.fields. Named fieldDeclarations (not fields) to avoid ambiguity with the WorkItem.fields payload.",
+      "items": {
+        "type": "object",
+        "required": ["path", "type", "required", "dataClassification"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Dot-notation path into WorkItem.fields (e.g. trade.ref, trade.notionalAmount.amount, counterparty.name). Applies to this path and, for OBJECT type, to all children unless a child overrides."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["STRING", "INTEGER", "DECIMAL", "BOOLEAN", "DATE", "DATETIME", "MONETARY", "OBJECT", "ARRAY"],
+            "description": "MONETARY: inline { amount: string, currency: string } structure. Amount is always string to preserve BigDecimal precision. Drives BigDecimal deserialisation in ingestion and BigDecimal-aware comparison in routing."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "If true and value absent at ingestion, the record is rejected with an error audit entry."
+          },
+          "dataClassification": {
+            "type": "string",
+            "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"],
+            "description": "Data classification for this field path. Authoritative source — display schemas (blotter, detail-view) cannot override classification. Drives field masking in the blotter and detail view for users without the required role."
+          },
+          "searchable": {
+            "type": "boolean",
+            "description": "If true, a PostgreSQL expression index is created via Liquibase for this path. Required for blotter filter columns referencing this path — validateConfigs enforces that all filterable blotter columns have searchable:true declared here."
+          },
+          "pgIndexType": {
+            "type": "string",
+            "enum": ["GIN", "BTREE", "BTREE_CAST_NUMERIC"],
+            "description": "Hint for Liquibase migration generation. Defaults: STRING -> BTREE, MONETARY -> BTREE_CAST_NUMERIC (casts amount string to numeric for range queries), OBJECT -> GIN."
+          },
+          "formatter": {
+            "type": "string",
+            "enum": ["CURRENCY", "DATE", "DATETIME", "PERCENTAGE", "TEXT"],
+            "description": "Default display format hint consumed by blotter and detail view. Display configs override this only when a different format is needed for a specific context."
+          },
+          "defaultValue": {
+            "description": "Used when value absent and required:false. Type must match the declared field type."
+          }
+        }
+      }
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

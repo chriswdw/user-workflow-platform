@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/workflow-config.schema.json",
+  "title": "WorkflowConfig",
+  "description": "Full state machine for a tenant/workflow type. Entirely config-driven — no states or transitions are hardcoded in the platform. Transitions support user-driven branching: multiple named transitions from the same fromState are rendered as distinct buttons in detail-view-config, each with independent roles, maker-checker rules, validation, and actions. Priority scoring uses a bounded group-scoped model with built-in guardrails against inflation and stacking.",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "initialState", "states", "transitions", "priorityConfig", "slaRules", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "workflowType": { "type": "string" },
+    "initialState": {
+      "type": "string",
+      "description": "State name assigned to a work item on ingestion. Must match a state declared in the states array."
+    },
+    "states": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "terminal"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique state name within this workflow (e.g. OPEN, UNDER_REVIEW, PENDING_SSI_SETUP, CLOSED, ESCALATED)."
+          },
+          "terminal": {
+            "type": "boolean",
+            "description": "Terminal states cannot be transitioned from. SLA clocks stop. WorkItemDependency fan-out fires for dependents."
+          },
+          "allowedRoles": {
+            "type": "array",
+            "description": "Roles that can view work items in this state. Absent means all authenticated roles.",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "description": "Available transitions. Multiple transitions can share the same fromState — each is rendered as a distinct button in detail-view-config, supporting user-driven branching (e.g. close-as-resolved vs forward-to-compliance from UNDER_REVIEW). Each path carries independent roles, maker-checker, validation, and actions.",
+      "items": {
+        "type": "object",
+        "required": ["name", "fromState", "toState", "trigger"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique transition name within this workflow. Referenced by detail-view-config.actions and SLA escalationActions."
+          },
+          "fromState": {
+            "type": "string",
+            "description": "State the work item must be in for this transition to be available. Must match a state in the states array."
+          },
+          "toState": {
+            "type": "string",
+            "description": "State the work item moves to after this transition. Must match a state in the states array."
+          },
+          "trigger": {
+            "type": "string",
+            "enum": ["USER_ACTION", "SYSTEM_EVENT", "SLA_BREACH"],
+            "description": "USER_ACTION: user explicitly fires from detail view. SYSTEM_EVENT: fires automatically when a named system event occurs. SLA_BREACH: fires automatically when escalateAfterMinutes is reached."
+          },
+          "systemEventType": {
+            "type": ["string", "null"],
+            "description": "Required when trigger=SYSTEM_EVENT. The event name this transition listens for (e.g. CHILD_WORKFLOW_COMPLETED, KAFKA_EVENT_RECEIVED)."
+          },
+          "allowedRoles": {
+            "type": "array",
+            "description": "Roles that can trigger this transition. Applies to USER_ACTION only. Absent means all authenticated roles.",
+            "items": { "type": "string" }
+          },
+          "requiresMakerChecker": {
+            "type": "boolean",
+            "description": "If true, the transition requires a second approver (checker) whose userId must differ from the maker's userId. Sets WorkItem.pendingCheckerId and WorkItem.pendingCheckerTransition."
+          },
+          "validationRules": {
+            "type": "array",
+            "description": "Field-level preconditions that must pass before the transition is allowed. A failed validation is surfaced to the user before execution.",
+            "items": {
+              "type": "object",
+              "required": ["field", "operator"],
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "Dot-notation path into WorkItem.fields."
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": ["EXISTS", "EQ", "NEQ", "GT", "GTE", "LT", "LTE", "REGEX"]
+                },
+                "value": {
+                  "description": "Comparand value. Not required for EXISTS."
+                },
+                "errorMessage": {
+                  "type": "string",
+                  "description": "Message shown to the user when this validation fails."
+                }
+              }
+            }
+          },
+          "actions": {
+            "type": "array",
+            "description": "Actions executed in order when this transition fires. On failure, behaviour is governed by onFailure.",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["HTTP_CALL", "KAFKA_EVENT", "EMAIL_NOTIFICATION", "REASSIGN_GROUP", "CREATE_CHILD_WORKFLOW"]
+                },
+                "onFailure": {
+                  "type": "string",
+                  "enum": ["ROLLBACK_TRANSITION", "CONTINUE", "RETRY"],
+                  "description": "ROLLBACK_TRANSITION: return item to fromState and write AuditEntry(TRANSITION_FAILED). CONTINUE: log the failure and continue to next action. RETRY: retry up to maxAttempts times with backoffSeconds delay."
+                },
+                "maxAttempts": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "For onFailure=RETRY only."
+                },
+                "backoffSeconds": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "For onFailure=RETRY only. Seconds between retry attempts."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "HTTP_CALL: endpoint URL."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": ["POST", "PUT", "PATCH"],
+                  "description": "HTTP_CALL: HTTP method."
+                },
+                "topic": {
+                  "type": "string",
+                  "description": "KAFKA_EVENT: target topic name."
+                },
+                "template": {
+                  "type": "string",
+                  "description": "EMAIL_NOTIFICATION: template identifier."
+                },
+                "targetGroup": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "REASSIGN_GROUP: the group id to assign. Changes WorkItem.assignedGroup without requiring a separate state change. Produces AuditEntry(GROUP_REASSIGNMENT). Can be combined with a state change in the same transition."
+                },
+                "createChildWorkflow": {
+                  "type": "object",
+                  "description": "CREATE_CHILD_WORKFLOW configuration.",
+                  "required": ["workflowType", "initialGroup"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "workflowType": {
+                      "type": "string",
+                      "description": "Workflow type of the child work item to create."
+                    },
+                    "initialGroup": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Group the child work item is initially assigned to."
+                    },
+                    "fieldMappings": {
+                      "type": "array",
+                      "description": "Field values to copy from the parent work item to the child's fields.",
+                      "items": {
+                        "type": "object",
+                        "required": ["sourceField", "targetField"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "sourceField": { "type": "string", "description": "Dot-notation path in the parent WorkItem.fields." },
+                          "targetField": { "type": "string", "description": "Dot-notation path in the child WorkItem.fields." }
+                        }
+                      }
+                    },
+                    "deduplicationKeyField": {
+                      "type": "string",
+                      "description": "Dot-notation path in the parent WorkItem.fields whose value is used as the deduplication key. If an existing non-terminal child work item of the target workflowType has a WorkItemDependency with the same deduplicationKey value, the parent attaches to that existing child (no new work item created). Produces AuditEntry(ATTACHED_TO_EXISTING_CHILD) vs AuditEntry(CHILD_WORKFLOW_CREATED)."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "priorityConfig": {
+      "type": "object",
+      "description": "Bounded, group-scoped priority scoring engine. Between groups: scores are additive. Within a group: only the highest-matching component counts (mutual exclusivity prevents stacking). maxTotalScore prevents inflation as groups accumulate. The simulatePriority Gradle task must be run before deploying priority config changes.",
+      "required": ["maxTotalScore", "recalculationIntervalMinutes", "saturationAlertThreshold", "componentGroups", "priorityLevels"],
+      "additionalProperties": false,
+      "properties": {
+        "maxTotalScore": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Hard ceiling on total score. validateConfigs rejects configs where sum of all groups' max possible scores exceeds maxTotalScore * 1.2. All priorityLevel.minScore values must be <= maxTotalScore."
+        },
+        "recalculationIntervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How often the background recalculation job re-scores all non-terminal work items of this type. Required because TEMPORAL_PROXIMITY scores change as time passes."
+        },
+        "saturationAlertThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage threshold (0-100). The simulatePriority Gradle task fails the build if the projected CRITICAL% exceeds this. Default 30 — prevents CRITICAL from becoming meaningless through saturation."
+        },
+        "componentGroups": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Scoring component groups. Scores are additive between groups. Within each group, only the highest-matching component counts.",
+          "items": {
+            "type": "object",
+            "required": ["groupId", "name", "rationale", "owner", "components"],
+            "additionalProperties": false,
+            "properties": {
+              "groupId": { "type": "string" },
+              "name": { "type": "string" },
+              "rationale": {
+                "type": "string",
+                "description": "REQUIRED. Business justification for this scoring dimension. Enforced by schema to prevent undocumented components accumulating and invisibly inflating scores."
+              },
+              "owner": {
+                "type": "string",
+                "description": "REQUIRED. Responsible business contact (email or team name). Required for change management alerting when this group's config changes."
+              },
+              "effectiveFrom": {
+                "type": ["string", "null"],
+                "format": "date",
+                "description": "Optional. If set, this group only scores items from this date. validateConfigs warns on expired groups."
+              },
+              "effectiveTo": {
+                "type": ["string", "null"],
+                "format": "date",
+                "description": "Optional. Expired groups auto-deactivate. validateConfigs warns on groups past their effectiveTo."
+              },
+              "components": {
+                "type": "array",
+                "minItems": 1,
+                "description": "Ordered array of scoring components within this group. Evaluated in order; first match wins and remaining components are skipped.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "title": "TemporalProximityComponent",
+                      "description": "Scores based on a date field's proximity to today (in tenant timezone). Bands must be exhaustive — a BEYOND catch-all is required. validateConfigs rejects overlapping bands and missing BEYOND.",
+                      "required": ["type", "field", "rationale", "bands"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "type": "string", "const": "TEMPORAL_PROXIMITY" },
+                        "field": { "type": "string", "description": "Dot-notation path to a DATE field in WorkItem.fields." },
+                        "rationale": { "type": "string" },
+                        "bands": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["condition", "points"],
+                            "additionalProperties": false,
+                            "properties": {
+                              "condition": {
+                                "type": "string",
+                                "enum": ["OVERDUE", "TODAY", "WITHIN_N_DAYS", "BEYOND"],
+                                "description": "OVERDUE: date is in the past. TODAY: date is today. WITHIN_N_DAYS: date is within the next N days (requires days field). BEYOND: catch-all for further dates — required."
+                              },
+                              "days": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "Required for WITHIN_N_DAYS."
+                              },
+                              "points": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "title": "NumericThresholdComponent",
+                      "description": "Scores based on a MONETARY or DECIMAL field value against thresholds. Thresholds must be in descending order. A default catch-all is required. validateConfigs enforces both constraints.",
+                      "required": ["type", "field", "rationale", "thresholds"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "type": "string", "const": "NUMERIC_THRESHOLD" },
+                        "field": { "type": "string", "description": "Dot-notation path to a MONETARY or DECIMAL field. For MONETARY, path should reference the amount sub-field (e.g. trade.notionalAmount.amount)." },
+                        "rationale": { "type": "string" },
+                        "thresholds": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": ["points"],
+                            "additionalProperties": false,
+                            "properties": {
+                              "operator": {
+                                "type": "string",
+                                "enum": ["GTE", "GT", "LTE", "LT"],
+                                "description": "Comparison operator. Absent on default catch-all rows."
+                              },
+                              "value": {
+                                "type": "string",
+                                "description": "Threshold value as string for BigDecimal precision (e.g. 1000000.00). Absent on default catch-all rows."
+                              },
+                              "default": {
+                                "type": "boolean",
+                                "description": "True on the catch-all threshold — matched when no other threshold matches. Required."
+                              },
+                              "points": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "title": "ConditionMatchComponent",
+                      "description": "Scores points if a condition tree matches, 0 if it does not. Uses the same LEAF/GROUP condition tree syntax as routing-config.rules.conditions.",
+                      "required": ["type", "rationale", "conditions", "points"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": { "type": "string", "const": "CONDITION_MATCH" },
+                        "rationale": { "type": "string" },
+                        "conditions": {
+                          "$ref": "routing-config.schema.json#/$defs/conditionNode"
+                        },
+                        "points": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "priorityLevels": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Maps score ranges to priority level labels. Must cover the full 0 to maxTotalScore range with no gaps. validateConfigs enforces this. Levels should be declared in descending minScore order.",
+          "items": {
+            "type": "object",
+            "required": ["minScore", "label", "colour"],
+            "additionalProperties": false,
+            "properties": {
+              "minScore": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Minimum score (inclusive) for this level. The level applies until the next level's minScore."
+              },
+              "label": {
+                "type": "string",
+                "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+              },
+              "colour": {
+                "type": "string",
+                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "description": "Hex colour for blotter row highlighting (e.g. #FF0000)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "slaRules": {
+      "type": "array",
+      "description": "SLA rules applied across states. Declared at workflow level (not per-state) to allow shared SLA policies. The SLA engine runs a scheduled job to scan non-terminal work items — scheduling is infrastructure, but SLA evaluation rules are a domain concern in platform-domain.",
+      "items": {
+        "type": "object",
+        "required": ["appliesTo", "clockStartEvent", "warnAfterMinutes", "escalateAfterMinutes", "escalationActions"],
+        "additionalProperties": false,
+        "properties": {
+          "appliesTo": {
+            "type": "array",
+            "description": "State names this rule applies to. Use [\"*\"] for all non-terminal states.",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "clockStartEvent": {
+            "type": "string",
+            "enum": ["ITEM_CREATED", "ENTERED_CURRENT_STATE", "ASSIGNED_TO_CURRENT_GROUP"],
+            "description": "Determines what event starts the SLA clock. ITEM_CREATED: from ingestion timestamp. ENTERED_CURRENT_STATE: from the last state transition. ASSIGNED_TO_CURRENT_GROUP: from the last group assignment. Minutes are business-hours minutes in the tenant's timezone (weekends excluded)."
+          },
+          "warnAfterMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Business minutes before a warning is raised. Produces AuditEntry(SLA_WARNING) and increments sla.warnings.total metric."
+          },
+          "escalateAfterMinutes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Business minutes before escalation fires. Must be greater than warnAfterMinutes. Produces AuditEntry(SLA_BREACH) and increments sla.breaches.total metric."
+          },
+          "escalationActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["REASSIGN_GROUP", "TRIGGER_TRANSITION", "NOTIFY_ROLES"]
+                },
+                "targetGroup": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "REASSIGN_GROUP: group to reassign the item to."
+                },
+                "transition": {
+                  "type": "string",
+                  "description": "TRIGGER_TRANSITION: name of the transition to fire. Must have trigger=SLA_BREACH."
+                },
+                "roles": {
+                  "type": "array",
+                  "description": "NOTIFY_ROLES: roles to send notifications to.",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "active": { "type": "boolean" },
+    "version": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

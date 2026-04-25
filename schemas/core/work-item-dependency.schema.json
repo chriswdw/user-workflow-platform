@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/core/work-item-dependency.schema.json",
+  "title": "WorkItemDependency",
+  "description": "Blocking dependency between two work items. Kept as a separate join table (not embedded in WorkItem) to support efficient bi-directional queries and the many-to-1 fan-in pattern where multiple work items of one type are blocked by a single work item of another type. Example: multiple SETTLEMENT_EXCEPTION items blocked by one SSI_SETUP_REQUEST. PostgreSQL indexes required: (tenantId, blockingWorkItemId) for fan-out query on blocking item completion; (tenantId, dependentWorkItemId) for display query showing what a given item is waiting for.",
+  "type": "object",
+  "required": [
+    "id", "tenantId",
+    "dependentWorkItemId", "dependentWorkflowType",
+    "blockingWorkItemId", "blockingWorkflowType",
+    "status", "createdAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "dependentWorkItemId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The work item that is blocked and waiting."
+    },
+    "dependentWorkflowType": {
+      "type": "string",
+      "description": "Denormalised for efficient queries without joining work_items."
+    },
+    "blockingWorkItemId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The work item that must reach a terminal state before the dependent can resume."
+    },
+    "blockingWorkflowType": {
+      "type": "string",
+      "description": "Denormalised for efficient queries without joining work_items."
+    },
+    "deduplicationKey": {
+      "type": ["string", "null"],
+      "description": "The computed value (e.g. counterparty LEI) that was used to match this dependent to an existing blocking work item rather than creating a new one. Stored for audit and debugging. Set by the CREATE_CHILD_WORKFLOW action when deduplicationKeyField is configured."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ACTIVE", "RESOLVED"],
+      "description": "RESOLVED when the blocking work item reaches a terminal state and the dependent has been re-triggered via CHILD_WORKFLOW_COMPLETED system event."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolvedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Set when status transitions to RESOLVED. Null while ACTIVE."
+    }
+  }
+}

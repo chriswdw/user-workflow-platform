@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/workflow-type-definition.schema.json",
+  "title": "WorkflowTypeDefinition",
+  "description": "Master type descriptor for a workflow type. The single entry point for all config related to a type — validateConfigs starts here, and platform-config-engine loads all config via this manifest. Without this, workflowType is a free-form string with no authoritative registry. Each config document (workflow-config, routing-config, field-type-registry, etc.) owns its own active:true state. validateConfigs enforces that exactly one active document of each config type exists per (tenantId, workflowType).",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "displayName", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workflowType": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "description": "Canonical string identifier for this workflow type (e.g. SETTLEMENT_EXCEPTION, SSI_SETUP_REQUEST). This is the key used on WorkItem and all other config documents. Uppercase with underscores."
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable name shown in the blotter header and config management UI."
+    },
+    "description": {
+      "type": "string",
+      "description": "Business description of what this workflow type represents."
+    },
+    "parentWorkflowType": {
+      "type": ["string", "null"],
+      "description": "Optional. If this workflow type is only ever created as a child (e.g. SSI_SETUP_REQUEST is only created by SETTLEMENT_EXCEPTION via CREATE_CHILD_WORKFLOW), declare the parent here. validateConfigs warns if a parent-only type appears as a direct routing target."
+    },
+    "active": {
+      "type": "boolean",
+      "description": "Whether this workflow type is currently active. Inactive types cannot receive new work items."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing version. Referenced by WorkItem.configVersionId to pin the config version active at ingestion time."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

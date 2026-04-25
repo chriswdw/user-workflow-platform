@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.workflow-platform.internal/config/user-role-config.schema.json",
+  "title": "UserRoleConfig",
+  "description": "Defines valid role names and their permissions hierarchy for a tenant. Roles appear as strings throughout the platform (allowedRoles, visibleRoles, actorRole in audit entries). This config is the authoritative registry of valid role names. validateConfigs verifies that all role references in other schemas (workflow-config.transitions.allowedRoles, routing-config.rules, blotter-config.maskingRoles, etc.) match roles declared here. User identity management is external (JWT claims); role names are validated against this registry.",
+  "type": "object",
+  "required": ["id", "tenantId", "roles", "active", "version", "createdAt", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "description": "All valid roles for this tenant. validateConfigs rejects role name references in other schemas that do not appear in this array.",
+      "items": {
+        "type": "object",
+        "required": ["name", "displayName", "permissions"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "description": "Canonical role name used throughout the platform (e.g. SETTLEMENT_ANALYST, SUPERVISOR, COMPLIANCE_OFFICER, AUDIT_VIEWER)."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Human-readable role name for the config management UI."
+          },
+          "description": {
+            "type": "string"
+          },
+          "inheritsFrom": {
+            "type": "array",
+            "description": "Role names this role inherits permissions from. Permissions are additive — a role has all permissions of itself plus all inherited roles. Cycles are rejected by validateConfigs.",
+            "items": { "type": "string" }
+          },
+          "permissions": {
+            "type": "array",
+            "description": "Explicit permissions granted to this role.",
+            "items": {
+              "type": "object",
+              "required": ["resource", "actions"],
+              "additionalProperties": false,
+              "properties": {
+                "resource": {
+                  "type": "string",
+                  "enum": [
+                    "WORK_ITEM",
+                    "AUDIT_LOG",
+                    "CONFIG",
+                    "REPORT",
+                    "ADMIN"
+                  ],
+                  "description": "The resource type this permission applies to."
+                },
+                "actions": {
+                  "type": "array",
+                  "description": "Allowed actions on this resource.",
+                  "items": {
+                    "type": "string",
+                    "enum": ["READ", "WRITE", "TRANSITION", "APPROVE", "EXPORT", "MANAGE"]
+                  }
+                },
+                "dataClassificationAccess": {
+                  "type": "array",
+                  "description": "Maximum data classification levels this role can see unmasked. Fields above this level are masked (***) for this role.",
+                  "items": {
+                    "type": "string",
+                    "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
