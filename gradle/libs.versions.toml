@@ -1,0 +1,49 @@
+[versions]
+spring-boot          = "3.3.5"
+spring-dependency-mgmt = "1.1.6"
+cucumber             = "7.18.1"
+junit5               = "5.11.0"
+junit-platform       = "1.11.0"
+jackson              = "2.17.2"
+assertj              = "3.26.3"
+embedded-postgres    = "2.0.7"
+spring-kafka         = "3.2.4"
+liquibase            = "4.29.2"
+postgresql           = "42.7.4"
+
+[libraries]
+# Cucumber
+cucumber-java                   = { module = "io.cucumber:cucumber-java",                   version.ref = "cucumber" }
+cucumber-junit-platform-engine  = { module = "io.cucumber:cucumber-junit-platform-engine",  version.ref = "cucumber" }
+
+# JUnit 5
+junit-platform-suite   = { module = "org.junit.platform:junit-platform-suite",    version.ref = "junit-platform" }
+junit5-api             = { module = "org.junit.jupiter:junit-jupiter-api",         version.ref = "junit5" }
+junit5-engine          = { module = "org.junit.jupiter:junit-jupiter-engine",      version.ref = "junit5" }
+junit5-params          = { module = "org.junit.jupiter:junit-jupiter-params",      version.ref = "junit5" }
+
+# Assertions
+assertj-core           = { module = "org.assertj:assertj-core",                    version.ref = "assertj" }
+
+# Jackson
+jackson-databind       = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+
+# Spring Boot (used by infrastructure modules)
+spring-boot-starter              = { module = "org.springframework.boot:spring-boot-starter",              version.ref = "spring-boot" }
+spring-boot-starter-web          = { module = "org.springframework.boot:spring-boot-starter-web",          version.ref = "spring-boot" }
+spring-boot-starter-data-jpa     = { module = "org.springframework.boot:spring-boot-starter-data-jpa",     version.ref = "spring-boot" }
+spring-boot-starter-security     = { module = "org.springframework.boot:spring-boot-starter-security",     version.ref = "spring-boot" }
+spring-boot-starter-test         = { module = "org.springframework.boot:spring-boot-starter-test",         version.ref = "spring-boot" }
+
+# Kafka
+spring-kafka      = { module = "org.springframework.kafka:spring-kafka",      version.ref = "spring-kafka" }
+spring-kafka-test = { module = "org.springframework.kafka:spring-kafka-test", version.ref = "spring-kafka" }
+
+# Database
+postgresql-driver  = { module = "org.postgresql:postgresql",        version.ref = "postgresql" }
+liquibase-core     = { module = "org.liquibase:liquibase-core",     version.ref = "liquibase" }
+embedded-postgres  = { module = "io.zonky.test:embedded-postgres",  version.ref = "embedded-postgres" }
+
+[plugins]
+spring-boot               = { id = "org.springframework.boot",         version.ref = "spring-boot" }
+spring-dependency-mgmt    = { id = "io.spring.dependency-management",  version.ref = "spring-dependency-mgmt" }
