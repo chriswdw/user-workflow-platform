@@ -1,0 +1,7 @@
+package com.platform.workflow.domain.exception;
+
+public class ValidationFailedException extends RuntimeException {
+    public ValidationFailedException(String message) {
+        super(message);
+    }
+}

@@ -2,5 +2,6 @@ rootProject.name = "user-workflow-platform"
 
 include(
     "platform-domain",
-    "platform-routing"
+    "platform-routing",
+    "platform-workflow"
 )
