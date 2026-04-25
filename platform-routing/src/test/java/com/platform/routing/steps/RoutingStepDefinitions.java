@@ -18,7 +18,6 @@ import com.platform.routing.domain.service.RoutingService;
 import com.platform.routing.doubles.InMemoryAuditRepository;
 import com.platform.routing.doubles.InMemoryRoutingConfigRepository;
 import io.cucumber.datatable.DataTable;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -157,7 +156,6 @@ public class RoutingStepDefinitions {
     }
 
     @Then("an audit entry is written with event type {string}")
-    @And("an audit entry is written with event type {string}")
     public void anAuditEntryIsWrittenWithEventType(String eventType) {
         AuditEventType expectedType = AuditEventType.valueOf(eventType);
         assertThat(auditRepo.all())
