@@ -1,0 +1,13 @@
+package com.platform.config.domain.model;
+
+public enum ConfigType {
+    WORKFLOW_TYPE_DEFINITION,
+    ROUTING_CONFIG,
+    WORKFLOW_CONFIG,
+    FIELD_TYPE_REGISTRY,
+    RESOLUTION_GROUP,
+    INGESTION_SOURCE_CONFIG,
+    BLOTTER_CONFIG,
+    DETAIL_VIEW_CONFIG,
+    USER_ROLE_CONFIG
+}
