@@ -6,7 +6,7 @@ interface Props {
 
 export function ConfirmModal({ message, onConfirm, onCancel }: Props) {
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
+    <dialog open className="modal-overlay" aria-modal="true">
       <div className="modal-box">
         <p>{message}</p>
         <div className="modal-actions">
@@ -14,6 +14,6 @@ export function ConfirmModal({ message, onConfirm, onCancel }: Props) {
           <button className="btn-primary" onClick={onConfirm}>Confirm</button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

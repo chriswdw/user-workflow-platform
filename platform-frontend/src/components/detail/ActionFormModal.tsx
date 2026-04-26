@@ -9,11 +9,45 @@ interface Props {
   serverError?: string;
 }
 
+function FieldInput({ f, register }: {
+  f: ActionInputField;
+  register: ReturnType<typeof useForm<Record<string, string>>>['register'];
+}) {
+  const validation = { required: f.required ? `${f.label} is required` : false };
+
+  if (f.inputType === 'TEXTAREA') {
+    return <textarea id={f.field} {...register(f.field, validation)} />;
+  }
+
+  if (f.inputType === 'SELECT') {
+    return (
+      <select id={f.field} {...register(f.field, validation)}>
+        <option value="">— select —</option>
+        {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    );
+  }
+
+  const inputType = f.inputType === 'DATE' ? 'date' : 'text';
+  const currencyPattern = f.inputType === 'CURRENCY'
+    ? { value: /^\d+(\.\d{1,2})?$/, message: 'Enter a valid amount' }
+    : undefined;
+
+  return (
+    <input
+      id={f.field}
+      type={inputType}
+      inputMode={f.inputType === 'CURRENCY' ? 'decimal' : undefined}
+      {...register(f.field, { ...validation, pattern: currencyPattern })}
+    />
+  );
+}
+
 export function ActionFormModal({ label, inputFields, onSubmit, onCancel, serverError }: Props) {
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, string>>();
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
+    <dialog open className="modal-overlay" aria-modal="true">
       <div className="modal-box">
         <h3>{label}</h3>
         {serverError && <p className="form-error">{serverError}</p>}
@@ -23,34 +57,7 @@ export function ActionFormModal({ label, inputFields, onSubmit, onCancel, server
               <label htmlFor={f.field}>
                 {f.label}{f.required && ' *'}
               </label>
-              {f.inputType === 'TEXTAREA' ? (
-                <textarea
-                  id={f.field}
-                  {...register(f.field, { required: f.required ? `${f.label} is required` : false })}
-                />
-              ) : f.inputType === 'SELECT' ? (
-                <select
-                  id={f.field}
-                  {...register(f.field, { required: f.required ? `${f.label} is required` : false })}
-                >
-                  <option value="">— select —</option>
-                  {(f.options ?? []).map(o => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={f.field}
-                  type={f.inputType === 'DATE' ? 'date' : 'text'}
-                  inputMode={f.inputType === 'CURRENCY' ? 'decimal' : undefined}
-                  {...register(f.field, {
-                    required: f.required ? `${f.label} is required` : false,
-                    pattern: f.inputType === 'CURRENCY'
-                      ? { value: /^\d+(\.\d{1,2})?$/, message: 'Enter a valid amount' }
-                      : undefined,
-                  })}
-                />
-              )}
+              <FieldInput f={f} register={register} />
               {errors[f.field] && (
                 <span className="field-error">{errors[f.field]?.message}</span>
               )}
@@ -62,6 +69,6 @@ export function ActionFormModal({ label, inputFields, onSubmit, onCancel, server
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }

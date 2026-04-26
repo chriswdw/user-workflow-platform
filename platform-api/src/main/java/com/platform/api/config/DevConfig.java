@@ -36,6 +36,28 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration
 public class DevConfig {
 
+    private static final String TENANT_1           = "tenant-1";
+    private static final String SETTLEMENT_EX      = "SETTLEMENT_EXCEPTION";
+    private static final String GROUP_OPS          = "group-ops";
+    private static final String GROUP_SENIOR       = "group-senior";
+    private static final String UNDER_REVIEW       = "UNDER_REVIEW";
+    private static final String ESCALATED          = "ESCALATED";
+    private static final String CLOSED             = "CLOSED";
+    private static final String ANALYST            = "ANALYST";
+    private static final String SUPERVISOR         = "SUPERVISOR";
+
+    // Config map keys
+    private static final String K_FIELD            = "field";
+    private static final String K_LABEL            = "label";
+    private static final String K_FORMATTER        = "formatter";
+    private static final String K_TITLE            = "title";
+    private static final String K_LAYOUT           = "layout";
+    private static final String K_FIELDS           = "fields";
+    private static final String K_TRANSITION       = "transition";
+    private static final String K_STYLE            = "style";
+    private static final String K_VISIBLE_STATES   = "visibleInStates";
+    private static final String K_VISIBLE_ROLES    = "visibleRoles";
+
     // ── Shared in-memory store ────────────────────────────────────────────────
 
     @Bean
@@ -100,7 +122,7 @@ public class DevConfig {
     public ILoadConfigUseCase loadConfigUseCase() {
         return (tenantId, workflowType, configType) -> {
             if (ConfigType.DETAIL_VIEW_CONFIG.equals(configType)
-                    && "SETTLEMENT_EXCEPTION".equals(workflowType)) {
+                    && SETTLEMENT_EX.equals(workflowType)) {
                 return new ConfigDocument(
                         "dev-dvc-settlement", tenantId, workflowType,
                         ConfigType.DETAIL_VIEW_CONFIG, seedDetailViewConfig(),
@@ -114,53 +136,53 @@ public class DevConfig {
     private static Map<String, Object> seedDetailViewConfig() {
         return Map.of(
             "id",           "dev-dvc-settlement",
-            "tenantId",     "tenant-1",
-            "workflowType", "SETTLEMENT_EXCEPTION",
+            "tenantId",     TENANT_1,
+            "workflowType", SETTLEMENT_EX,
             "active",       true,
             "version",      1,
             "sections", List.of(
-                Map.of("title", "Trade Details", "layout", "TWO_COLUMN", "fields", List.of(
-                    Map.of("field", "trade.ref",                     "label", "Trade Ref",   "formatter", "TEXT"),
-                    Map.of("field", "trade.valueDate",               "label", "Value Date",  "formatter", "DATE"),
-                    Map.of("field", "trade.notionalAmount.amount",   "label", "Notional",    "formatter", "CURRENCY"),
-                    Map.of("field", "trade.notionalAmount.currency", "label", "Currency",    "formatter", "TEXT"),
-                    Map.of("field", "status",                        "label", "Status",      "formatter", "BADGE"),
-                    Map.of("field", "priorityLevel",                 "label", "Priority",    "formatter", "BADGE")
+                Map.of(K_TITLE, "Trade Details", K_LAYOUT, "TWO_COLUMN", K_FIELDS, List.of(
+                    Map.of(K_FIELD, "trade.ref",                     K_LABEL, "Trade Ref",   K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "trade.valueDate",               K_LABEL, "Value Date",  K_FORMATTER, "DATE"),
+                    Map.of(K_FIELD, "trade.notionalAmount.amount",   K_LABEL, "Notional",    K_FORMATTER, "CURRENCY"),
+                    Map.of(K_FIELD, "trade.notionalAmount.currency", K_LABEL, "Currency",    K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "status",                        K_LABEL, "Status",      K_FORMATTER, "BADGE"),
+                    Map.of(K_FIELD, "priorityLevel",                 K_LABEL, "Priority",    K_FORMATTER, "BADGE")
                 )),
-                Map.of("title", "Counterparty", "layout", "TWO_COLUMN", "fields", List.of(
-                    Map.of("field", "counterparty.name", "label", "Name", "formatter", "TEXT"),
-                    Map.of("field", "counterparty.lei",  "label", "LEI",  "formatter", "TEXT")
+                Map.of(K_TITLE, "Counterparty", K_LAYOUT, "TWO_COLUMN", K_FIELDS, List.of(
+                    Map.of(K_FIELD, "counterparty.name", K_LABEL, "Name", K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "counterparty.lei",  K_LABEL, "LEI",  K_FORMATTER, "TEXT")
                 )),
-                Map.of("title", "Assignment", "layout", "TWO_COLUMN", "collapsible", true, "fields", List.of(
-                    Map.of("field", "assignedGroup", "label", "Group",   "formatter", "TEXT"),
-                    Map.of("field", "source",        "label", "Source",  "formatter", "TEXT"),
-                    Map.of("field", "makerUserId",   "label", "Maker",   "formatter", "TEXT"),
-                    Map.of("field", "createdAt",     "label", "Created", "formatter", "DATETIME")
+                Map.of(K_TITLE, "Assignment", K_LAYOUT, "TWO_COLUMN", "collapsible", true, K_FIELDS, List.of(
+                    Map.of(K_FIELD, "assignedGroup", K_LABEL, "Group",   K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "source",        K_LABEL, "Source",  K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "makerUserId",   K_LABEL, "Maker",   K_FORMATTER, "TEXT"),
+                    Map.of(K_FIELD, "createdAt",     K_LABEL, "Created", K_FORMATTER, "DATETIME")
                 ))
             ),
             "actions", List.of(
-                Map.of("transition", "close-as-resolved",
-                       "label", "Close as Resolved", "style", "PRIMARY",
-                       "visibleInStates", List.of("UNDER_REVIEW", "ESCALATED"),
-                       "visibleRoles", List.of("ANALYST", "SUPERVISOR"),
+                Map.of(K_TRANSITION, "close-as-resolved",
+                       K_LABEL, "Close as Resolved", K_STYLE, "PRIMARY",
+                       K_VISIBLE_STATES, List.of(UNDER_REVIEW, ESCALATED),
+                       K_VISIBLE_ROLES, List.of(ANALYST, SUPERVISOR),
                        "confirmationRequired", true,
                        "confirmationMessage", "Close this exception as resolved?",
                        "inputFields", List.of(
-                           Map.of("field", "resolution.reason", "label", "Reason",
+                           Map.of(K_FIELD, "resolution.reason", K_LABEL, "Reason",
                                   "inputType", "TEXTAREA", "required", true)
                        )),
-                Map.of("transition", "escalate",
-                       "label", "Escalate", "style", "SECONDARY",
-                       "visibleInStates", List.of("UNDER_REVIEW"),
-                       "visibleRoles", List.of("ANALYST", "SUPERVISOR")),
-                Map.of("transition", "assign-to-compliance",
-                       "label", "Compliance Review", "style", "SECONDARY",
-                       "visibleInStates", List.of("UNDER_REVIEW", "ESCALATED"),
-                       "visibleRoles", List.of("SUPERVISOR")),
-                Map.of("transition", "return-to-review",
-                       "label", "Return to Review", "style", "SECONDARY",
-                       "visibleInStates", List.of("ESCALATED"),
-                       "visibleRoles", List.of("SUPERVISOR"))
+                Map.of(K_TRANSITION, "escalate",
+                       K_LABEL, "Escalate", K_STYLE, "SECONDARY",
+                       K_VISIBLE_STATES, List.of(UNDER_REVIEW),
+                       K_VISIBLE_ROLES, List.of(ANALYST, SUPERVISOR)),
+                Map.of(K_TRANSITION, "assign-to-compliance",
+                       K_LABEL, "Compliance Review", K_STYLE, "SECONDARY",
+                       K_VISIBLE_STATES, List.of(UNDER_REVIEW, ESCALATED),
+                       K_VISIBLE_ROLES, List.of(SUPERVISOR)),
+                Map.of(K_TRANSITION, "return-to-review",
+                       K_LABEL, "Return to Review", K_STYLE, "SECONDARY",
+                       K_VISIBLE_STATES, List.of(ESCALATED),
+                       K_VISIBLE_ROLES, List.of(SUPERVISOR))
             )
         );
     }
@@ -170,8 +192,8 @@ public class DevConfig {
     private static List<WorkItem> seed() {
         Instant now = Instant.now();
         return List.of(
-            item("wi-001", "tenant-1", "SETTLEMENT_EXCEPTION", SourceType.KAFKA,
-                "UNDER_REVIEW", "group-ops", 750, "CRITICAL", now.minusSeconds(7200),
+            item("wi-001", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
+                UNDER_REVIEW, GROUP_OPS, 750, "CRITICAL", now.minusSeconds(7200),
                 Map.of(
                     "trade", Map.of(
                         "ref", "TRD-20241015-001",
@@ -181,8 +203,8 @@ public class DevConfig {
                         "name", "Barclays Capital",
                         "lei", "G5GSEF7VJP5I7OUK5573"))),
 
-            item("wi-002", "tenant-1", "SETTLEMENT_EXCEPTION", SourceType.KAFKA,
-                "UNDER_REVIEW", "group-ops", 400, "HIGH", now.minusSeconds(3600),
+            item("wi-002", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
+                UNDER_REVIEW, GROUP_OPS, 400, "HIGH", now.minusSeconds(3600),
                 Map.of(
                     "trade", Map.of(
                         "ref", "TRD-20241015-002",
@@ -192,8 +214,8 @@ public class DevConfig {
                         "name", "Deutsche Bank AG",
                         "lei", "7LTWFZYICNSX8D621K86"))),
 
-            item("wi-003", "tenant-1", "SETTLEMENT_EXCEPTION", SourceType.DB_POLL,
-                "ESCALATED", "group-senior", 850, "CRITICAL", now.minusSeconds(18000),
+            item("wi-003", TENANT_1, SETTLEMENT_EX, SourceType.DB_POLL,
+                ESCALATED, GROUP_SENIOR, 850, "CRITICAL", now.minusSeconds(18000),
                 Map.of(
                     "trade", Map.of(
                         "ref", "TRD-20241014-087",
@@ -203,8 +225,8 @@ public class DevConfig {
                         "name", "JP Morgan Chase",
                         "lei", "8I5DZWZKVSZI1NUHU748"))),
 
-            item("wi-004", "tenant-1", "SETTLEMENT_EXCEPTION", SourceType.FILE_UPLOAD,
-                "CLOSED", "group-ops", 50, "LOW", now.minusSeconds(86400),
+            item("wi-004", TENANT_1, SETTLEMENT_EX, SourceType.FILE_UPLOAD,
+                CLOSED, GROUP_OPS, 50, "LOW", now.minusSeconds(86400),
                 Map.of(
                     "trade", Map.of(
                         "ref", "TRD-20241013-044",
@@ -214,8 +236,8 @@ public class DevConfig {
                         "name", "HSBC Holdings",
                         "lei", "MLU0ZO3ML4LN2LL2TL39"))),
 
-            item("wi-005", "tenant-1", "SETTLEMENT_EXCEPTION", SourceType.KAFKA,
-                "UNDER_REVIEW", "group-ops", 300, "MEDIUM", now.minusSeconds(1800),
+            item("wi-005", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
+                UNDER_REVIEW, GROUP_OPS, 300, "MEDIUM", now.minusSeconds(1800),
                 Map.of(
                     "trade", Map.of(
                         "ref", "TRD-20241015-031",
@@ -230,18 +252,18 @@ public class DevConfig {
     private static Map<String, List<AuditEntry>> seedAudit() {
         Instant base = Instant.now().minusSeconds(7200);
         return Map.of(
-            storeKey("tenant-1", "wi-001"), List.of(
-                auditEntry("tenant-1", "wi-001", AuditEventType.INGESTION,
-                    null, "UNDER_REVIEW", base),
-                auditEntry("tenant-1", "wi-001", AuditEventType.ASSIGNMENT,
-                    "UNDER_REVIEW", "UNDER_REVIEW", base.plusSeconds(5))),
-            storeKey("tenant-1", "wi-003"), List.of(
-                auditEntry("tenant-1", "wi-003", AuditEventType.INGESTION,
-                    null, "UNDER_REVIEW", base.minusSeconds(10800)),
-                auditEntry("tenant-1", "wi-003", AuditEventType.STATE_TRANSITION,
-                    "UNDER_REVIEW", "ESCALATED", base.minusSeconds(7200)),
-                auditEntry("tenant-1", "wi-003", AuditEventType.SLA_WARNING,
-                    "ESCALATED", "ESCALATED", base.minusSeconds(3600)))
+            storeKey(TENANT_1, "wi-001"), List.of(
+                auditEntry(TENANT_1, "wi-001", AuditEventType.INGESTION,
+                    null, UNDER_REVIEW, base),
+                auditEntry(TENANT_1, "wi-001", AuditEventType.ASSIGNMENT,
+                    UNDER_REVIEW, UNDER_REVIEW, base.plusSeconds(5))),
+            storeKey(TENANT_1, "wi-003"), List.of(
+                auditEntry(TENANT_1, "wi-003", AuditEventType.INGESTION,
+                    null, UNDER_REVIEW, base.minusSeconds(10800)),
+                auditEntry(TENANT_1, "wi-003", AuditEventType.STATE_TRANSITION,
+                    UNDER_REVIEW, ESCALATED, base.minusSeconds(7200)),
+                auditEntry(TENANT_1, "wi-003", AuditEventType.SLA_WARNING,
+                    ESCALATED, ESCALATED, base.minusSeconds(3600)))
         );
     }
 
@@ -249,9 +271,9 @@ public class DevConfig {
 
     private static String applyTransition(String currentStatus, String transitionName) {
         return switch (transitionName) {
-            case "close-as-resolved"   -> "CLOSED";
-            case "escalate"            -> "ESCALATED";
-            case "return-to-review"    -> "UNDER_REVIEW";
+            case "close-as-resolved"   -> CLOSED;
+            case "escalate"            -> ESCALATED;
+            case "return-to-review"    -> UNDER_REVIEW;
             case "assign-to-compliance"-> "COMPLIANCE_REVIEW";
             default -> throw new ForbiddenTransitionException(
                     "Unknown transition '" + transitionName + "' from state '" + currentStatus + "'");

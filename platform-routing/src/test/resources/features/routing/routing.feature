@@ -106,3 +106,77 @@ Feature: Work item routing
     When a work item is routed with fields:
       | counterparty.region | EMEA |
     Then an audit entry is written with event type "ASSIGNMENT"
+
+  # ── Operator coverage ────────────────────────────────────────────────────────
+
+  Scenario: NEQ operator matches when field does not equal the value
+    Given the config has a rule with priority 10 matching "trade.status" NEQ "SETTLED" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.status | PENDING |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: NEQ operator does not match when field equals the value
+    Given the config has a rule with priority 10 matching "trade.status" NEQ "SETTLED" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.status | SETTLED |
+    Then the work item is assigned to "group-default"
+
+  Scenario: IN operator matches when field value is in the list
+    Given the config has a rule with priority 10 routing to "group-settlement" matching:
+      """
+      { "type": "LEAF", "field": "counterparty.region", "operator": "IN", "value": ["EMEA", "APAC"] }
+      """
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: IN operator does not match when field value is absent from the list
+    Given the config has a rule with priority 10 routing to "group-settlement" matching:
+      """
+      { "type": "LEAF", "field": "counterparty.region", "operator": "IN", "value": ["EMEA", "APAC"] }
+      """
+    When a work item is routed with fields:
+      | counterparty.region | AMERICAS |
+    Then the work item is assigned to "group-default"
+
+  Scenario: NOT_IN operator matches when field value is absent from the exclusion list
+    Given the config has a rule with priority 10 routing to "group-settlement" matching:
+      """
+      { "type": "LEAF", "field": "trade.flag", "operator": "NOT_IN", "value": ["CANCELLED", "REJECTED"] }
+      """
+    When a work item is routed with fields:
+      | trade.flag | ACTIVE |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: CONTAINS operator matches when field value contains the substring
+    Given the config has a rule with priority 10 matching "trade.ref" CONTAINS "BARCLAYS" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.ref | BARCLAYS-2024-001 |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: REGEX operator matches when field value satisfies the pattern
+    Given the config has a rule with priority 10 matching "trade.ref" REGEX "TRD-\d{8}-\d{3}" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.ref | TRD-20241015-001 |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: EXISTS operator matches when the field is present on the work item
+    Given the config has a rule with priority 10 routing to "group-settlement" matching:
+      """
+      { "type": "LEAF", "field": "trade.urgentFlag", "operator": "EXISTS" }
+      """
+    When a work item is routed with fields:
+      | trade.urgentFlag | true |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: LT operator matches when numeric field is strictly below the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" LT "100000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 50000.00 |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: LTE operator matches when numeric field equals the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" LTE "100000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 100000.00 |
+    Then the work item is assigned to "group-settlement"

@@ -86,14 +86,19 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
             }
         }
 
-        // Merge user-supplied additional fields from the action form
+        // Merge user-supplied additional fields from the action form.
+        // Fields use dot-notation paths (e.g. "resolution.reason") and must be nested
+        // into the fields map consistently with how FieldPathResolver resolves them.
         WorkItem updated = workItem;
         if (!command.additionalFields().isEmpty()) {
             java.util.Map<String, Object> merged = new java.util.HashMap<>(workItem.fields());
             List<AuditEntry.ChangedField> fieldChanges = command.additionalFields().entrySet().stream()
-                    .map(e -> new AuditEntry.ChangedField(e.getKey(), merged.get(e.getKey()), e.getValue()))
+                    .map(e -> new AuditEntry.ChangedField(
+                            e.getKey(),
+                            FieldPathResolver.resolve(merged, e.getKey()).orElse(null),
+                            e.getValue()))
                     .toList();
-            merged.putAll(command.additionalFields());
+            command.additionalFields().forEach((path, value) -> setNestedValue(merged, path, value));
             updated = updated.withFields(java.util.Collections.unmodifiableMap(merged));
             auditRepository.save(fieldUpdateAuditEntry(command, updated, fieldChanges));
         }
@@ -193,5 +198,18 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
                 Instant.now(),
                 workItem.id() + ":" + command.transitionName() + ":fields"
         );
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void setNestedValue(java.util.Map<String, Object> map, String dotPath, Object value) {
+        int dot = dotPath.indexOf('.');
+        if (dot == -1) {
+            map.put(dotPath, value);
+        } else {
+            String head = dotPath.substring(0, dot);
+            String tail = dotPath.substring(dot + 1);
+            map.computeIfAbsent(head, k -> new java.util.HashMap<>());
+            setNestedValue((java.util.Map<String, Object>) map.get(head), tail, value);
+        }
     }
 }

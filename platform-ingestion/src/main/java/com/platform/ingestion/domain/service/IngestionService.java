@@ -63,14 +63,14 @@ public class IngestionService implements IIngestRecordUseCase {
     }
 
     @Override
-    public IngestionResult ingest(RawInboundRecord record) {
+    public IngestionResult ingest(RawInboundRecord inboundRecord) {
         IngestionConfig config = configRepository
                 .findByTenantAndWorkflowTypeAndSourceType(
-                        record.tenantId(), record.workflowType(), record.sourceType())
+                        inboundRecord.tenantId(), inboundRecord.workflowType(), inboundRecord.sourceType())
                 .orElseThrow(() -> new IllegalStateException(
-                        "No ingestion config for tenantId=" + record.tenantId()
-                        + ", workflowType=" + record.workflowType()
-                        + ", sourceType=" + record.sourceType()));
+                        "No ingestion config for tenantId=" + inboundRecord.tenantId()
+                        + ", workflowType=" + inboundRecord.workflowType()
+                        + ", sourceType=" + inboundRecord.sourceType()));
 
         // Map fields and validate
         Set<String> declaredSourceFields = config.fieldMappings().stream()
@@ -80,7 +80,7 @@ public class IngestionService implements IIngestRecordUseCase {
         Map<String, Object> mappedFields = new HashMap<>();
 
         for (FieldMapping mapping : config.fieldMappings()) {
-            String value = record.rawFields().get(mapping.sourceField());
+            String value = inboundRecord.rawFields().get(mapping.sourceField());
             if (value == null) {
                 if (mapping.required()) {
                     return new IngestionResult.Rejected(
@@ -92,7 +92,7 @@ public class IngestionService implements IIngestRecordUseCase {
         }
 
         // Handle unknown columns
-        for (String sourceField : record.rawFields().keySet()) {
+        for (String sourceField : inboundRecord.rawFields().keySet()) {
             if (!declaredSourceFields.contains(sourceField)) {
                 if (config.unknownColumnPolicy() == UnknownColumnPolicy.REJECT) {
                     return new IngestionResult.Rejected("Unknown column: " + sourceField);
@@ -102,12 +102,12 @@ public class IngestionService implements IIngestRecordUseCase {
         }
 
         // Compute idempotency key
-        String idempotencyKey = computeIdempotencyKey(record, config);
+        String idempotencyKey = computeIdempotencyKey(inboundRecord, config);
 
         // Duplicate check
-        if (idempotencyRepository.exists(record.tenantId(), record.workflowType(), idempotencyKey)) {
+        if (idempotencyRepository.exists(inboundRecord.tenantId(), inboundRecord.workflowType(), idempotencyKey)) {
             auditRepository.save(auditEntry(
-                    record.tenantId(), record.makerUserId(),
+                    inboundRecord.tenantId(), inboundRecord.makerUserId(),
                     AuditEventType.DUPLICATE_INGESTION_DISCARDED, idempotencyKey,
                     null, null));
             return new IngestionResult.Duplicate(idempotencyKey);
@@ -115,19 +115,19 @@ public class IngestionService implements IIngestRecordUseCase {
 
         // Assign group
         IGroupAssignmentPort.AssignmentResult assignment =
-                groupAssignmentPort.assignGroup(record.tenantId(), record.workflowType(), mappedFields);
+                groupAssignmentPort.assignGroup(inboundRecord.tenantId(), inboundRecord.workflowType(), mappedFields);
 
         // Build WorkItem
         String workItemId = UUID.randomUUID().toString();
         String correlationId = UUID.randomUUID().toString();
         WorkItem workItem = new WorkItem(
                 workItemId,
-                record.tenantId(),
-                record.workflowType(),
+                inboundRecord.tenantId(),
+                inboundRecord.workflowType(),
                 correlationId,
                 null,                        // configVersionId — set by config engine in production
-                record.sourceType(),
-                record.sourceRef(),
+                inboundRecord.sourceType(),
+                inboundRecord.sourceRef(),
                 idempotencyKey,
                 config.initialState(),
                 assignment.groupId(),
@@ -136,13 +136,13 @@ public class IngestionService implements IIngestRecordUseCase {
                 null, null, null,             // priority fields — computed separately
                 null, null,                   // pendingChecker fields
                 1,
-                record.makerUserId(),
+                inboundRecord.makerUserId(),
                 Instant.now(),
                 Instant.now()
         );
 
         // Persist
-        idempotencyRepository.save(record.tenantId(), record.workflowType(), idempotencyKey);
+        idempotencyRepository.save(inboundRecord.tenantId(), inboundRecord.workflowType(), idempotencyKey);
         WorkItem saved = workItemRepository.save(workItem);
         auditRepository.save(auditEntry(
                 saved.tenantId(), saved.makerUserId(),
@@ -154,10 +154,10 @@ public class IngestionService implements IIngestRecordUseCase {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static String computeIdempotencyKey(RawInboundRecord record, IngestionConfig config) {
+    private static String computeIdempotencyKey(RawInboundRecord inboundRecord, IngestionConfig config) {
         return switch (config.idempotencyKeyStrategy()) {
             case EXPLICIT_FIELD -> {
-                String value = record.rawFields().get(config.idempotencyExplicitField());
+                String value = inboundRecord.rawFields().get(config.idempotencyExplicitField());
                 if (value == null) throw new IllegalStateException(
                         "Idempotency key field '" + config.idempotencyExplicitField() + "' is absent");
                 yield value;
@@ -165,7 +165,7 @@ public class IngestionService implements IIngestRecordUseCase {
             case COMPOSITE_HASH -> {
                 List<String> values = new ArrayList<>();
                 for (String field : config.idempotencyKeyFields()) {
-                    values.add(record.rawFields().getOrDefault(field, ""));
+                    values.add(inboundRecord.rawFields().getOrDefault(field, ""));
                 }
                 yield sha256(String.join("|", values));
             }

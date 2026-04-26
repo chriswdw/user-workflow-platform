@@ -27,3 +27,4 @@ Thumbs.db
 # Secrets — never commit
 application-local.yml
 application-local.properties
+platform-frontend/coverage/

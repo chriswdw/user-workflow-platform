@@ -85,6 +85,6 @@ class MdcFilterTest {
         @Override public Object getDetails() { return null; }
         @Override public Object getPrincipal() { return this; }
         @Override public boolean isAuthenticated() { return true; }
-        @Override public void setAuthenticated(boolean b) {}
+        @Override public void setAuthenticated(boolean b) { /* test stub — state is fixed */ }
     }
 }

@@ -75,11 +75,6 @@ public class AuditStepDefinitions {
     // ── Then ─────────────────────────────────────────────────────────────────
 
     @Then("the audit trail for work item {string} contains {int} entry")
-    public void trailContainsSingleEntry(String workItemId, int count) {
-        queryResult = auditService.query(new AuditQuery(tenantId, workItemId, null, null, null));
-        assertThat(queryResult).as("audit trail for " + workItemId).hasSize(count);
-    }
-
     @Then("the audit trail for work item {string} contains {int} entries")
     public void trailContainsEntries(String workItemId, int count) {
         queryResult = auditService.query(new AuditQuery(tenantId, workItemId, null, null, null));

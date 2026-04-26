@@ -74,11 +74,40 @@ public class RoutingStepDefinitions {
 
     @Given("the config has a rule with priority {int} matching {string} EQ {string} routing to {string}")
     public void addSimpleEqRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.EQ, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} NEQ {string} routing to {string}")
+    public void addSimpleNeqRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.NEQ, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} CONTAINS {string} routing to {string}")
+    public void addSimpleContainsRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.CONTAINS, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} REGEX {string} routing to {string}")
+    public void addSimpleRegexRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.REGEX, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} LT {string} routing to {string}")
+    public void addSimpleLtRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.LT, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} LTE {string} routing to {string}")
+    public void addSimpleLteRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.LTE, value, targetGroupId);
+    }
+
+    private void addLeafRule(int priority, String field, Operator operator, String value, String targetGroupId) {
         pendingRules.add(new RoutingRule(
                 "rule-" + (++ruleCounter),
                 "rule-" + ruleCounter,
                 priority,
-                new LeafCondition(field, Operator.EQ, value),
+                new LeafCondition(field, operator, value),
                 targetGroupId,
                 true
         ));
@@ -170,11 +199,11 @@ public class RoutingStepDefinitions {
      * "counterparty.region" → EMEA becomes fields["counterparty"]["region"] = "EMEA"
      */
     private Map<String, Object> buildNestedMap(Map<String, String> flatMap) {
-        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> nested = new HashMap<>();
         for (Map.Entry<String, String> entry : flatMap.entrySet()) {
-            setNestedValue(result, entry.getKey(), entry.getValue());
+            setNestedValue(nested, entry.getKey(), entry.getValue());
         }
-        return result;
+        return nested;
     }
 
     @SuppressWarnings("unchecked")
@@ -199,7 +228,7 @@ public class RoutingStepDefinitions {
             case "LEAF" -> new LeafCondition(
                     node.get("field").asText(),
                     Operator.valueOf(node.get("operator").asText()),
-                    node.get("value").asText()
+                    parseLeafValue(node.get("value"))
             );
             case "GROUP" -> new GroupCondition(
                     LogicalOperator.valueOf(node.get("logicalOperator").asText()),
@@ -209,5 +238,17 @@ public class RoutingStepDefinitions {
             );
             default -> throw new IllegalArgumentException("Unknown condition node type: " + type);
         };
+    }
+
+    private static Object parseLeafValue(JsonNode valueNode) {
+        if (valueNode == null || valueNode.isNull()) {
+            return null;
+        }
+        if (valueNode.isArray()) {
+            return StreamSupport.stream(valueNode.spliterator(), false)
+                    .map(JsonNode::asText)
+                    .toList();
+        }
+        return valueNode.asText();
     }
 }

@@ -11,6 +11,31 @@ interface Props {
   userRole: string;
 }
 
+function FieldValue({ formatter, masked, isEditable, label }: {
+  formatter: string;
+  masked: unknown;
+  isEditable: boolean;
+  label: string;
+}) {
+  if (formatter === 'BADGE' && masked != null) {
+    return (
+      <span className={`badge badge--${String(masked).toLowerCase().replace(/_/g, '-')}`}>
+        {formatValue(masked, formatter)}
+      </span>
+    );
+  }
+  if (isEditable) {
+    return (
+      <input
+        className="field-inline-edit"
+        defaultValue={masked != null ? String(masked) : ''}
+        aria-label={label}
+      />
+    );
+  }
+  return <>{formatValue(masked, formatter)}</>;
+}
+
 export function SectionRenderer({ section, item, userRole }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -20,13 +45,18 @@ export function SectionRenderer({ section, item, userRole }: Props) {
 
   return (
     <section className={`section section--${section.layout.toLowerCase()}`}>
-      <h2
-        className={section.collapsible ? 'section-heading section-heading--collapsible' : 'section-heading'}
-        onClick={section.collapsible ? () => setCollapsed(c => !c) : undefined}
-        aria-expanded={section.collapsible ? !collapsed : undefined}
-      >
-        {section.collapsible && <span className="collapse-indicator">{collapsed ? '▶' : '▼'}</span>}
-        {section.title}
+      <h2 className={section.collapsible ? 'section-heading section-heading--collapsible' : 'section-heading'}>
+        {section.collapsible ? (
+          <button
+            type="button"
+            className="section-collapse-toggle"
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed(c => !c)}
+          >
+            <span className="collapse-indicator" aria-hidden="true">{collapsed ? '▶' : '▼'}</span>
+            {section.title}
+          </button>
+        ) : section.title}
       </h2>
 
       {!collapsed && (
@@ -36,29 +66,20 @@ export function SectionRenderer({ section, item, userRole }: Props) {
             const raw = topLevel !== undefined
               ? topLevel
               : resolve(item.fields as Record<string, unknown>, f.field);
-
             const masked = maskIfNeeded(raw, f.visibleRoles, userRole);
-            const display = formatValue(masked, f.formatter);
-            const isEditable = f.editable &&
+            const isEditable = !!f.editable &&
               (!f.editableInStates || f.editableInStates.includes(item.status));
 
             return (
               <div key={f.field} className="field-row">
                 <dt>{f.label}</dt>
                 <dd>
-                  {f.formatter === 'BADGE' && masked != null ? (
-                    <span className={`badge badge--${String(masked).toLowerCase().replace(/_/g, '-')}`}>
-                      {display}
-                    </span>
-                  ) : isEditable ? (
-                    <input
-                      className="field-inline-edit"
-                      defaultValue={masked != null ? String(masked) : ''}
-                      aria-label={f.label}
-                    />
-                  ) : (
-                    display
-                  )}
+                  <FieldValue
+                    formatter={f.formatter}
+                    masked={masked}
+                    isEditable={isEditable}
+                    label={f.label}
+                  />
                 </dd>
               </div>
             );

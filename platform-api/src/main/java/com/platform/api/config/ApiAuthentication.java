@@ -16,5 +16,7 @@ public record ApiAuthentication(String userId, String role, String tenantId)
     @Override public Object getDetails() { return null; }
     @Override public Object getPrincipal() { return this; }
     @Override public boolean isAuthenticated() { return true; }
-    @Override public void setAuthenticated(boolean isAuthenticated) {}
+    // Intentionally a no-op: authentication state is immutable once the JWT is validated.
+    // Callers cannot downgrade a validated token to unauthenticated mid-request.
+    @Override public void setAuthenticated(boolean isAuthenticated) { /* immutable — see above */ }
 }

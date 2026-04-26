@@ -39,3 +39,27 @@ Feature: Workflow state machine transitions
     When user "alice" with role "ANALYST" executes transition "close-with-reason"
     Then the work item status is "CLOSED"
     And a STATE_TRANSITION audit entry is written
+
+  Scenario: EQ validation rule blocks transition when field does not equal the required value
+    Given the workflow config has a transition "approve" from "UNDER_REVIEW" to "CLOSED" for role "ANALYST" requiring field "trade.status" EQ "MATCHED"
+    When user "alice" with role "ANALYST" attempts transition "approve"
+    Then a ValidationFailedException is thrown
+
+  Scenario: EQ validation rule passes when field equals the required value
+    Given the workflow config has a transition "approve" from "UNDER_REVIEW" to "CLOSED" for role "ANALYST" requiring field "trade.status" EQ "MATCHED"
+    And the work item has field "trade.status" set to "MATCHED"
+    When user "alice" with role "ANALYST" executes transition "approve"
+    Then the work item status is "CLOSED"
+
+  Scenario: NEQ validation rule blocks transition when field equals the excluded value
+    Given the workflow config has a transition "reject" from "UNDER_REVIEW" to "CLOSED" for role "ANALYST" requiring field "trade.status" NEQ "SETTLED"
+    And the work item has field "trade.status" set to "SETTLED"
+    When user "alice" with role "ANALYST" attempts transition "reject"
+    Then a ValidationFailedException is thrown
+
+  Scenario: Transition with additional fields merges values and writes a FIELD_UPDATE audit entry
+    When user "alice" with role "ANALYST" executes transition "close-resolved" with additional fields:
+      | resolution.reason | Counterparty confirmed settlement |
+    Then the work item status is "CLOSED"
+    And a FIELD_UPDATE audit entry is written
+    And the returned work item field "resolution.reason" equals "Counterparty confirmed settlement"

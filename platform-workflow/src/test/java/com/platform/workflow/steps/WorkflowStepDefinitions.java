@@ -126,12 +126,26 @@ public class WorkflowStepDefinitions {
 
     @Given("the workflow config has a transition {string} from {string} to {string} for role {string} requiring field {string} EXISTS")
     public void addTransitionWithExistsValidation(String name, String from, String to, String role, String field) {
+        addTransitionWithValidation(name, from, to, role, new ValidationRule(field, "EXISTS", null));
+    }
+
+    @Given("the workflow config has a transition {string} from {string} to {string} for role {string} requiring field {string} EQ {string}")
+    public void addTransitionWithEqValidation(String name, String from, String to, String role, String field, String value) {
+        addTransitionWithValidation(name, from, to, role, new ValidationRule(field, "EQ", value));
+    }
+
+    @Given("the workflow config has a transition {string} from {string} to {string} for role {string} requiring field {string} NEQ {string}")
+    public void addTransitionWithNeqValidation(String name, String from, String to, String role, String field, String value) {
+        addTransitionWithValidation(name, from, to, role, new ValidationRule(field, "NEQ", value));
+    }
+
+    private void addTransitionWithValidation(String name, String from, String to, String role, ValidationRule rule) {
         pendingTransitions.add(new WorkflowTransition(
                 name, from, to,
                 TransitionTrigger.USER_ACTION, null,
                 List.of(role), false,
                 List.of(),
-                List.of(new ValidationRule(field, "EXISTS", null))
+                List.of(rule)
         ));
         saveConfig();
     }
@@ -150,14 +164,21 @@ public class WorkflowStepDefinitions {
     @When("user {string} with role {string} executes transition {string}")
     public void executeTransition(String userId, String role, String transitionName) {
         result = workflowService.transition(
-                new TransitionCommand(workItemId, tenantId, transitionName, userId, role, java.util.Map.of()));
+                new TransitionCommand(workItemId, tenantId, transitionName, userId, role, Map.of()));
+    }
+
+    @When("user {string} with role {string} executes transition {string} with additional fields:")
+    public void executeTransitionWithFields(String userId, String role, String transitionName, DataTable dataTable) {
+        Map<String, Object> additional = new HashMap<>(dataTable.asMap());
+        result = workflowService.transition(
+                new TransitionCommand(workItemId, tenantId, transitionName, userId, role, additional));
     }
 
     @When("user {string} with role {string} attempts transition {string}")
     public void attemptsTransition(String userId, String role, String transitionName) {
         try {
             workflowService.transition(
-                    new TransitionCommand(workItemId, tenantId, transitionName, userId, role, java.util.Map.of()));
+                    new TransitionCommand(workItemId, tenantId, transitionName, userId, role, Map.of()));
         } catch (ForbiddenTransitionException | InvalidTransitionException | ValidationFailedException e) {
             thrownException = e;
         }
@@ -200,6 +221,18 @@ public class WorkflowStepDefinitions {
     @Then("a ValidationFailedException is thrown")
     public void aValidationFailedExceptionIsThrown() {
         assertThat(thrownException).isInstanceOf(ValidationFailedException.class);
+    }
+
+    @Then("a FIELD_UPDATE audit entry is written")
+    public void aFieldUpdateAuditEntryIsWritten() {
+        assertThat(auditRepo.all())
+                .anyMatch(e -> e.eventType() == AuditEventType.FIELD_UPDATE);
+    }
+
+    @Then("the returned work item field {string} equals {string}")
+    public void theReturnedWorkItemFieldEquals(String dotPath, String expected) {
+        Object value = FieldPathResolver.resolve(result.fields(), dotPath).orElse(null);
+        assertThat(value).as("field " + dotPath).isEqualTo(expected);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
