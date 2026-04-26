@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <!-- MDC fields (correlationId, userId, tenantId, role) are included automatically -->
+      <fieldNames>
+        <timestamp>timestamp</timestamp>
+        <message>message</message>
+        <logger>logger</logger>
+        <level>level</level>
+        <thread>thread</thread>
+      </fieldNames>
+    </encoder>
+  </appender>
+
+  <root level="${LOG_LEVEL_ROOT:-INFO}">
+    <appender-ref ref="JSON_CONSOLE"/>
+  </root>
+
+</configuration>

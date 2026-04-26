@@ -1,0 +1,39 @@
+{
+  "name": "platform-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "jest --passWithNoTests",
+    "test:bdd": "TS_NODE_PROJECT=tsconfig.cucumber.json cucumber-js --config cucumber.cjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ag-grid-community": "^32.3.0",
+    "ag-grid-react": "^32.3.0",
+    "@tanstack/react-query": "^5.56.0",
+    "zustand": "^4.5.5",
+    "react-hook-form": "^7.53.0",
+    "axios": "^1.7.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8",
+    "@vitejs/plugin-react": "^4.3.2",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@cucumber/cucumber": "^11.0.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@types/jest": "^29.5.13",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "@types/node": "^22.7.5"
+  }
+}

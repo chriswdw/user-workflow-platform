@@ -86,9 +86,20 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
             }
         }
 
-        // Apply synchronous REASSIGN_GROUP actions
-        String previousGroup = workItem.assignedGroup();
+        // Merge user-supplied additional fields from the action form
         WorkItem updated = workItem;
+        if (!command.additionalFields().isEmpty()) {
+            java.util.Map<String, Object> merged = new java.util.HashMap<>(workItem.fields());
+            List<AuditEntry.ChangedField> fieldChanges = command.additionalFields().entrySet().stream()
+                    .map(e -> new AuditEntry.ChangedField(e.getKey(), merged.get(e.getKey()), e.getValue()))
+                    .toList();
+            merged.putAll(command.additionalFields());
+            updated = updated.withFields(java.util.Collections.unmodifiableMap(merged));
+            auditRepository.save(fieldUpdateAuditEntry(command, updated, fieldChanges));
+        }
+
+        // Apply synchronous REASSIGN_GROUP actions
+        String previousGroup = updated.assignedGroup();
         for (TransitionAction action : transition.actions()) {
             if (action.type() == com.platform.workflow.domain.model.TransitionActionType.REASSIGN_GROUP) {
                 String targetGroup = action.config().get("targetGroup");
@@ -161,6 +172,26 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
                 command.actorRole(),
                 Instant.now(),
                 workItem.id() + ":" + command.transitionName() + ":reassign"
+        );
+    }
+
+    private static AuditEntry fieldUpdateAuditEntry(TransitionCommand command,
+                                                      WorkItem workItem,
+                                                      List<AuditEntry.ChangedField> changedFields) {
+        return new AuditEntry(
+                UUID.randomUUID().toString(),
+                workItem.tenantId(),
+                workItem.id(),
+                workItem.correlationId(),
+                AuditEventType.FIELD_UPDATE,
+                null,
+                null,
+                command.transitionName(),
+                changedFields,
+                command.actorUserId(),
+                command.actorRole(),
+                Instant.now(),
+                workItem.id() + ":" + command.transitionName() + ":fields"
         );
     }
 }

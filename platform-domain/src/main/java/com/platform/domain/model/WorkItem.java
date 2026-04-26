@@ -14,6 +14,9 @@ public record WorkItem(
         String workflowType,
         String correlationId,
         String configVersionId,
+        SourceType source,
+        String sourceRef,
+        String idempotencyKey,
         String status,
         String assignedGroup,
         boolean routedByDefault,
@@ -31,6 +34,7 @@ public record WorkItem(
 
     public WorkItem withStatus(String newStatus) {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 newStatus, assignedGroup, routedByDefault, fields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 pendingCheckerId, pendingCheckerTransition, version, makerUserId, createdAt, Instant.now());
@@ -38,6 +42,7 @@ public record WorkItem(
 
     public WorkItem withAssignedGroup(String newGroup) {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 status, newGroup, routedByDefault, fields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 pendingCheckerId, pendingCheckerTransition, version, makerUserId, createdAt, Instant.now());
@@ -45,6 +50,7 @@ public record WorkItem(
 
     public WorkItem withMakerUserId(String userId) {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 status, assignedGroup, routedByDefault, fields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 pendingCheckerId, pendingCheckerTransition, version, userId, createdAt, Instant.now());
@@ -52,6 +58,7 @@ public record WorkItem(
 
     public WorkItem withFields(Map<String, Object> newFields) {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 status, assignedGroup, routedByDefault, newFields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 pendingCheckerId, pendingCheckerTransition, version, makerUserId, createdAt, Instant.now());
@@ -59,6 +66,7 @@ public record WorkItem(
 
     public WorkItem withPendingMakerChecker(String checkerId, String transitionName) {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 status, assignedGroup, routedByDefault, fields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 checkerId, transitionName, version, makerUserId, createdAt, Instant.now());
@@ -66,6 +74,7 @@ public record WorkItem(
 
     public WorkItem clearPendingMakerChecker() {
         return new WorkItem(id, tenantId, workflowType, correlationId, configVersionId,
+                source, sourceRef, idempotencyKey,
                 status, assignedGroup, routedByDefault, fields,
                 priorityScore, priorityLevel, priorityLastCalculatedAt,
                 null, null, version, makerUserId, createdAt, Instant.now());
