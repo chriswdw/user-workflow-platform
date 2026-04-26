@@ -4,6 +4,10 @@ import com.platform.api.domain.ports.IFindWorkItemPort;
 import com.platform.api.domain.ports.IListWorkItemsPort;
 import com.platform.audit.domain.model.AuditQuery;
 import com.platform.audit.domain.ports.in.IQueryAuditTrailUseCase;
+import com.platform.config.domain.exception.ConfigNotFoundException;
+import com.platform.config.domain.model.ConfigDocument;
+import com.platform.config.domain.model.ConfigType;
+import com.platform.config.domain.ports.in.ILoadConfigUseCase;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.SourceType;
@@ -89,6 +93,76 @@ public class DevConfig {
             String key = storeKey(query.tenantId(), query.workItemId());
             return store.getOrDefault(key, List.of());
         };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ILoadConfigUseCase loadConfigUseCase() {
+        return (tenantId, workflowType, configType) -> {
+            if (ConfigType.DETAIL_VIEW_CONFIG.equals(configType)
+                    && "SETTLEMENT_EXCEPTION".equals(workflowType)) {
+                return new ConfigDocument(
+                        "dev-dvc-settlement", tenantId, workflowType,
+                        ConfigType.DETAIL_VIEW_CONFIG, seedDetailViewConfig(),
+                        "1", true);
+            }
+            throw new ConfigNotFoundException(
+                    "No dev config for " + configType + "/" + workflowType);
+        };
+    }
+
+    private static Map<String, Object> seedDetailViewConfig() {
+        return Map.of(
+            "id",           "dev-dvc-settlement",
+            "tenantId",     "tenant-1",
+            "workflowType", "SETTLEMENT_EXCEPTION",
+            "active",       true,
+            "version",      1,
+            "sections", List.of(
+                Map.of("title", "Trade Details", "layout", "TWO_COLUMN", "fields", List.of(
+                    Map.of("field", "trade.ref",                     "label", "Trade Ref",   "formatter", "TEXT"),
+                    Map.of("field", "trade.valueDate",               "label", "Value Date",  "formatter", "DATE"),
+                    Map.of("field", "trade.notionalAmount.amount",   "label", "Notional",    "formatter", "CURRENCY"),
+                    Map.of("field", "trade.notionalAmount.currency", "label", "Currency",    "formatter", "TEXT"),
+                    Map.of("field", "status",                        "label", "Status",      "formatter", "BADGE"),
+                    Map.of("field", "priorityLevel",                 "label", "Priority",    "formatter", "BADGE")
+                )),
+                Map.of("title", "Counterparty", "layout", "TWO_COLUMN", "fields", List.of(
+                    Map.of("field", "counterparty.name", "label", "Name", "formatter", "TEXT"),
+                    Map.of("field", "counterparty.lei",  "label", "LEI",  "formatter", "TEXT")
+                )),
+                Map.of("title", "Assignment", "layout", "TWO_COLUMN", "collapsible", true, "fields", List.of(
+                    Map.of("field", "assignedGroup", "label", "Group",   "formatter", "TEXT"),
+                    Map.of("field", "source",        "label", "Source",  "formatter", "TEXT"),
+                    Map.of("field", "makerUserId",   "label", "Maker",   "formatter", "TEXT"),
+                    Map.of("field", "createdAt",     "label", "Created", "formatter", "DATETIME")
+                ))
+            ),
+            "actions", List.of(
+                Map.of("transition", "close-as-resolved",
+                       "label", "Close as Resolved", "style", "PRIMARY",
+                       "visibleInStates", List.of("UNDER_REVIEW", "ESCALATED"),
+                       "visibleRoles", List.of("ANALYST", "SUPERVISOR"),
+                       "confirmationRequired", true,
+                       "confirmationMessage", "Close this exception as resolved?",
+                       "inputFields", List.of(
+                           Map.of("field", "resolution.reason", "label", "Reason",
+                                  "inputType", "TEXTAREA", "required", true)
+                       )),
+                Map.of("transition", "escalate",
+                       "label", "Escalate", "style", "SECONDARY",
+                       "visibleInStates", List.of("UNDER_REVIEW"),
+                       "visibleRoles", List.of("ANALYST", "SUPERVISOR")),
+                Map.of("transition", "assign-to-compliance",
+                       "label", "Compliance Review", "style", "SECONDARY",
+                       "visibleInStates", List.of("UNDER_REVIEW", "ESCALATED"),
+                       "visibleRoles", List.of("SUPERVISOR")),
+                Map.of("transition", "return-to-review",
+                       "label", "Return to Review", "style", "SECONDARY",
+                       "visibleInStates", List.of("ESCALATED"),
+                       "visibleRoles", List.of("SUPERVISOR"))
+            )
+        );
     }
 
     // ── Seed data ─────────────────────────────────────────────────────────────
