@@ -585,9 +585,15 @@ dialog.modal-overlay {
   --ag-header-background-color: #f8fafc;
   --ag-header-foreground-color: #475569;
   --ag-border-color: #e2e8f0;
-  --ag-row-hover-color: #f1f5f9;
+  --ag-row-hover-color: #e8f0fe;
   --ag-selected-row-background-color: #eff6ff;
+  --ag-odd-row-background-color: #f8fafc;
   --ag-font-size: 13px;
   --ag-font-family: var(--font);
   border-radius: var(--radius-md);
 }
+
+.ag-theme-alpine .ag-row-odd  { background-color: #f8fafc; }
+.ag-theme-alpine .ag-row-even { background-color: #ffffff; }
+.ag-theme-alpine .ag-row-odd:hover,
+.ag-theme-alpine .ag-row-even:hover { background-color: #e8f0fe; }
