@@ -10,22 +10,30 @@ export function LoginPage() {
   const login = useDevLogin();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 120, gap: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>Workflow Platform</h1>
-      <p style={{ color: '#666', marginBottom: 24 }}>Dev login — select a role to continue</p>
-      {ROLES.map(r => (
-        <button
-          key={r.role}
-          onClick={() => login.mutate(r)}
-          disabled={login.isPending}
-          style={{ width: 220, padding: '10px 0', fontSize: 15, cursor: 'pointer' }}
-        >
-          Login as {r.label}
-        </button>
-      ))}
-      {login.isError && (
-        <p style={{ color: 'red' }}>Login failed — is the backend running?</p>
-      )}
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h1 className="login-title">Workflow Platform</h1>
+        <p className="login-subtitle">Select a role to sign in</p>
+        <div className="login-divider" />
+        {ROLES.map(r => (
+          <button
+            key={r.role}
+            className="login-btn"
+            onClick={() => login.mutate(r)}
+            disabled={login.isPending}
+          >
+            {login.isPending ? 'Signing in…' : `Continue as ${r.label}`}
+          </button>
+        ))}
+        {login.isError && (
+          <p className="login-error">Login failed — is the backend running?</p>
+        )}
+      </div>
     </div>
   );
 }

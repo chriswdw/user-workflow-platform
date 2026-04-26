@@ -6,6 +6,7 @@ export default defineConfig({
   server: {
     host: true,        // binds to 0.0.0.0, reachable from LAN
     port: 5173,
+    allowedHosts: 'all',  // permit requests via hostname, not just IP
     proxy: {
       '/api': 'http://localhost:8080',
     },

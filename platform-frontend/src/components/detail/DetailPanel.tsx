@@ -30,51 +30,36 @@ export function DetailPanel({ workItemId, onClose }: Props) {
   };
 
   return (
-    <div
-      className="detail-panel"
-      style={{
-        position: 'fixed', top: 0, right: 0, height: '100vh', width: 680,
-        background: '#fff', boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
-        display: 'flex', flexDirection: 'column', zIndex: 100,
-      }}
-    >
-      <header className="detail-panel-header" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid #e0e0e0' }}>
+    <div className="detail-panel">
+      <header className="detail-panel-header">
         {item && (
           <>
-            <span className="detail-panel-id" style={{ fontWeight: 600, fontSize: 15 }}>{item.id}</span>
-            <span className={`badge badge--${item.status.toLowerCase().replace(/_/g, '-')}`}>{item.status}</span>
+            <span className="detail-panel-id">{item.id}</span>
+            <span className={`badge badge--${item.status.toLowerCase().replace(/_/g, '-')}`}>
+              {item.status.replace(/_/g, ' ')}
+            </span>
             {item.priorityLevel && (
-              <span className={`badge badge--priority-${item.priorityLevel.toLowerCase()}`}>{item.priorityLevel}</span>
+              <span className={`badge badge--priority-${item.priorityLevel.toLowerCase()}`}>
+                {item.priorityLevel}
+              </span>
             )}
           </>
         )}
-        <button
-          onClick={onClose}
-          style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}
-          aria-label="Close"
-        >
-          ×
-        </button>
+        <button className="detail-panel-close" onClick={onClose} aria-label="Close">×</button>
       </header>
 
-      <nav className="detail-panel-tabs" style={{ display: 'flex', borderBottom: '1px solid #e0e0e0' }}>
-        <button
-          className={tab === 'details' ? 'tab tab--active' : 'tab'}
-          onClick={() => setTab('details')}
-        >
+      <nav className="detail-panel-tabs">
+        <button className={tab === 'details' ? 'tab tab--active' : 'tab'} onClick={() => setTab('details')}>
           Details
         </button>
-        <button
-          className={tab === 'audit' ? 'tab tab--active' : 'tab'}
-          onClick={() => setTab('audit')}
-        >
+        <button className={tab === 'audit' ? 'tab tab--active' : 'tab'} onClick={() => setTab('audit')}>
           Audit Trail
         </button>
       </nav>
 
-      <div className="detail-panel-body" style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-        {loading && <p>Loading…</p>}
-        {itemError && <p style={{ color: 'red' }}>Failed to load item.</p>}
+      <div className="detail-panel-body">
+        {loading && <p style={{ padding: 24, color: 'var(--color-text-muted)' }}>Loading…</p>}
+        {itemError && <p style={{ padding: 24, color: 'var(--color-danger)' }}>Failed to load item.</p>}
 
         {!loading && item && config && tab === 'details' && (
           <DetailView
@@ -86,9 +71,7 @@ export function DetailPanel({ workItemId, onClose }: Props) {
           />
         )}
 
-        {tab === 'audit' && (
-          <AuditTrail entries={auditEntries} />
-        )}
+        {tab === 'audit' && <AuditTrail entries={auditEntries} />}
       </div>
     </div>
   );

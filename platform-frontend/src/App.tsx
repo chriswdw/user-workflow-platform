@@ -17,34 +17,34 @@ function MainApp() {
   const config = BLOTTER_CONFIGS[workflowType];
 
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '8px 16px', background: '#1a1a2e', color: 'white' }}>
-        <strong style={{ fontSize: 18 }}>Workflow Platform</strong>
+    <div>
+      <header className="app-header">
+        <span className="app-header-title">Workflow Platform</span>
         <select
+          className="app-header-select"
           value={workflowType}
           onChange={e => setWorkflowType(e.target.value)}
-          style={{ marginLeft: 16, padding: '4px 8px' }}
         >
-          {WORKFLOW_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
+          {WORKFLOW_TYPES.map(t => (
+            <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+          ))}
         </select>
-        <span style={{ marginLeft: 'auto', fontSize: 13, opacity: 0.8 }}>
-          {userId} · {role}
-        </span>
-        <button onClick={clearAuth} style={{ padding: '4px 12px', cursor: 'pointer' }}>
-          Logout
-        </button>
+        <span className="app-header-user">{userId} · {role}</span>
+        <button className="app-header-logout" onClick={clearAuth}>Logout</button>
       </header>
 
-      <main style={{ padding: 16 }}>
-        {isLoading && <p>Loading…</p>}
-        {isError  && <p style={{ color: 'red' }}>Failed to load work items.</p>}
+      <main className="app-main">
+        {isLoading && <p style={{ color: 'var(--color-text-muted)' }}>Loading…</p>}
+        {isError && <p style={{ color: 'var(--color-danger)' }}>Failed to load work items.</p>}
         {!isLoading && !isError && config && (
-          <Blotter
-            config={config}
-            items={items}
-            userRole={role ?? ''}
-            onSelectItem={setSelectedItemId}
-          />
+          <div className="blotter-container">
+            <Blotter
+              config={config}
+              items={items}
+              userRole={role ?? ''}
+              onSelectItem={setSelectedItemId}
+            />
+          </div>
         )}
       </main>
 
