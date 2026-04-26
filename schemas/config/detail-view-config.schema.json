@@ -117,6 +117,39 @@
           "confirmationMessage": {
             "type": "string",
             "description": "Message shown in the confirmation dialog. Required if confirmationRequired:true."
+          },
+          "inputFields": {
+            "type": "array",
+            "description": "Fields collected from the user in a modal before the transition fires. Values are merged into WorkItem.fields server-side. Takes precedence over confirmationRequired — if inputFields is present, the form modal is shown instead of a simple confirmation dialog.",
+            "items": {
+              "type": "object",
+              "required": ["field", "label", "inputType"],
+              "additionalProperties": false,
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "Dot-notation path into WorkItem.fields to write the captured value."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Label shown next to the input in the modal."
+                },
+                "inputType": {
+                  "type": "string",
+                  "enum": ["TEXT", "TEXTAREA", "DATE", "SELECT", "CURRENCY"],
+                  "description": "TEXT: single-line text. TEXTAREA: multi-line text. DATE: date picker. SELECT: dropdown — requires options. CURRENCY: decimal input validated as BigDecimal string."
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "If true, the form cannot be submitted with this field empty."
+                },
+                "options": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Required for inputType=SELECT. List of selectable values."
+                }
+              }
+            }
           }
         }
       }

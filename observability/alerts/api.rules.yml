@@ -1,0 +1,42 @@
+groups:
+  - name: platform-api
+    interval: 1m
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="platform-api",status=~"5.."}[5m]))
+          /
+          sum(rate(http_server_requests_seconds_count{job="platform-api"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          module: platform-api
+        annotations:
+          summary: "High 5xx error rate on platform-api"
+          description: "5xx rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: RateLimitSaturation
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="platform-api",status="429"}[1m]))
+          /
+          sum(rate(http_server_requests_seconds_count{job="platform-api"}[1m])) > 0.10
+        for: 2m
+        labels:
+          severity: warning
+          module: platform-api
+        annotations:
+          summary: "High rate-limit rejection rate on platform-api"
+          description: "429 rate is {{ $value | humanizePercentage }} — tenants may be experiencing throttling"
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_server_requests_seconds_bucket{job="platform-api"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          module: platform-api
+        annotations:
+          summary: "p99 API latency exceeds 2s"
+          description: "p99 latency is {{ $value }}s"

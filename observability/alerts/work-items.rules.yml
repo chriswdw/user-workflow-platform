@@ -1,0 +1,25 @@
+groups:
+  - name: platform-work-items
+    interval: 1m
+    rules:
+      - alert: RoutingFallbackSpike
+        expr: |
+          sum(rate(platform_routing_fallback_total[5m])) by (workflow_type)
+          /
+          sum(rate(platform_work_items_ingested_total[5m])) by (workflow_type) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High routing fallback rate for {{ $labels.workflow_type }}"
+          description: "{{ $value | humanizePercentage }} of items are being caught by defaultGroup — routing rules may need updating"
+
+      - alert: SlaBreachRateHigh
+        expr: |
+          sum(rate(platform_sla_breaches_total[15m])) by (workflow_type) > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SLA breaches occurring for {{ $labels.workflow_type }}"
+          description: "{{ $value }} SLA breaches/s over the last 15 minutes"

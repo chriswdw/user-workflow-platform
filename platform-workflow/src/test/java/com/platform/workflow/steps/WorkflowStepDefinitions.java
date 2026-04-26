@@ -72,6 +72,7 @@ public class WorkflowStepDefinitions {
         this.workflowType = type;
         WorkItem workItem = new WorkItem(
                 id, tenantId, type, "corr-" + id, null,
+                null, null, null,
                 state, group, false, new HashMap<>(),
                 null, null, null, null, null,
                 1, "system", Instant.now(), Instant.now()
@@ -149,14 +150,14 @@ public class WorkflowStepDefinitions {
     @When("user {string} with role {string} executes transition {string}")
     public void executeTransition(String userId, String role, String transitionName) {
         result = workflowService.transition(
-                new TransitionCommand(workItemId, tenantId, transitionName, userId, role));
+                new TransitionCommand(workItemId, tenantId, transitionName, userId, role, java.util.Map.of()));
     }
 
     @When("user {string} with role {string} attempts transition {string}")
     public void attemptsTransition(String userId, String role, String transitionName) {
         try {
             workflowService.transition(
-                    new TransitionCommand(workItemId, tenantId, transitionName, userId, role));
+                    new TransitionCommand(workItemId, tenantId, transitionName, userId, role, java.util.Map.of()));
         } catch (ForbiddenTransitionException | InvalidTransitionException | ValidationFailedException e) {
             thrownException = e;
         }
