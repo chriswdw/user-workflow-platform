@@ -37,6 +37,29 @@ tasks.register("validateConfigs") {
     }
 }
 
+// Generates TypeScript types from JSON schemas into platform-frontend/src/types/generated/
+tasks.register<Exec>("generateTypes") {
+    group = "build"
+    description = "Generates Zod validators and TypeScript types from JSON schemas."
+    commandLine("node", "scripts/generate-types.mjs")
+}
+
+// Runs the frontend BDD tests
+tasks.register<Exec>("frontendTest") {
+    group = "verification"
+    description = "Runs the platform-frontend Cucumber BDD tests."
+    workingDir("platform-frontend")
+    commandLine("npm", "run", "test:bdd")
+}
+
+// Builds the frontend for production
+tasks.register<Exec>("frontendBuild") {
+    group = "build"
+    description = "Builds the platform-frontend Vite application."
+    workingDir("platform-frontend")
+    commandLine("npm", "run", "build")
+}
+
 // Custom task: simulate priority scoring impact before deploying priorityConfig changes
 tasks.register("simulatePriority") {
     group = "verification"

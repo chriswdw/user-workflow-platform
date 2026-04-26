@@ -1,24 +1,29 @@
 # Gradle
 .gradle/
 build/
-**/build/
+!**/src/**/build/
 
 # IDE
 .idea/
+.vscode/
 *.iml
-*.ipr
 *.iws
-out/
-.classpath
-.project
-.settings/
-*.swp
+*.ipr
+
+# Node / Frontend
+node_modules/
+platform-frontend/dist/
+
+# Python virtualenv
+.venv/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
+# Logs
+*.log
+
+# Secrets — never commit
 application-local.yml
-application-local.yaml
+application-local.properties
