@@ -22,6 +22,8 @@ import java.util.Optional;
 
 public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItemsPort, IWorkItemRepository {
 
+    private static final String TENANT_ID = "tenantId";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -38,7 +40,7 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
                 """;
         var params = new MapSqlParameterSource()
                 .addValue("id", workItemId)
-                .addValue("tenantId", tenantId);
+                .addValue(TENANT_ID, tenantId);
         return jdbc.query(sql, params, this::mapRow).stream().findFirst();
     }
 
@@ -50,7 +52,7 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
                 ORDER BY priority_score DESC NULLS LAST, created_at DESC
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
+                .addValue(TENANT_ID, tenantId)
                 .addValue("workflowType", workflowType);
         return jdbc.query(sql, params, this::mapRow);
     }
@@ -76,7 +78,7 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
         Instant now = Instant.now();
         var params = new MapSqlParameterSource()
                 .addValue("id", w.id())
-                .addValue("tenantId", w.tenantId())
+                .addValue(TENANT_ID, w.tenantId())
                 .addValue("status", w.status())
                 .addValue("assignedGroup", w.assignedGroup())
                 .addValue("routedByDefault", w.routedByDefault())

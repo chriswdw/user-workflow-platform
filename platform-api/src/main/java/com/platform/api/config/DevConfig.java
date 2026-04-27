@@ -46,7 +46,21 @@ public class DevConfig {
     private static final String ANALYST            = "ANALYST";
     private static final String SUPERVISOR         = "SUPERVISOR";
 
+    // Work item IDs (seed data)
+    private static final String WI_001             = "wi-001";
+    private static final String WI_003             = "wi-003";
+
+    // Trade field keys (JSONB structure)
+    private static final String F_TRADE            = "trade";
+    private static final String F_VALUE_DATE       = "valueDate";
+    private static final String F_NOTIONAL_AMOUNT  = "notionalAmount";
+    private static final String F_AMOUNT           = "amount";
+    private static final String F_CURRENCY         = "currency";
+    private static final String F_COUNTERPARTY     = "counterparty";
+
     // Config map keys
+    private static final String LAYOUT_TWO_COLUMN  = "TWO_COLUMN";
+    private static final String STYLE_SECONDARY    = "SECONDARY";
     private static final String K_FIELD            = "field";
     private static final String K_LABEL            = "label";
     private static final String K_FORMATTER        = "formatter";
@@ -141,7 +155,7 @@ public class DevConfig {
             "active",       true,
             "version",      1,
             "sections", List.of(
-                Map.of(K_TITLE, "Trade Details", K_LAYOUT, "TWO_COLUMN", K_FIELDS, List.of(
+                Map.of(K_TITLE, "Trade Details", K_LAYOUT, LAYOUT_TWO_COLUMN, K_FIELDS, List.of(
                     Map.of(K_FIELD, "trade.ref",                     K_LABEL, "Trade Ref",   K_FORMATTER, "TEXT"),
                     Map.of(K_FIELD, "trade.valueDate",               K_LABEL, "Value Date",  K_FORMATTER, "DATE"),
                     Map.of(K_FIELD, "trade.notionalAmount.amount",   K_LABEL, "Notional",    K_FORMATTER, "CURRENCY"),
@@ -149,11 +163,11 @@ public class DevConfig {
                     Map.of(K_FIELD, "status",                        K_LABEL, "Status",      K_FORMATTER, "BADGE"),
                     Map.of(K_FIELD, "priorityLevel",                 K_LABEL, "Priority",    K_FORMATTER, "BADGE")
                 )),
-                Map.of(K_TITLE, "Counterparty", K_LAYOUT, "TWO_COLUMN", K_FIELDS, List.of(
+                Map.of(K_TITLE, "Counterparty", K_LAYOUT, LAYOUT_TWO_COLUMN, K_FIELDS, List.of(
                     Map.of(K_FIELD, "counterparty.name", K_LABEL, "Name", K_FORMATTER, "TEXT"),
                     Map.of(K_FIELD, "counterparty.lei",  K_LABEL, "LEI",  K_FORMATTER, "TEXT")
                 )),
-                Map.of(K_TITLE, "Assignment", K_LAYOUT, "TWO_COLUMN", "collapsible", true, K_FIELDS, List.of(
+                Map.of(K_TITLE, "Assignment", K_LAYOUT, LAYOUT_TWO_COLUMN, "collapsible", true, K_FIELDS, List.of(
                     Map.of(K_FIELD, "assignedGroup", K_LABEL, "Group",   K_FORMATTER, "TEXT"),
                     Map.of(K_FIELD, "source",        K_LABEL, "Source",  K_FORMATTER, "TEXT"),
                     Map.of(K_FIELD, "makerUserId",   K_LABEL, "Maker",   K_FORMATTER, "TEXT"),
@@ -172,15 +186,15 @@ public class DevConfig {
                                   "inputType", "TEXTAREA", "required", true)
                        )),
                 Map.of(K_TRANSITION, "escalate",
-                       K_LABEL, "Escalate", K_STYLE, "SECONDARY",
+                       K_LABEL, "Escalate", K_STYLE, STYLE_SECONDARY,
                        K_VISIBLE_STATES, List.of(UNDER_REVIEW),
                        K_VISIBLE_ROLES, List.of(ANALYST, SUPERVISOR)),
                 Map.of(K_TRANSITION, "assign-to-compliance",
-                       K_LABEL, "Compliance Review", K_STYLE, "SECONDARY",
+                       K_LABEL, "Compliance Review", K_STYLE, STYLE_SECONDARY,
                        K_VISIBLE_STATES, List.of(UNDER_REVIEW, ESCALATED),
                        K_VISIBLE_ROLES, List.of(SUPERVISOR)),
                 Map.of(K_TRANSITION, "return-to-review",
-                       K_LABEL, "Return to Review", K_STYLE, "SECONDARY",
+                       K_LABEL, "Return to Review", K_STYLE, STYLE_SECONDARY,
                        K_VISIBLE_STATES, List.of(ESCALATED),
                        K_VISIBLE_ROLES, List.of(SUPERVISOR))
             )
@@ -192,58 +206,58 @@ public class DevConfig {
     private static List<WorkItem> seed() {
         Instant now = Instant.now();
         return List.of(
-            item("wi-001", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
+            item(WI_001, TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
                 UNDER_REVIEW, GROUP_OPS, 750, "CRITICAL", now.minusSeconds(7200),
                 Map.of(
-                    "trade", Map.of(
+                    F_TRADE, Map.of(
                         "ref", "TRD-20241015-001",
-                        "valueDate", "2024-10-17",
-                        "notionalAmount", Map.of("amount", "15000000.00", "currency", "GBP")),
-                    "counterparty", Map.of(
+                        F_VALUE_DATE, "2024-10-17",
+                        F_NOTIONAL_AMOUNT, Map.of(F_AMOUNT, "15000000.00", F_CURRENCY, "GBP")),
+                    F_COUNTERPARTY, Map.of(
                         "name", "Barclays Capital",
                         "lei", "G5GSEF7VJP5I7OUK5573"))),
 
             item("wi-002", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
                 UNDER_REVIEW, GROUP_OPS, 400, "HIGH", now.minusSeconds(3600),
                 Map.of(
-                    "trade", Map.of(
+                    F_TRADE, Map.of(
                         "ref", "TRD-20241015-002",
-                        "valueDate", "2024-10-18",
-                        "notionalAmount", Map.of("amount", "2500000.00", "currency", "EUR")),
-                    "counterparty", Map.of(
+                        F_VALUE_DATE, "2024-10-18",
+                        F_NOTIONAL_AMOUNT, Map.of(F_AMOUNT, "2500000.00", F_CURRENCY, "EUR")),
+                    F_COUNTERPARTY, Map.of(
                         "name", "Deutsche Bank AG",
                         "lei", "7LTWFZYICNSX8D621K86"))),
 
-            item("wi-003", TENANT_1, SETTLEMENT_EX, SourceType.DB_POLL,
+            item(WI_003, TENANT_1, SETTLEMENT_EX, SourceType.DB_POLL,
                 ESCALATED, GROUP_SENIOR, 850, "CRITICAL", now.minusSeconds(18000),
                 Map.of(
-                    "trade", Map.of(
+                    F_TRADE, Map.of(
                         "ref", "TRD-20241014-087",
-                        "valueDate", "2024-10-15",
-                        "notionalAmount", Map.of("amount", "50000000.00", "currency", "USD")),
-                    "counterparty", Map.of(
+                        F_VALUE_DATE, "2024-10-15",
+                        F_NOTIONAL_AMOUNT, Map.of(F_AMOUNT, "50000000.00", F_CURRENCY, "USD")),
+                    F_COUNTERPARTY, Map.of(
                         "name", "JP Morgan Chase",
                         "lei", "8I5DZWZKVSZI1NUHU748"))),
 
             item("wi-004", TENANT_1, SETTLEMENT_EX, SourceType.FILE_UPLOAD,
                 CLOSED, GROUP_OPS, 50, "LOW", now.minusSeconds(86400),
                 Map.of(
-                    "trade", Map.of(
+                    F_TRADE, Map.of(
                         "ref", "TRD-20241013-044",
-                        "valueDate", "2024-10-14",
-                        "notionalAmount", Map.of("amount", "175000.00", "currency", "GBP")),
-                    "counterparty", Map.of(
+                        F_VALUE_DATE, "2024-10-14",
+                        F_NOTIONAL_AMOUNT, Map.of(F_AMOUNT, "175000.00", F_CURRENCY, "GBP")),
+                    F_COUNTERPARTY, Map.of(
                         "name", "HSBC Holdings",
                         "lei", "MLU0ZO3ML4LN2LL2TL39"))),
 
             item("wi-005", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
                 UNDER_REVIEW, GROUP_OPS, 300, "MEDIUM", now.minusSeconds(1800),
                 Map.of(
-                    "trade", Map.of(
+                    F_TRADE, Map.of(
                         "ref", "TRD-20241015-031",
-                        "valueDate", "2024-10-20",
-                        "notionalAmount", Map.of("amount", "8750000.00", "currency", "CHF")),
-                    "counterparty", Map.of(
+                        F_VALUE_DATE, "2024-10-20",
+                        F_NOTIONAL_AMOUNT, Map.of(F_AMOUNT, "8750000.00", F_CURRENCY, "CHF")),
+                    F_COUNTERPARTY, Map.of(
                         "name", "UBS Group AG",
                         "lei", "BFM8T61CT2L1QCEMIK50")))
         );
@@ -252,17 +266,17 @@ public class DevConfig {
     private static Map<String, List<AuditEntry>> seedAudit() {
         Instant base = Instant.now().minusSeconds(7200);
         return Map.of(
-            storeKey(TENANT_1, "wi-001"), List.of(
-                auditEntry(TENANT_1, "wi-001", AuditEventType.INGESTION,
+            storeKey(TENANT_1, WI_001), List.of(
+                auditEntry(TENANT_1, WI_001, AuditEventType.INGESTION,
                     null, UNDER_REVIEW, base),
-                auditEntry(TENANT_1, "wi-001", AuditEventType.ASSIGNMENT,
+                auditEntry(TENANT_1, WI_001, AuditEventType.ASSIGNMENT,
                     UNDER_REVIEW, UNDER_REVIEW, base.plusSeconds(5))),
-            storeKey(TENANT_1, "wi-003"), List.of(
-                auditEntry(TENANT_1, "wi-003", AuditEventType.INGESTION,
+            storeKey(TENANT_1, WI_003), List.of(
+                auditEntry(TENANT_1, WI_003, AuditEventType.INGESTION,
                     null, UNDER_REVIEW, base.minusSeconds(10800)),
-                auditEntry(TENANT_1, "wi-003", AuditEventType.STATE_TRANSITION,
+                auditEntry(TENANT_1, WI_003, AuditEventType.STATE_TRANSITION,
                     UNDER_REVIEW, ESCALATED, base.minusSeconds(7200)),
-                auditEntry(TENANT_1, "wi-003", AuditEventType.SLA_WARNING,
+                auditEntry(TENANT_1, WI_003, AuditEventType.SLA_WARNING,
                     ESCALATED, ESCALATED, base.minusSeconds(3600)))
         );
     }
