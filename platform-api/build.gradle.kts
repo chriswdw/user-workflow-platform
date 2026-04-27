@@ -13,6 +13,11 @@ dependencies {
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.jdbc)
+    implementation(libs.liquibase.core)
+    runtimeOnly(libs.postgresql.driver)
+
+    testImplementation(libs.embedded.postgres)
     implementation(libs.jjwt.api)
     runtimeOnly(libs.jjwt.impl)
     runtimeOnly(libs.jjwt.jackson)
