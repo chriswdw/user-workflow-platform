@@ -129,6 +129,26 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 
 **Why in-memory adapters matter**: Cucumber step definitions call domain services directly via input ports using in-memory implementations — no Spring context, no database, no Kafka. New output ports must have an in-memory implementation before a BDD test can fail correctly. This is the mechanism that enforces hexagonal architecture through the test process.
 
+## Code Coverage
+
+> Coverage is a signal, not a target. A green coverage bar on the wrong tests is worthless. Use it to find untested behaviour, not to hit a number.
+
+**When to review**: after every feature branch, before raising a PR. Run `./gradlew build` — JaCoCo XML reports are written to `*/build/reports/jacoco/test/jacocoTestReport.xml` for each module.
+
+**Threshold for action**: any production class below **80% line coverage** is a gap worth addressing, unless it falls into an exempt category (see below).
+
+**How to address gaps — Cucumber first:**
+1. Ask: *does this uncovered path represent a behaviour a user or system actor could trigger?* If yes, write a Cucumber scenario in `src/test/resources/features/<module>/`. This is the default choice — scenarios document intent in business terms, serve as living documentation, and exercise the full port-to-port stack via in-memory doubles.
+2. If the gap is in a pure-logic method with no meaningful BDD narrative (e.g. a domain model helper, an edge case in a validation algorithm), write a focused JUnit 5 unit test instead.
+3. Adapter integration gaps (JDBC repositories, Kafka consumers) that cannot be expressed as domain-level BDD scenarios should use `io.zonky.test:embedded-postgres` or `@EmbeddedKafka` integration tests, following the pattern in `platform-api/src/test/.../adapter/out/postgres/`.
+
+**Exempt from coverage requirements:**
+- Spring `@AutoConfiguration` and `@Configuration` wiring classes — these are integration-tested implicitly when the application context starts
+- `main()` entry points
+- Generated code
+
+**What to look for beyond the percentage:** uncovered *error paths* (exception branches, not-found returns, optimistic lock failures) are more dangerous than uncovered happy paths. Prioritise those.
+
 ## Coding Standards
 
 **Java**: records for immutable domain objects; sealed interfaces for sum types; no nulls in domain layer (use `Optional`); constructor injection only; no `@Autowired` outside `config/`; all dependency versions in `libs.versions.toml`.
@@ -136,6 +156,8 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 **TypeScript**: strict mode; no `any`; Zod for runtime validation at API boundaries.
 
 **PostgreSQL**: every query must use an index. For `WorkItem.fields` JSONB queries: containment queries use the GIN index; field-specific queries use expression indexes declared via `field-type-registry.fieldDeclarations[].searchable`. Flag potential seq scans before implementing — check with `EXPLAIN ANALYZE`.
+
+**Cyclomatic complexity**: individual methods must stay at ≤15. Methods approaching the limit are a signal to extract a private helper or introduce a strategy/table-driven approach — not to suppress the warning. SonarQube enforces this; treat any violation as a HIGH issue.
 
 **Git**: conventional commits; feature branches; no direct commits to `main`.
 
@@ -149,3 +171,4 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 - [ ] No PII in logs; monetary values use `BigDecimal`; audit entry produced for every state change
 - [ ] `./gradlew build cucumber` passes with no failures
 - [ ] `./gradlew sonar` run and all HIGH/CRITICAL issues resolved before merge
+- [ ] Coverage reviewed; any production class below 80% line coverage addressed — Cucumber scenario preferred, unit test where BDD narrative doesn't apply, adapter integration test for infrastructure-only gaps
