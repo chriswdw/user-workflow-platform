@@ -15,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -53,7 +54,7 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IWorkflo
                 .addValue("changedFields", toJsonChangedFields(entry.changedFields()))
                 .addValue("actorUserId", entry.actorUserId())
                 .addValue("actorRole", entry.actorRole())
-                .addValue("timestamp", entry.timestamp())
+                .addValue("timestamp", toOdt(entry.timestamp()))
                 .addValue("idempotencyKey", entry.idempotencyKey());
         jdbc.update(sql, params);
     }
@@ -87,6 +88,10 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IWorkflo
                 toInstant(rs, "timestamp"),
                 rs.getString("idempotency_key")
         );
+    }
+
+    private static OffsetDateTime toOdt(Instant instant) {
+        return instant != null ? OffsetDateTime.ofInstant(instant, ZoneOffset.UTC) : null;
     }
 
     private static Instant toInstant(ResultSet rs, String column) throws SQLException {

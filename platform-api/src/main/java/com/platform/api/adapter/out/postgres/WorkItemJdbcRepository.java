@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,11 +86,11 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
                 .addValue("fields", toJson(w.fields()))
                 .addValue("priorityScore", w.priorityScore())
                 .addValue("priorityLevel", w.priorityLevel())
-                .addValue("priorityLastCalculatedAt", w.priorityLastCalculatedAt())
+                .addValue("priorityLastCalculatedAt", toOdt(w.priorityLastCalculatedAt()))
                 .addValue("pendingCheckerId", w.pendingCheckerId())
                 .addValue("pendingCheckerTransition", w.pendingCheckerTransition())
                 .addValue("makerUserId", w.makerUserId())
-                .addValue("updatedAt", now)
+                .addValue("updatedAt", toOdt(now))
                 .addValue("version", w.version());
 
         int rows = jdbc.update(sql, params);
@@ -130,6 +131,10 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
                 toInstant(rs, "created_at"),
                 toInstant(rs, "updated_at")
         );
+    }
+
+    private static OffsetDateTime toOdt(Instant instant) {
+        return instant != null ? OffsetDateTime.ofInstant(instant, ZoneOffset.UTC) : null;
     }
 
     private static Instant toInstant(ResultSet rs, String column) throws SQLException {

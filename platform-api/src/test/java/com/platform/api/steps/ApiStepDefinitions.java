@@ -1,8 +1,11 @@
 package com.platform.api.steps;
 
 import com.platform.api.doubles.InMemoryAuditQueryPort;
+import com.platform.api.doubles.InMemoryConfigPort;
 import com.platform.api.doubles.InMemoryTransitionPort;
 import com.platform.api.doubles.InMemoryWorkItemQueryPort;
+import com.platform.config.domain.model.ConfigDocument;
+import com.platform.config.domain.model.ConfigType;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.SourceType;
@@ -40,6 +43,7 @@ public class ApiStepDefinitions {
     @Autowired private InMemoryWorkItemQueryPort workItemStore;
     @Autowired private InMemoryTransitionPort transitionPort;
     @Autowired private InMemoryAuditQueryPort auditStore;
+    @Autowired private InMemoryConfigPort configStore;
 
     @Value("${api.jwt.secret}")
     private String jwtSecret;
@@ -80,6 +84,15 @@ public class ApiStepDefinitions {
     @Given("I am not authenticated")
     public void notAuthenticated() {
         authHeader = null;
+    }
+
+    @Given("a detail view config exists for workflow type {string} and tenant {string}")
+    public void detailViewConfigExists(String workflowType, String tenantId) {
+        configStore.save(new ConfigDocument(
+                "test-dvc-" + workflowType, tenantId, workflowType,
+                ConfigType.DETAIL_VIEW_CONFIG,
+                Map.of("sections", List.of(), "actions", List.of()),
+                "1", true));
     }
 
     @Given("the audit trail for work item {string} has {int} entries")
@@ -127,6 +140,23 @@ public class ApiStepDefinitions {
     @Then("the response contains {int} audit entries")
     public void responseContainsAuditEntries(int count) throws Exception {
         lastResult.andExpect(jsonPath("$.length()").value(count));
+    }
+
+    @Then("the response is a non-empty JSON array")
+    public void responseIsNonEmptyArray() throws Exception {
+        lastResult.andExpect(jsonPath("$").isArray())
+                  .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+    }
+
+    @Then("the response contains a {string} field")
+    public void responseContainsField(String fieldName) throws Exception {
+        lastResult.andExpect(jsonPath("$." + fieldName).exists());
+    }
+
+    @Then("the response contains a JWT token")
+    public void responseContainsJwtToken() throws Exception {
+        lastResult.andExpect(jsonPath("$.token").isString())
+                  .andExpect(jsonPath("$.token").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.emptyString())));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

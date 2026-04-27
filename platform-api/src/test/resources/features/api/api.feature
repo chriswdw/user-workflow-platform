@@ -43,3 +43,26 @@ Feature: Work item API
     When I POST /api/v1/work-items/wi-100/transitions with body {"transition":"close-as-resolved","additionalFields":{"resolution.reason":"Duplicate trade"}}
     Then the response status is 200
     And the response contains work item status "CLOSED"
+
+  Scenario: List work items for a workflow type returns all matching items
+    Given I am authenticated as user "user-1" with role "ANALYST" for tenant "tenant-1"
+    When I GET /api/v1/work-items?workflowType=SETTLEMENT_EXCEPTION
+    Then the response status is 200
+    And the response is a non-empty JSON array
+
+  Scenario: Config endpoint returns detail view config for known workflow type
+    Given a detail view config exists for workflow type "SETTLEMENT_EXCEPTION" and tenant "tenant-1"
+    And I am authenticated as user "user-1" with role "ANALYST" for tenant "tenant-1"
+    When I GET /api/v1/configs/detail-view/SETTLEMENT_EXCEPTION
+    Then the response status is 200
+    And the response contains a "sections" field
+
+  Scenario: Config endpoint returns 404 for unknown workflow type
+    Given I am authenticated as user "user-1" with role "ANALYST" for tenant "tenant-1"
+    When I GET /api/v1/configs/detail-view/UNKNOWN_WORKFLOW
+    Then the response status is 404
+
+  Scenario: Dev token endpoint issues a signed JWT
+    When I POST /api/dev/token with body {"userId":"dev-user","role":"ANALYST","tenantId":"tenant-1"}
+    Then the response status is 200
+    And the response contains a JWT token
