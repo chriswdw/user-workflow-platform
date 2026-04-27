@@ -16,6 +16,10 @@ Configuration-driven workflow platform for financial services. Work items ingest
 ./gradlew generateTypes                                          # Generate TypeScript types from schemas
 ./gradlew simulatePriority --workflowType=X                     # Simulate priority score impact before deploying priorityConfig changes
 docker compose -f docker/observability/docker-compose.yml up    # Full Grafana stack (optional — not required for dev or tests)
+./gradlew sonar \
+  -Dsonar.host.url=http://localhost:9000 \
+  -Dsonar.token=<token> \
+  -Dsonar.projectKey=user-workflow-platform                      # Static analysis — run before every PR; resolve all HIGH and CRITICAL issues
 ```
 
 **Developer environment**: Tests use `io.zonky.test:embedded-postgres` (real PostgreSQL binary in-JVM, no Docker) and `@EmbeddedKafka` from `spring-kafka-test`. No Docker required for running tests. **H2/HSQL are explicitly excluded** — they do not support PostgreSQL's JSONB operators (`@>`, `#>>`) or GIN indexes, making them unsuitable for validating the core data access pattern.
@@ -39,7 +43,7 @@ module/src/main/java/.../
     in/rest/     — Spring MVC controllers; call input ports only
     in/kafka/    — Kafka listeners; call input ports only
     in/file/     — file upload handlers; call input ports only
-    out/postgres/ — implements repository output ports via Spring Data JPA + JSONB
+    out/postgres/ — implements repository output ports via NamedParameterJdbcTemplate + JSONB
     out/kafka/   — implements messaging output ports via Spring Kafka
     out/http/    — implements external API output ports via WebClient
   config/        — Spring @Configuration and @Bean wiring; all DI lives here
@@ -84,7 +88,7 @@ module/src/main/java/.../
 - **Monetary values**: `BigDecimal` only — `float` and `double` are forbidden for financial amounts
 - **No PII in logs**: use masked references (e.g. `workItemId`) in log messages; the audit log holds detail
 - **Idempotency**: required on all inbound Kafka events and outbound API calls
-- **Optimistic locking**: JPA `@Version` field on WorkItem — always
+- **Optimistic locking**: enforced in SQL via `WHERE id = :id AND version = :version`; `UPDATE` row-count of 0 throws `OptimisticLockingFailureException` — always
 - **Maker-checker**: critical transitions configurable to require a second approver (`userId` must differ)
 - **Data classification**: field classification is declared per dot-notation path in `field-type-registry` (not on WorkItem instances); the blotter masks fields for insufficient roles — enforce in the domain, not in the UI
 - **Database changes**: Liquibase migration scripts only — never applied manually. Every new indexed path on `WorkItem.fields` requires a Liquibase changeset generating the PostgreSQL expression index.
@@ -144,3 +148,4 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 - [ ] Metrics, trace propagation, and structured logging implemented
 - [ ] No PII in logs; monetary values use `BigDecimal`; audit entry produced for every state change
 - [ ] `./gradlew build cucumber` passes with no failures
+- [ ] `./gradlew sonar` run and all HIGH/CRITICAL issues resolved before merge
