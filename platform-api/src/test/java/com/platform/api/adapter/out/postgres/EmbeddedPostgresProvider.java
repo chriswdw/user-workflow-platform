@@ -15,9 +15,9 @@ import java.sql.Connection;
  * Starts a single embedded PostgreSQL instance per JVM and runs Liquibase migrations once.
  * Shared across all JDBC repository integration tests to keep total setup time low.
  */
-final class EmbeddedPostgresProvider {
+public final class EmbeddedPostgresProvider {
 
-    static final DataSource DATA_SOURCE;
+    public static final DataSource DATA_SOURCE;
 
     static {
         try {

@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":platform-workflow"))
     implementation(project(":platform-audit"))
     implementation(project(":platform-observability"))
+    implementation(project(":platform-ingestion"))
     implementation(libs.spring.boot.starter.actuator)
 
     implementation(libs.spring.boot.starter.web)
@@ -18,6 +19,8 @@ dependencies {
     runtimeOnly(libs.postgresql.driver)
 
     testImplementation(libs.embedded.postgres)
+    testImplementation(libs.spring.kafka)
+    testImplementation(libs.spring.kafka.test)
     implementation(libs.jjwt.api)
     runtimeOnly(libs.jjwt.impl)
     runtimeOnly(libs.jjwt.jackson)
