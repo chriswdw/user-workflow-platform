@@ -43,11 +43,13 @@ module/src/main/java/.../
     in/rest/     — Spring MVC controllers; call input ports only
     in/kafka/    — Kafka listeners; call input ports only
     in/file/     — file upload handlers; call input ports only
-    out/postgres/ — implements repository output ports via NamedParameterJdbcTemplate + JSONB
+    out/postgres/ — implements repository output ports via NamedParameterJdbcTemplate + JSONB (see note below)
     out/kafka/   — implements messaging output ports via Spring Kafka
     out/http/    — implements external API output ports via WebClient
   config/        — Spring @Configuration and @Bean wiring; all DI lives here
 ```
+
+**No JPA/Hibernate — ever.** All database access uses `NamedParameterJdbcTemplate` with explicit SQL. Hibernate is excluded because its session/proxy model, lazy-loading surprises, and N+1 behaviour are incompatible with the performance and auditability requirements of a financial services platform at scale. `spring-boot-starter-data-jpa` must not be added to any module. JSONB columns are written using `CAST(:param AS jsonb)` in SQL — no PGobject compile-time dependency. Timestamp parameters must be `OffsetDateTime` (not `java.time.Instant`) because the PostgreSQL JDBC driver cannot infer the SQL type for `Instant`.
 
 **Rules enforced on every PR:**
 - Domain services declare constructor dependencies on output port interfaces only — never on concrete adapters
