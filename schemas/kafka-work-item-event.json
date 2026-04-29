@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "kafka-work-item-event.json",
+  "title": "KafkaWorkItemEvent",
+  "description": "Message published to work-items.ingest topic to trigger ingestion of a new work item.",
+  "type": "object",
+  "required": ["tenantId", "workflowType", "sourceRef", "rawFields"],
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "description": "Tenant that owns this work item."
+    },
+    "workflowType": {
+      "type": "string",
+      "description": "Identifies the workflow type; must match an active IngestionConfig."
+    },
+    "sourceRef": {
+      "type": "string",
+      "description": "Opaque reference to the upstream source record (e.g. topic-partition-offset)."
+    },
+    "rawFields": {
+      "type": "object",
+      "description": "Flat map of source field names to string values. Field mapping to WorkItem.fields is driven by IngestionConfig.",
+      "additionalProperties": { "type": "string" }
+    },
+    "makerUserId": {
+      "type": "string",
+      "description": "User ID of the initiating actor. Null for system-generated events."
+    }
+  },
+  "additionalProperties": false
+}

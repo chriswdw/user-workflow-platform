@@ -18,6 +18,7 @@ import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * automatically. No profile flag required.
  */
 @Configuration
+@Profile("!local")
 public class DevConfig {
 
     private static final String TENANT_1           = "tenant-1";

@@ -19,7 +19,7 @@ dependencies {
     runtimeOnly(libs.postgresql.driver)
 
     testImplementation(libs.embedded.postgres)
-    testImplementation(libs.spring.kafka)
+    implementation(libs.spring.kafka)
     testImplementation(libs.spring.kafka.test)
     implementation(libs.jjwt.api)
     runtimeOnly(libs.jjwt.impl)

@@ -57,28 +57,42 @@ cd platform-frontend && npm install && npm test
 
 Tests use embedded infrastructure and need no setup. To run the Spring Boot API against a real PostgreSQL instance:
 
-1. Install PostgreSQL and create a database:
+1. Install PostgreSQL (14 or later) if not already present:
+   ```bash
+   # Ubuntu / Debian
+   sudo apt install -y postgresql
+   ```
+
+2. Create a PostgreSQL role for your OS user and set a password. The JDBC driver
+   connects over TCP, so peer authentication is not sufficient — a password is required:
+   ```bash
+   sudo -u postgres createuser --superuser $USER
+   sudo -u postgres psql -c "ALTER USER $USER WITH PASSWORD 'localdev';"
+   ```
+
+3. Create the database:
    ```bash
    createdb platform_dev
    ```
 
-2. Create `platform-api/src/main/resources/application-local.yml`:
+4. Create `platform-api/src/main/resources/application-local.yml` (gitignored — not committed):
    ```yaml
    spring:
      datasource:
        url: jdbc:postgresql://localhost:5432/platform_dev
-       username: postgres
-       password: your_password
+       username: <your-os-username>
+       password: localdev
    ```
 
-3. Start the API:
+5. Start the API:
    ```bash
    ./gradlew :platform-api:bootRun --args='--spring.profiles.active=local'
    ```
 
-   Liquibase will run the schema migrations automatically on startup. The API will be available at `http://localhost:8080`.
+   Liquibase runs schema migrations and seeds config data automatically on first startup.
+   The API will be available at `http://localhost:8080`.
 
-4. Get a dev JWT (no credentials required in local mode):
+6. Get a dev JWT (no credentials required in local mode):
    ```bash
    curl -s -X POST http://localhost:8080/api/dev/token \
      -H "Content-Type: application/json" \

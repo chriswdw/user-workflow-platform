@@ -11,3 +11,9 @@ databaseChangeLog:
   - include:
       file: db/changelog/v1/004-seed-config-documents.sql
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1/005-seed-ingestion-config.sql
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/v1/006-nullable-audit-work-item-id.sql
+      relativeToChangelogFile: false

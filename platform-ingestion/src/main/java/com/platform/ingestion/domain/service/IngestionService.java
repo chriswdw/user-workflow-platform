@@ -3,6 +3,7 @@ package com.platform.ingestion.domain.service;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.WorkItem;
+import com.platform.ingestion.domain.exception.DuplicateIdempotencyKeyException;
 import com.platform.ingestion.domain.model.FieldMapping;
 import com.platform.ingestion.domain.model.IngestionConfig;
 import com.platform.ingestion.domain.model.IngestionResult;
@@ -141,9 +142,18 @@ public class IngestionService implements IIngestRecordUseCase {
                 Instant.now()
         );
 
-        // Persist
+        // Persist — catch concurrent duplicate: two threads may both pass exists() before either inserts
         idempotencyRepository.save(inboundRecord.tenantId(), inboundRecord.workflowType(), idempotencyKey);
-        WorkItem saved = workItemRepository.save(workItem);
+        WorkItem saved;
+        try {
+            saved = workItemRepository.save(workItem);
+        } catch (DuplicateIdempotencyKeyException e) {
+            auditRepository.save(auditEntry(
+                    inboundRecord.tenantId(), inboundRecord.makerUserId(),
+                    AuditEventType.DUPLICATE_INGESTION_DISCARDED, e.idempotencyKey(),
+                    null, null));
+            return new IngestionResult.Duplicate(e.idempotencyKey());
+        }
         auditRepository.save(auditEntry(
                 saved.tenantId(), saved.makerUserId(),
                 AuditEventType.INGESTION, idempotencyKey,
