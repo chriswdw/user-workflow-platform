@@ -8,5 +8,5 @@
     "esModuleInterop": true,
     "allowJs": true
   },
-  "include": ["src/utils", "src/types", "step-definitions"]
+  "include": ["src/utils", "src/types", "src/store", "step-definitions"]
 }

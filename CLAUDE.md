@@ -26,6 +26,14 @@ docker compose -f docker/observability/docker-compose.yml up    # Full Grafana s
 
 For local dev run: install PostgreSQL locally (no container required) and configure `spring.datasource.url` in `application-local.yml`.
 
+## Agent Tool Usage
+
+Prefer direct tools (Read, Edit, Bash, grep) over spawning sub-agents. Only use the Agent tool when:
+- Exploration requires searching many locations across the codebase (subagent_type=Explore)
+- Two or more tasks are genuinely independent and can run in parallel
+
+Never spawn a sub-agent for a single file read, a targeted grep, or a simple code edit.
+
 ## Architecture — Hexagonal (Ports & Adapters)
 
 > This is the hardest constraint to maintain and the most important. The domain core has zero framework dependencies. Violations break testability and defeat the entire design.
