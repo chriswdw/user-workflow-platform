@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "source-connection",
+  "title": "SourceConnection",
+  "description": "A data source connection managed by platform admins and accessed by tenants",
+  "type": "object",
+  "required": ["id", "name", "displayName", "connectionType", "config", "createdBy", "createdAt", "updatedAt"],
+  "properties": {
+    "id":             { "type": "string", "format": "uuid" },
+    "name":           { "type": "string", "description": "Machine-readable unique name" },
+    "displayName":    { "type": "string" },
+    "connectionType": { "type": "string", "enum": ["KAFKA", "DB", "FILE_SHARE"] },
+    "config":         { "type": "object", "description": "Connection-type-specific configuration (no credentials)" },
+    "credentialsRef": { "type": ["string", "null"], "description": "Vault or secrets-manager reference" },
+    "createdBy":      { "type": "string" },
+    "createdAt":      { "type": "string", "format": "date-time" },
+    "updatedAt":      { "type": "string", "format": "date-time" }
+  }
+}

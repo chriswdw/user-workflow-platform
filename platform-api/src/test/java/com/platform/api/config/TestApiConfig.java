@@ -2,6 +2,8 @@ package com.platform.api.config;
 
 import com.platform.api.doubles.InMemoryAuditQueryPort;
 import com.platform.api.doubles.InMemoryConfigPort;
+import com.platform.api.doubles.InMemorySourceConnectionPort;
+import com.platform.api.doubles.InMemorySubmissionPort;
 import com.platform.api.doubles.InMemoryTransitionPort;
 import com.platform.api.doubles.InMemoryWorkItemQueryPort;
 import io.cucumber.spring.CucumberContextConfiguration;
@@ -43,6 +45,18 @@ public class TestApiConfig {
         @Primary
         public InMemoryConfigPort configPort() {
             return new InMemoryConfigPort();
+        }
+
+        @Bean
+        @Primary
+        public InMemorySubmissionPort submissionPort() {
+            return new InMemorySubmissionPort();
+        }
+
+        @Bean
+        @Primary
+        public InMemorySourceConnectionPort sourceConnectionPort() {
+            return new InMemorySourceConnectionPort();
         }
     }
 }
