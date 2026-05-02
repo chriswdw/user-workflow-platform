@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "workflow-type-submission-response",
+  "title": "WorkflowTypeSubmissionResponse",
+  "description": "API response body for workflow type submission endpoints",
+  "type": "object",
+  "required": ["id", "tenantId", "workflowType", "displayName", "statusCode", "statusDisplayName", "submittedBy", "currentStep", "version", "createdAt", "updatedAt"],
+  "properties": {
+    "id":                { "type": "string", "format": "uuid" },
+    "tenantId":          { "type": "string" },
+    "workflowType":      { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "displayName":       { "type": "string" },
+    "description":       { "type": ["string", "null"] },
+    "statusCode":        { "type": "string", "enum": ["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED"] },
+    "statusDisplayName": { "type": "string" },
+    "draftConfigs": {
+      "type": "object",
+      "properties": {
+        "workflowTypeDefinition": { "type": ["object", "null"] },
+        "fieldTypeRegistry":      { "type": ["object", "null"] },
+        "ingestionSourceConfig":  { "type": ["object", "null"] },
+        "workflowConfig":         { "type": ["object", "null"] },
+        "blotterConfig":          { "type": ["object", "null"] },
+        "detailViewConfig":       { "type": ["object", "null"] }
+      }
+    },
+    "submittedBy":      { "type": "string" },
+    "submittedAt":      { "type": ["string", "null"], "format": "date-time" },
+    "reviewedBy":       { "type": ["string", "null"] },
+    "reviewedAt":       { "type": ["string", "null"], "format": "date-time" },
+    "rejectionReason":  { "type": ["string", "null"] },
+    "currentStep":      { "type": "integer", "minimum": 1 },
+    "version":          { "type": "integer", "minimum": 1 },
+    "createdAt":        { "type": "string", "format": "date-time" },
+    "updatedAt":        { "type": "string", "format": "date-time" }
+  }
+}
