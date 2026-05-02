@@ -21,13 +21,26 @@ public class LocalDemoDataLoader {
 
     private static final String TENANT_1 = "tenant-1";
     private static final String SETTLEMENT_EX = "SETTLEMENT_EXCEPTION";
+    private static final String PARAM_TENANT_ID = "tenantId";
+    private static final String WI_001 = "wi-001";
+    private static final String WI_003 = "wi-003";
+    private static final String STATUS_UNDER_REVIEW = "UNDER_REVIEW";
+    private static final String STATUS_ESCALATED = "ESCALATED";
+    private static final String SOURCE_KAFKA = "KAFKA";
+    private static final String GROUP_OPS = "group-ops";
+    private static final String FIELD_TRADE = "trade";
+    private static final String FIELD_VALUE_DATE = "valueDate";
+    private static final String FIELD_CURRENCY = "currency";
+    private static final String FIELD_AMOUNT = "amount";
+    private static final String FIELD_NOTIONAL_AMOUNT = "notionalAmount";
+    private static final String FIELD_COUNTERPARTY = "counterparty";
 
     @Bean
     public ApplicationRunner loadDemoData(NamedParameterJdbcTemplate jdbc, ObjectMapper mapper) {
         return args -> {
             Integer count = jdbc.queryForObject(
                     "SELECT COUNT(*) FROM work_items WHERE tenant_id = :tenantId",
-                    Map.of("tenantId", TENANT_1),
+                    Map.of(PARAM_TENANT_ID, TENANT_1),
                     Integer.class);
             if (count != null && count > 0) return;
 
@@ -51,7 +64,7 @@ public class LocalDemoDataLoader {
         for (var item : demoItems(now)) {
             jdbc.update(sql, new MapSqlParameterSource()
                     .addValue("id", item.id())
-                    .addValue("tenantId", TENANT_1)
+                    .addValue(PARAM_TENANT_ID, TENANT_1)
                     .addValue("workflowType", SETTLEMENT_EX)
                     .addValue("correlationId", UUID.randomUUID().toString())
                     .addValue("source", item.source())
@@ -79,17 +92,17 @@ public class LocalDemoDataLoader {
 
         OffsetDateTime base = now.minusSeconds(7200);
         List<AuditRow> rows = List.of(
-                new AuditRow("wi-001", "INGESTION",        null,           "UNDER_REVIEW", base),
-                new AuditRow("wi-001", "ASSIGNMENT",       "UNDER_REVIEW", "UNDER_REVIEW", base.plusSeconds(5)),
-                new AuditRow("wi-003", "INGESTION",        null,           "UNDER_REVIEW", base.minusSeconds(10800)),
-                new AuditRow("wi-003", "STATE_TRANSITION", "UNDER_REVIEW", "ESCALATED",    base.minusSeconds(7200)),
-                new AuditRow("wi-003", "SLA_WARNING",      "ESCALATED",    "ESCALATED",    base.minusSeconds(3600))
+                new AuditRow(WI_001, "INGESTION",        null,                 STATUS_UNDER_REVIEW, base),
+                new AuditRow(WI_001, "ASSIGNMENT",       STATUS_UNDER_REVIEW,  STATUS_UNDER_REVIEW, base.plusSeconds(5)),
+                new AuditRow(WI_003, "INGESTION",        null,                 STATUS_UNDER_REVIEW, base.minusSeconds(10800)),
+                new AuditRow(WI_003, "STATE_TRANSITION", STATUS_UNDER_REVIEW,  STATUS_ESCALATED,    base.minusSeconds(7200)),
+                new AuditRow(WI_003, "SLA_WARNING",      STATUS_ESCALATED,     STATUS_ESCALATED,    base.minusSeconds(3600))
         );
 
         for (var row : rows) {
             jdbc.update(sql, new MapSqlParameterSource()
                     .addValue("id", UUID.randomUUID().toString())
-                    .addValue("tenantId", TENANT_1)
+                    .addValue(PARAM_TENANT_ID, TENANT_1)
                     .addValue("workItemId", row.workItemId())
                     .addValue("correlationId", UUID.randomUUID().toString())
                     .addValue("eventType", row.eventType())
@@ -107,31 +120,31 @@ public class LocalDemoDataLoader {
 
     private static List<DemoItem> demoItems(OffsetDateTime now) {
         return List.of(
-                new DemoItem("wi-001", "KAFKA", "UNDER_REVIEW", "group-ops", 750, "CRITICAL",
+                new DemoItem(WI_001, SOURCE_KAFKA, STATUS_UNDER_REVIEW, GROUP_OPS, 750, "CRITICAL",
                         now.minusSeconds(7200),
-                        Map.of("trade", Map.of("ref", "TRD-20241015-001", "valueDate", "2024-10-17",
-                                "notionalAmount", Map.of("amount", "15000000.00", "currency", "GBP")),
-                            "counterparty", Map.of("name", "Barclays Capital", "lei", "G5GSEF7VJP5I7OUK5573"))),
-                new DemoItem("wi-002", "KAFKA", "UNDER_REVIEW", "group-ops", 400, "HIGH",
+                        Map.of(FIELD_TRADE, Map.of("ref", "TRD-20241015-001", FIELD_VALUE_DATE, "2024-10-17",
+                                FIELD_NOTIONAL_AMOUNT, Map.of(FIELD_AMOUNT, "15000000.00", FIELD_CURRENCY, "GBP")),
+                            FIELD_COUNTERPARTY, Map.of("name", "Barclays Capital", "lei", "G5GSEF7VJP5I7OUK5573"))),
+                new DemoItem("wi-002", SOURCE_KAFKA, STATUS_UNDER_REVIEW, GROUP_OPS, 400, "HIGH",
                         now.minusSeconds(3600),
-                        Map.of("trade", Map.of("ref", "TRD-20241015-002", "valueDate", "2024-10-18",
-                                "notionalAmount", Map.of("amount", "2500000.00", "currency", "EUR")),
-                            "counterparty", Map.of("name", "Deutsche Bank AG", "lei", "7LTWFZYICNSX8D621K86"))),
-                new DemoItem("wi-003", "DB_POLL", "ESCALATED", "group-senior", 850, "CRITICAL",
+                        Map.of(FIELD_TRADE, Map.of("ref", "TRD-20241015-002", FIELD_VALUE_DATE, "2024-10-18",
+                                FIELD_NOTIONAL_AMOUNT, Map.of(FIELD_AMOUNT, "2500000.00", FIELD_CURRENCY, "EUR")),
+                            FIELD_COUNTERPARTY, Map.of("name", "Deutsche Bank AG", "lei", "7LTWFZYICNSX8D621K86"))),
+                new DemoItem(WI_003, "DB_POLL", STATUS_ESCALATED, "group-senior", 850, "CRITICAL",
                         now.minusSeconds(18000),
-                        Map.of("trade", Map.of("ref", "TRD-20241014-087", "valueDate", "2024-10-15",
-                                "notionalAmount", Map.of("amount", "50000000.00", "currency", "USD")),
-                            "counterparty", Map.of("name", "JP Morgan Chase", "lei", "8I5DZWZKVSZI1NUHU748"))),
-                new DemoItem("wi-004", "FILE_UPLOAD", "CLOSED", "group-ops", 50, "LOW",
+                        Map.of(FIELD_TRADE, Map.of("ref", "TRD-20241014-087", FIELD_VALUE_DATE, "2024-10-15",
+                                FIELD_NOTIONAL_AMOUNT, Map.of(FIELD_AMOUNT, "50000000.00", FIELD_CURRENCY, "USD")),
+                            FIELD_COUNTERPARTY, Map.of("name", "JP Morgan Chase", "lei", "8I5DZWZKVSZI1NUHU748"))),
+                new DemoItem("wi-004", "FILE_UPLOAD", "CLOSED", GROUP_OPS, 50, "LOW",
                         now.minusSeconds(86400),
-                        Map.of("trade", Map.of("ref", "TRD-20241013-044", "valueDate", "2024-10-14",
-                                "notionalAmount", Map.of("amount", "175000.00", "currency", "GBP")),
-                            "counterparty", Map.of("name", "HSBC Holdings", "lei", "MLU0ZO3ML4LN2LL2TL39"))),
-                new DemoItem("wi-005", "KAFKA", "UNDER_REVIEW", "group-ops", 300, "MEDIUM",
+                        Map.of(FIELD_TRADE, Map.of("ref", "TRD-20241013-044", FIELD_VALUE_DATE, "2024-10-14",
+                                FIELD_NOTIONAL_AMOUNT, Map.of(FIELD_AMOUNT, "175000.00", FIELD_CURRENCY, "GBP")),
+                            FIELD_COUNTERPARTY, Map.of("name", "HSBC Holdings", "lei", "MLU0ZO3ML4LN2LL2TL39"))),
+                new DemoItem("wi-005", SOURCE_KAFKA, STATUS_UNDER_REVIEW, GROUP_OPS, 300, "MEDIUM",
                         now.minusSeconds(1800),
-                        Map.of("trade", Map.of("ref", "TRD-20241015-031", "valueDate", "2024-10-20",
-                                "notionalAmount", Map.of("amount", "8750000.00", "currency", "CHF")),
-                            "counterparty", Map.of("name", "UBS Group AG", "lei", "BFM8T61CT2L1QCEMIK50")))
+                        Map.of(FIELD_TRADE, Map.of("ref", "TRD-20241015-031", FIELD_VALUE_DATE, "2024-10-20",
+                                FIELD_NOTIONAL_AMOUNT, Map.of(FIELD_AMOUNT, "8750000.00", FIELD_CURRENCY, "CHF")),
+                            FIELD_COUNTERPARTY, Map.of("name", "UBS Group AG", "lei", "BFM8T61CT2L1QCEMIK50")))
         );
     }
 

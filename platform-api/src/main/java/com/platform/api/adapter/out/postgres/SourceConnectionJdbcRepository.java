@@ -19,6 +19,9 @@ import java.util.Optional;
 
 public class SourceConnectionJdbcRepository implements ISourceConnectionRepository {
 
+    private static final String COL_TENANT_ID = "tenantId";
+    private static final String COL_SOURCE_CONNECTION_ID = "sourceConnectionId";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -79,7 +82,7 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                 ORDER BY sc.display_name
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
+                .addValue(COL_TENANT_ID, tenantId)
                 .addValue("connectionType", type.name());
         return jdbc.query(sql, params, this::mapRow);
     }
@@ -94,8 +97,8 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                 """;
         jdbc.update(sql, new MapSqlParameterSource()
                 .addValue("id", access.id())
-                .addValue("sourceConnectionId", access.sourceConnectionId())
-                .addValue("tenantId", access.tenantId())
+                .addValue(COL_SOURCE_CONNECTION_ID, access.sourceConnectionId())
+                .addValue(COL_TENANT_ID, access.tenantId())
                 .addValue("grantedBy", access.grantedBy())
                 .addValue("grantedAt", access.grantedAt()));
     }
@@ -107,8 +110,8 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                 WHERE source_connection_id = :sourceConnectionId AND tenant_id = :tenantId
                 """,
                 new MapSqlParameterSource()
-                        .addValue("sourceConnectionId", sourceConnectionId)
-                        .addValue("tenantId", tenantId));
+                        .addValue(COL_SOURCE_CONNECTION_ID, sourceConnectionId)
+                        .addValue(COL_TENANT_ID, tenantId));
     }
 
     @Override
@@ -125,8 +128,8 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                 """;
         return Boolean.TRUE.equals(jdbc.queryForObject(sql,
                 new MapSqlParameterSource()
-                        .addValue("sourceConnectionId", sourceConnectionId)
-                        .addValue("tenantId", tenantId),
+                        .addValue(COL_SOURCE_CONNECTION_ID, sourceConnectionId)
+                        .addValue(COL_TENANT_ID, tenantId),
                 Boolean.class));
     }
 

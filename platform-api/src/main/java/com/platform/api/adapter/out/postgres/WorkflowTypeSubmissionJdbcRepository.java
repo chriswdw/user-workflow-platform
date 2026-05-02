@@ -19,6 +19,9 @@ import java.util.Optional;
 
 public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmissionRepository {
 
+    private static final String COL_TENANT_ID = "tenantId";
+    private static final String COL_STATUS = "status";
+
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -53,11 +56,11 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                 """;
         var params = new MapSqlParameterSource()
                 .addValue("id", s.id())
-                .addValue("tenantId", s.tenantId())
+                .addValue(COL_TENANT_ID, s.tenantId())
                 .addValue("workflowType", s.workflowType())
                 .addValue("displayName", s.displayName())
                 .addValue("description", s.description())
-                .addValue("status", s.status().name())
+                .addValue(COL_STATUS, s.status().name())
                 .addValue("draftConfigs", toJson(s.draftConfigs()))
                 .addValue("submittedBy", s.submittedBy())
                 .addValue("submittedAt", s.submittedAt())
@@ -87,7 +90,7 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                 WHERE s.tenant_id = :tenantId AND s.id = :id
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
+                .addValue(COL_TENANT_ID, tenantId)
                 .addValue("id", submissionId);
         return jdbc.query(sql, params, this::mapRow).stream().findFirst();
     }
@@ -102,8 +105,8 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                 ORDER BY s.updated_at DESC
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
-                .addValue("status", status.name());
+                .addValue(COL_TENANT_ID, tenantId)
+                .addValue(COL_STATUS, status.name());
         return jdbc.query(sql, params, this::mapRow);
     }
 
@@ -119,8 +122,8 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                 ORDER BY s.updated_at DESC
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
-                .addValue("status", status.name())
+                .addValue(COL_TENANT_ID, tenantId)
+                .addValue(COL_STATUS, status.name())
                 .addValue("userId", userId);
         return jdbc.query(sql, params, this::mapRow);
     }
@@ -134,7 +137,7 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                   AND status NOT IN ('REJECTED')
                 """;
         var params = new MapSqlParameterSource()
-                .addValue("tenantId", tenantId)
+                .addValue(COL_TENANT_ID, tenantId)
                 .addValue("workflowType", workflowType);
         return Boolean.TRUE.equals(jdbc.queryForObject(sql, params, Boolean.class));
     }
@@ -146,7 +149,7 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
                 rs.getString("workflow_type"),
                 rs.getString("display_name"),
                 rs.getString("description"),
-                SubmissionStatus.valueOf(rs.getString("status")),
+                SubmissionStatus.valueOf(rs.getString(COL_STATUS)),
                 rs.getString("status_display_name"),
                 parseDraftConfigs(rs.getString("draft_configs")),
                 rs.getString("submitted_by"),

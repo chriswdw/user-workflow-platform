@@ -22,6 +22,9 @@ import java.util.Map;
 @RestController
 public class SourceConnectionController {
 
+    private static final String FIELD_CONNECTION_TYPE = "connectionType";
+    private static final String FIELD_CONFIG = "config";
+
     private final IManageSourceConnectionsUseCase manageUseCase;
     private final IListSourceConnectionsUseCase listUseCase;
 
@@ -43,8 +46,8 @@ public class SourceConnectionController {
                 null,
                 (String) body.get("name"),
                 (String) body.get("displayName"),
-                ConnectionType.valueOf((String) body.get("connectionType")),
-                body.containsKey("config") ? (Map<String, Object>) body.get("config") : Map.of(),
+                ConnectionType.valueOf((String) body.get(FIELD_CONNECTION_TYPE)),
+                body.containsKey(FIELD_CONFIG) ? (Map<String, Object>) body.get(FIELD_CONFIG) : Map.of(),
                 (String) body.get("credentialsRef"),
                 auth.userId(),
                 null, null));
@@ -65,15 +68,15 @@ public class SourceConnectionController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal ApiAuthentication auth) {
         if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
-        ConnectionType connectionType = body.containsKey("connectionType")
-                ? ConnectionType.valueOf((String) body.get("connectionType"))
+        ConnectionType connectionType = body.containsKey(FIELD_CONNECTION_TYPE)
+                ? ConnectionType.valueOf((String) body.get(FIELD_CONNECTION_TYPE))
                 : null;
         SourceConnection updated = manageUseCase.update(new SourceConnection(
                 id,
                 (String) body.get("name"),
                 (String) body.get("displayName"),
                 connectionType,
-                body.containsKey("config") ? (Map<String, Object>) body.get("config") : null,
+                body.containsKey(FIELD_CONFIG) ? (Map<String, Object>) body.get(FIELD_CONFIG) : null,
                 (String) body.get("credentialsRef"),
                 null, null, null));
         return ResponseEntity.ok(updated);
