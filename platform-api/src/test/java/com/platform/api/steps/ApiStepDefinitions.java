@@ -2,12 +2,20 @@ package com.platform.api.steps;
 
 import com.platform.api.doubles.InMemoryAuditQueryPort;
 import com.platform.api.doubles.InMemoryConfigPort;
+import com.platform.api.doubles.InMemorySourceConnectionPort;
+import com.platform.api.doubles.InMemorySubmissionPort;
 import com.platform.api.doubles.InMemoryTransitionPort;
 import com.platform.api.doubles.InMemoryWorkItemQueryPort;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
+import com.platform.config.domain.model.DraftConfigs;
+import com.platform.config.domain.model.SubmissionStatus;
+import com.platform.config.domain.model.WorkflowTypeSubmission;
+import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
+import com.platform.domain.model.ConnectionType;
+import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
 import io.cucumber.java.Before;
@@ -24,15 +32,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,6 +55,8 @@ public class ApiStepDefinitions {
     @Autowired private InMemoryTransitionPort transitionPort;
     @Autowired private InMemoryAuditQueryPort auditStore;
     @Autowired private InMemoryConfigPort configStore;
+    @Autowired private InMemorySubmissionPort submissionStore;
+    @Autowired private InMemorySourceConnectionPort sourceConnectionStore;
 
     @Value("${api.jwt.secret}")
     private String jwtSecret;
@@ -55,6 +68,8 @@ public class ApiStepDefinitions {
     public void reset() {
         authHeader = null;
         lastResult = null;
+        submissionStore.reset();
+        sourceConnectionStore.reset();
     }
 
     // ── Given ────────────────────────────────────────────────────────────────
@@ -101,6 +116,64 @@ public class ApiStepDefinitions {
         auditStore.setTrail("tenant-1", workItemId, entries);
     }
 
+    // ── Given — submissions ───────────────────────────────────────────────────
+
+    @Given("a submission for workflow type {string} exists for tenant {string}")
+    public void submissionExistsForWorkflowType(String workflowType, String tenantId) {
+        submissionStore.create(new CreateSubmissionCommand(
+                tenantId, "alice", workflowType, workflowType + " Display", null, incompleteDraftConfigs()));
+    }
+
+    @Given("a draft submission {string} exists for tenant {string} workflow type {string} submitted by {string}")
+    public void draftSubmissionExists(String id, String tenantId, String workflowType, String submittedBy) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        submissionStore.seed(new WorkflowTypeSubmission(
+                id, tenantId, workflowType, workflowType + " Display", null,
+                SubmissionStatus.DRAFT, "Draft",
+                incompleteDraftConfigs(),
+                submittedBy, null, null, null, null,
+                1, 1, now, now));
+    }
+
+    @Given("a complete draft submission {string} exists for tenant {string} workflow type {string} submitted by {string}")
+    public void completeDraftSubmissionExists(String id, String tenantId, String workflowType, String submittedBy) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        submissionStore.seed(new WorkflowTypeSubmission(
+                id, tenantId, workflowType, workflowType + " Display", null,
+                SubmissionStatus.DRAFT, "Draft",
+                completeDraftConfigs(),
+                submittedBy, null, null, null, null,
+                1, 1, now, now));
+    }
+
+    @Given("a pending submission {string} exists for tenant {string} workflow type {string} submitted by {string}")
+    public void pendingSubmissionExists(String id, String tenantId, String workflowType, String submittedBy) {
+        completeDraftSubmissionExists(id, tenantId, workflowType, submittedBy);
+        submissionStore.submit(tenantId, id, submittedBy);
+    }
+
+    @Given("a rejected submission {string} exists for tenant {string} workflow type {string} submitted by {string}")
+    public void rejectedSubmissionExists(String id, String tenantId, String workflowType, String submittedBy) {
+        pendingSubmissionExists(id, tenantId, workflowType, submittedBy);
+        submissionStore.reject(tenantId, id, "bob", "Test rejection");
+    }
+
+    // ── Given — source connections ────────────────────────────────────────────
+
+    @Given("a source connection {string} of type {string} exists")
+    public void sourceConnectionExists(String id, String type) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        sourceConnectionStore.putConnection(new SourceConnection(
+                id, id, id + " Display",
+                ConnectionType.valueOf(type),
+                Map.of(), null, "admin", now, now));
+    }
+
+    @Given("tenant {string} has access to source connection {string}")
+    public void tenantHasAccessToConnection(String tenantId, String connectionId) {
+        sourceConnectionStore.grantAccessForTest(connectionId, tenantId);
+    }
+
     // ── When ─────────────────────────────────────────────────────────────────
 
     @When("^I GET (.+)$")
@@ -116,6 +189,23 @@ public class ApiStepDefinitions {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)
                 .accept(MediaType.APPLICATION_JSON);
+        if (authHeader != null) req = req.header("Authorization", authHeader);
+        lastResult = mockMvc.perform(req);
+    }
+
+    @When("^I PATCH (.+) with body (.+)$")
+    public void iPatch(String path, String body) throws Exception {
+        var req = patch(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .accept(MediaType.APPLICATION_JSON);
+        if (authHeader != null) req = req.header("Authorization", authHeader);
+        lastResult = mockMvc.perform(req);
+    }
+
+    @When("^I DELETE (.+)$")
+    public void iDelete(String path) throws Exception {
+        var req = delete(path).accept(MediaType.APPLICATION_JSON);
         if (authHeader != null) req = req.header("Authorization", authHeader);
         lastResult = mockMvc.perform(req);
     }
@@ -159,6 +249,11 @@ public class ApiStepDefinitions {
                   .andExpect(jsonPath("$.token").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.emptyString())));
     }
 
+    @Then("the response contains statusCode {string}")
+    public void responseContainsStatusCode(String statusCode) throws Exception {
+        lastResult.andExpect(jsonPath("$.statusCode").value(statusCode));
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private String buildJwt(String userId, String role, String tenantId) {
@@ -182,5 +277,18 @@ public class ApiStepDefinitions {
                         null, null, null, List.of(), "user-1", "ANALYST",
                         Instant.now(), null))
                 .toList();
+    }
+
+    private static DraftConfigs incompleteDraftConfigs() {
+        Map<String, Object> basic = Map.of("workflowType", "TRADE_BREAK");
+        return new DraftConfigs(basic, basic, basic, basic, null, null);
+    }
+
+    private static DraftConfigs completeDraftConfigs() {
+        Map<String, Object> basic = Map.of("workflowType", "TRADE_BREAK");
+        Map<String, Object> blotter = Map.of("columns", List.of(Map.of("field", "trade.ref", "header", "Ref")));
+        Map<String, Object> detail = Map.of("sections", List.of(
+                Map.of("title", "Details", "fields", List.of(Map.of("field", "trade.ref")))));
+        return new DraftConfigs(basic, basic, basic, basic, blotter, detail);
     }
 }
