@@ -132,4 +132,9 @@ public class InMemorySubmissionPort
     public List<WorkflowTypeSubmission> getRejectedForUser(String tenantId, String actorUserId) {
         return service().getRejectedForUser(tenantId, actorUserId);
     }
+
+    @Override
+    public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
+        return service().getAllDraftsForTenant(tenantId);
+    }
 }
