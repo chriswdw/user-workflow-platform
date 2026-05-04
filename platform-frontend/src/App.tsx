@@ -142,7 +142,7 @@ function MainApp() {
 
         {view === 'admin-connections' && <SourceConnectionsAdminView />}
 
-        {view === 'admin-drafts' && <AllDraftsAdminView />}
+        {view === 'admin-drafts' && <AllDraftsAdminView onOpenWizard={() => setView('wizard')} />}
       </main>
 
       {view === 'wizard' && <WizardShell onClose={() => setView('blotter')} />}

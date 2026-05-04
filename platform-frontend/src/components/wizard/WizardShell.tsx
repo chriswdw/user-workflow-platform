@@ -30,7 +30,7 @@ interface WizardShellProps {
 
 export function WizardShell({ onClose }: WizardShellProps) {
   const store = useWizardStore();
-  const { currentStep, setStep, submissionId, revisingSubmissionId, buildSubmissionPayload } = store;
+  const { currentStep, setStep, submissionId, revisingSubmissionId, buildSubmissionPayload, buildDraftConfigsPayload } = store;
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -70,9 +70,8 @@ export function WizardShell({ onClose }: WizardShellProps) {
     }
 
     if (currentStep >= 2 && currentStep <= 6 && submissionId) {
-      const payload = buildSubmissionPayload();
       saveDraft.mutate(
-        { draftConfigs: payload as unknown as Record<string, unknown>, currentStep },
+        { draftConfigs: buildDraftConfigsPayload(), currentStep },
         {
           onSuccess: () => setStep(currentStep + 1),
           onError: err => setSubmitError(err.message ?? 'Failed to save draft.'),

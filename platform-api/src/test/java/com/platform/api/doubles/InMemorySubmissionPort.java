@@ -4,6 +4,7 @@ import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.ports.in.ICreateWorkflowTypeSubmissionUseCase;
+import com.platform.config.domain.ports.in.IDiscardSubmissionUseCase;
 import com.platform.config.domain.ports.in.IGetSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
@@ -22,7 +23,8 @@ public class InMemorySubmissionPort
                    ISubmitForApprovalUseCase,
                    IReviewSubmissionUseCase,
                    IReviseSubmissionUseCase,
-                   IGetSubmissionUseCase {
+                   IGetSubmissionUseCase,
+                   IDiscardSubmissionUseCase {
 
     private final InMemoryWorkflowTypeSubmissionRepository repo =
             new InMemoryWorkflowTypeSubmissionRepository();
@@ -37,6 +39,10 @@ public class InMemorySubmissionPort
 
     public void seed(WorkflowTypeSubmission submission) {
         repo.save(submission);
+    }
+
+    public WorkflowTypeSubmission findByIdOrNull(String tenantId, String submissionId) {
+        return repo.findById(tenantId, submissionId).orElse(null);
     }
 
     public void reset() {
@@ -101,5 +107,10 @@ public class InMemorySubmissionPort
     @Override
     public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
         return service().getAllDraftsForTenant(tenantId);
+    }
+
+    @Override
+    public void discard(String tenantId, String submissionId, String actorUserId, boolean isAdmin) {
+        service().discard(tenantId, submissionId, actorUserId, isAdmin);
     }
 }

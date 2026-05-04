@@ -163,3 +163,32 @@ Feature: Workflow type submission lifecycle
     Then an audit entry of type "SUBMISSION_REVISED" is recorded for the submission
     And the audit entry records actor "alice"
     And the audit entry records previous state "REJECTED" and new state "DRAFT"
+
+  # ── Discard ───────────────────────────────────────────────────────────────
+
+  Scenario: Owner can discard their own draft submission
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then the submission is deleted
+    And a SUBMISSION_DISCARDED audit entry is recorded
+
+  Scenario: Admin can discard any draft submission
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" discards the submission as admin
+    Then the submission is deleted
+    And a SUBMISSION_DISCARDED audit entry is recorded
+
+  Scenario: Owner can discard their own rejected submission
+    Given a REJECTED submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then the submission is deleted
+
+  Scenario: Non-owner cannot discard another user's draft
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" discards the submission as owner
+    Then an IllegalStateException is thrown
+
+  Scenario: Pending approval submission cannot be discarded
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then an IllegalStateException is thrown

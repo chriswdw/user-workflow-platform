@@ -8,6 +8,7 @@ import com.platform.config.domain.exception.SubmissionNotFoundException;
 import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.ports.in.ICreateWorkflowTypeSubmissionUseCase;
+import com.platform.config.domain.ports.in.IDiscardSubmissionUseCase;
 import com.platform.config.domain.ports.in.IGetSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
@@ -15,6 +16,7 @@ import com.platform.config.domain.ports.in.ISaveDraftUseCase;
 import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +38,7 @@ public class WorkflowTypeSubmissionController {
     private final IReviewSubmissionUseCase reviewUseCase;
     private final IReviseSubmissionUseCase reviseUseCase;
     private final IGetSubmissionUseCase getUseCase;
+    private final IDiscardSubmissionUseCase discardUseCase;
 
     public WorkflowTypeSubmissionController(
             ICreateWorkflowTypeSubmissionUseCase createUseCase,
@@ -43,13 +46,15 @@ public class WorkflowTypeSubmissionController {
             ISubmitForApprovalUseCase submitUseCase,
             IReviewSubmissionUseCase reviewUseCase,
             IReviseSubmissionUseCase reviseUseCase,
-            IGetSubmissionUseCase getUseCase) {
+            IGetSubmissionUseCase getUseCase,
+            IDiscardSubmissionUseCase discardUseCase) {
         this.createUseCase = createUseCase;
         this.saveDraftUseCase = saveDraftUseCase;
         this.submitUseCase = submitUseCase;
         this.reviewUseCase = reviewUseCase;
         this.reviseUseCase = reviseUseCase;
         this.getUseCase = getUseCase;
+        this.discardUseCase = discardUseCase;
     }
 
     @PostMapping
@@ -190,6 +195,20 @@ public class WorkflowTypeSubmissionController {
                     WorkflowTypeSubmissionResponse.from(getUseCase.getById(auth.tenantId(), id)));
         } catch (SubmissionNotFoundException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> discard(@PathVariable String id,
+                                         @AuthenticationPrincipal ApiAuthentication auth) {
+        try {
+            discardUseCase.discard(auth.tenantId(), id, auth.userId(),
+                    "PLATFORM_ADMIN".equals(auth.role()));
+            return ResponseEntity.noContent().build();
+        } catch (SubmissionNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.unprocessableEntity().build();
         }
     }
 

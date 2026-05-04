@@ -52,6 +52,11 @@ public class InMemoryWorkflowTypeSubmissionRepository implements IWorkflowTypeSu
                         && s.status() != SubmissionStatus.REJECTED);
     }
 
+    @Override
+    public void deleteById(String tenantId, String submissionId) {
+        store.removeIf(s -> s.tenantId().equals(tenantId) && s.id().equals(submissionId));
+    }
+
     public void reset() {
         store.clear();
     }

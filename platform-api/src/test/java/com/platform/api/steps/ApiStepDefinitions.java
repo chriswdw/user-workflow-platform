@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -252,6 +253,11 @@ public class ApiStepDefinitions {
     @Then("the response contains statusCode {string}")
     public void responseContainsStatusCode(String statusCode) throws Exception {
         lastResult.andExpect(jsonPath("$.statusCode").value(statusCode));
+    }
+
+    @Then("submission {string} no longer exists for tenant {string}")
+    public void submissionNoLongerExists(String submissionId, String tenantId) {
+        assertThat(submissionStore.findByIdOrNull(tenantId, submissionId)).isNull();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

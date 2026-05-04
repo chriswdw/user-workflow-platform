@@ -75,3 +75,14 @@ export function useReviseSubmission(submissionId: string) {
     onSuccess: () => invalidateSubmission(queryClient, submissionId),
   });
 }
+
+export function useDiscardSubmission(submissionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      await client.delete(`/workflow-type-submissions/${submissionId}`);
+    },
+    onSuccess: () => invalidateSubmission(queryClient, submissionId),
+  });
+}

@@ -129,6 +129,14 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
     }
 
     @Override
+    public void deleteById(String tenantId, String submissionId) {
+        jdbc.update("DELETE FROM workflow_type_submissions WHERE tenant_id = :tenantId AND id = :id",
+                new MapSqlParameterSource()
+                        .addValue(COL_TENANT_ID, tenantId)
+                        .addValue("id", submissionId));
+    }
+
+    @Override
     public boolean existsByTenantAndWorkflowType(String tenantId, String workflowType) {
         String sql = """
                 SELECT COUNT(*) > 0

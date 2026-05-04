@@ -166,6 +166,24 @@ public class WorkflowTypeSubmissionStepDefinitions {
         }
     }
 
+    @When("user {string} discards the submission as owner")
+    public void userDiscardsAsOwner(String userId) {
+        try {
+            service().discard(lastResult.tenantId(), lastSubmissionId, userId, false);
+        } catch (Exception e) {
+            thrownException = e;
+        }
+    }
+
+    @When("user {string} discards the submission as admin")
+    public void userDiscardsAsAdmin(String userId) {
+        try {
+            service().discard(lastResult.tenantId(), lastSubmissionId, userId, true);
+        } catch (Exception e) {
+            thrownException = e;
+        }
+    }
+
     @When("user {string} revises the submission with updated draft configs")
     public void userRevisesSubmission(String userId) {
         lastDraftConfigs = completeDraftConfigs();
@@ -287,6 +305,16 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @Then("an IllegalArgumentException is thrown")
     public void illegalArgumentExceptionThrown() {
         assertThat(thrownException).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Then("the submission is deleted")
+    public void submissionIsDeleted() {
+        assertThat(repo.findById(lastResult.tenantId(), lastSubmissionId)).isEmpty();
+    }
+
+    @Then("a SUBMISSION_DISCARDED audit entry is recorded")
+    public void submissionDiscardedAuditEntryRecorded() {
+        assertThat(auditRepo.findByEventType(AuditEventType.SUBMISSION_DISCARDED)).isNotEmpty();
     }
 
     @Then("an audit entry of type {string} is recorded for the submission")

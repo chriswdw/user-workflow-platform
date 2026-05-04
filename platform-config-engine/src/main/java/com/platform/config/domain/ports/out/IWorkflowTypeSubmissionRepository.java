@@ -12,4 +12,5 @@ public interface IWorkflowTypeSubmissionRepository {
     List<WorkflowTypeSubmission> findByTenantAndStatus(String tenantId, SubmissionStatus status);
     List<WorkflowTypeSubmission> findByTenantAndStatusAndUser(String tenantId, SubmissionStatus status, String userId);
     boolean existsByTenantAndWorkflowType(String tenantId, String workflowType);
+    void deleteById(String tenantId, String submissionId);
 }

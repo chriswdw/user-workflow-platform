@@ -11,6 +11,7 @@ import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.ports.in.ICreateWorkflowTypeSubmissionUseCase;
+import com.platform.config.domain.ports.in.IDiscardSubmissionUseCase;
 import com.platform.config.domain.ports.in.IGetSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
@@ -36,7 +37,8 @@ public class WorkflowTypeSubmissionService
                    IReviewSubmissionUseCase,
                    ISaveDraftUseCase,
                    IReviseSubmissionUseCase,
-                   IGetSubmissionUseCase {
+                   IGetSubmissionUseCase,
+                   IDiscardSubmissionUseCase {
 
     private static final Pattern WORKFLOW_TYPE_PATTERN = Pattern.compile("^[A-Z][A-Z0-9_]*$");
     private static final String DISPLAY_NAME_DRAFT = "Draft";
@@ -246,6 +248,24 @@ public class WorkflowTypeSubmissionService
     @Override
     public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
         return repo.findByTenantAndStatus(tenantId, SubmissionStatus.DRAFT);
+    }
+
+    // ── IDiscardSubmissionUseCase ─────────────────────────────────────────────
+
+    @Override
+    public void discard(String tenantId, String submissionId, String actorUserId, boolean isAdmin) {
+        WorkflowTypeSubmission submission = load(tenantId, submissionId);
+        if (submission.status() != SubmissionStatus.DRAFT && submission.status() != SubmissionStatus.REJECTED) {
+            throw new IllegalStateException(
+                    "Cannot discard a submission in status " + submission.status()
+                    + "; only DRAFT or REJECTED submissions may be discarded");
+        }
+        if (!isAdmin) {
+            assertOwner(submission, actorUserId, "discard");
+        }
+        repo.deleteById(tenantId, submissionId);
+        auditRepo.save(submissionAuditEntry(submission, AuditEventType.SUBMISSION_DISCARDED,
+                submission.status().name(), "DISCARDED", actorUserId));
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

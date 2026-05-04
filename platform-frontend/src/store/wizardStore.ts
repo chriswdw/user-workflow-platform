@@ -87,6 +87,7 @@ interface WizardState {
   setDetailSections: (detailSections: DetailSectionDraft[]) => void;
 
   buildSubmissionPayload: () => CreateSubmissionRequest;
+  buildDraftConfigsPayload: () => Record<string, unknown>;
   hydrateForResume: (submission: WorkflowTypeSubmission) => void;
   hydrateForRevision: (submission: WorkflowTypeSubmission) => void;
 }
@@ -109,18 +110,60 @@ const INITIAL_STATE = {
 };
 
 function parseDraftConfigs(draftConfigs: Record<string, unknown>) {
+  const wtd = (draftConfigs['workflowTypeDefinition'] as Record<string, unknown> | null) ?? {};
+  const ftr = (draftConfigs['fieldTypeRegistry'] as Record<string, unknown> | null) ?? {};
+  const isc = (draftConfigs['ingestionSourceConfig'] as Record<string, unknown> | null) ?? {};
+  const bc = (draftConfigs['blotterConfig'] as Record<string, unknown> | null) ?? {};
+  const dvc = (draftConfigs['detailViewConfig'] as Record<string, unknown> | null) ?? {};
   return {
-    workflowType: (draftConfigs['workflowType'] as string) ?? '',
-    displayName: (draftConfigs['displayName'] as string) ?? '',
-    description: (draftConfigs['description'] as string) ?? '',
-    sourceType: (draftConfigs['sourceType'] as SourceType | null) ?? null,
-    sourceConnectionId: (draftConfigs['sourceConnectionId'] as string | null) ?? null,
-    sourceConfig: (draftConfigs['sourceConfig'] as Record<string, unknown>) ?? {},
-    sampleFields: (draftConfigs['sampleFields'] as string[]) ?? [],
-    fieldMappings: (draftConfigs['fieldMappings'] as FieldMappingRow[]) ?? [],
-    idempotencyKeyField: (draftConfigs['idempotencyKeyField'] as string | null) ?? null,
-    blotterColumns: (draftConfigs['blotterColumns'] as BlotterColumnDraft[]) ?? [],
-    detailSections: (draftConfigs['detailSections'] as DetailSectionDraft[]) ?? [],
+    workflowType: (wtd['workflowType'] as string) ?? '',
+    displayName: (wtd['displayName'] as string) ?? '',
+    description: (wtd['description'] as string) ?? '',
+    sourceType: (isc['sourceType'] as SourceType | null) ?? null,
+    sourceConnectionId: (isc['sourceConnectionId'] as string | null) ?? null,
+    sourceConfig: (isc['sourceConfig'] as Record<string, unknown>) ?? {},
+    sampleFields: (ftr['sampleFields'] as string[]) ?? [],
+    fieldMappings: (ftr['fieldMappings'] as FieldMappingRow[]) ?? [],
+    idempotencyKeyField: (ftr['idempotencyKeyField'] as string | null) ?? null,
+    blotterColumns: (bc['columns'] as BlotterColumnDraft[]) ?? [],
+    detailSections: (dvc['sections'] as DetailSectionDraft[]) ?? [],
+  };
+}
+
+interface DraftConfigsPayload {
+  workflowType: string;
+  displayName: string;
+  description: string;
+  sourceType: SourceType | null;
+  sourceConnectionId: string | null;
+  sourceConfig: Record<string, unknown>;
+  sampleFields: string[];
+  fieldMappings: FieldMappingRow[];
+  idempotencyKeyField: string | null;
+  blotterColumns: BlotterColumnDraft[];
+  detailSections: DetailSectionDraft[];
+}
+
+function buildDraftConfigs(s: DraftConfigsPayload): Record<string, unknown> {
+  return {
+    workflowTypeDefinition: {
+      workflowType: s.workflowType,
+      displayName: s.displayName,
+      description: s.description,
+    },
+    fieldTypeRegistry: {
+      fieldMappings: s.fieldMappings,
+      idempotencyKeyField: s.idempotencyKeyField,
+      sampleFields: s.sampleFields,
+    },
+    ingestionSourceConfig: {
+      sourceType: s.sourceType,
+      sourceConnectionId: s.sourceConnectionId,
+      sourceConfig: s.sourceConfig,
+    },
+    workflowConfig: AUTO_WORKFLOW_CONFIG,
+    blotterConfig: { columns: s.blotterColumns },
+    detailViewConfig: { sections: s.detailSections },
   };
 }
 
@@ -157,6 +200,8 @@ export const useWizardStore = create<WizardState>((set, get) => ({
       workflowConfig: AUTO_WORKFLOW_CONFIG,
     };
   },
+
+  buildDraftConfigsPayload: () => buildDraftConfigs(get()),
 
   hydrateForResume: submission =>
     set({

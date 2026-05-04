@@ -1,4 +1,5 @@
 import { useMyDraftSubmissions, useMyRejectedSubmissions } from '../../api/useWorkflowTypeSubmissions';
+import { useDiscardSubmission } from '../../api/useSubmissionActions';
 import { useWizardStore } from '../../store/wizardStore';
 import type { WorkflowTypeSubmission } from '../../types/WorkflowTypeSubmission';
 
@@ -18,10 +19,17 @@ interface RejectedRowProps {
 
 function DraftRow({ sub, onOpenWizard }: DraftRowProps) {
   const { hydrateForResume } = useWizardStore();
+  const discard = useDiscardSubmission(sub.id);
 
   function handleResume() {
     hydrateForResume(sub);
     onOpenWizard();
+  }
+
+  function handleDiscard() {
+    if (window.confirm('Discard this draft? This cannot be undone.')) {
+      discard.mutate();
+    }
   }
 
   return (
@@ -32,6 +40,8 @@ function DraftRow({ sub, onOpenWizard }: DraftRowProps) {
       <td>{new Date(sub.updatedAt).toLocaleString()}</td>
       <td>
         <button type="button" className="btn btn-secondary" onClick={handleResume}>Resume</button>
+        <button type="button" className="btn btn-danger" onClick={handleDiscard}
+                disabled={discard.isPending}>Discard</button>
       </td>
     </tr>
   );
@@ -39,10 +49,17 @@ function DraftRow({ sub, onOpenWizard }: DraftRowProps) {
 
 function RejectedRow({ sub, onOpenWizard }: RejectedRowProps) {
   const { hydrateForRevision } = useWizardStore();
+  const discard = useDiscardSubmission(sub.id);
 
   function handleRevise() {
     hydrateForRevision(sub);
     onOpenWizard();
+  }
+
+  function handleDiscard() {
+    if (window.confirm('Discard this rejected submission? This cannot be undone.')) {
+      discard.mutate();
+    }
   }
 
   return (
@@ -53,6 +70,8 @@ function RejectedRow({ sub, onOpenWizard }: RejectedRowProps) {
       <td>{new Date(sub.updatedAt).toLocaleString()}</td>
       <td>
         <button type="button" className="btn btn-secondary" onClick={handleRevise}>Revise</button>
+        <button type="button" className="btn btn-danger" onClick={handleDiscard}
+                disabled={discard.isPending}>Discard</button>
       </td>
     </tr>
   );
