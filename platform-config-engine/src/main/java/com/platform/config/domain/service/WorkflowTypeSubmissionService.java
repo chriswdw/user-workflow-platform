@@ -17,8 +17,12 @@ import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
 import com.platform.config.domain.ports.in.ISaveDraftUseCase;
 import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
 import com.platform.config.domain.ports.out.IConfigDocumentWriter;
+import com.platform.config.domain.ports.out.ISubmissionAuditRepository;
 import com.platform.config.domain.ports.out.IWorkflowTypeSubmissionRepository;
+import com.platform.domain.model.AuditEntry;
+import com.platform.domain.model.AuditEventType;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -39,13 +43,16 @@ public class WorkflowTypeSubmissionService
 
     private final IWorkflowTypeSubmissionRepository repo;
     private final IConfigDocumentWriter configDocumentWriter;
+    private final ISubmissionAuditRepository auditRepo;
     private final boolean makerCheckerEnabled;
 
     public WorkflowTypeSubmissionService(IWorkflowTypeSubmissionRepository repo,
                                           IConfigDocumentWriter configDocumentWriter,
+                                          ISubmissionAuditRepository auditRepo,
                                           boolean makerCheckerEnabled) {
         this.repo = repo;
         this.configDocumentWriter = configDocumentWriter;
+        this.auditRepo = auditRepo;
         this.makerCheckerEnabled = makerCheckerEnabled;
     }
 
@@ -77,6 +84,8 @@ public class WorkflowTypeSubmissionService
                 now, now);
 
         WorkflowTypeSubmission saved = repo.save(submission);
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_CREATED,
+                null, "DRAFT", command.actorUserId()));
 
         if (!makerCheckerEnabled) {
             return autoApprove(saved, command.actorUserId());
@@ -123,7 +132,7 @@ public class WorkflowTypeSubmissionService
         }
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return repo.save(new WorkflowTypeSubmission(
+        WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(
                 submission.id(), submission.tenantId(), submission.workflowType(),
                 submission.displayName(), submission.description(),
                 SubmissionStatus.PENDING_APPROVAL, "Pending Approval",
@@ -133,6 +142,9 @@ public class WorkflowTypeSubmissionService
                 submission.currentStep(),
                 submission.version() + 1,
                 submission.createdAt(), now));
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_SUBMITTED_FOR_REVIEW,
+                "DRAFT", "PENDING_APPROVAL", actorUserId));
+        return saved;
     }
 
     // ── IReviewSubmissionUseCase ──────────────────────────────────────────────
@@ -146,7 +158,7 @@ public class WorkflowTypeSubmissionService
         publishConfigDocuments(submission);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return repo.save(new WorkflowTypeSubmission(
+        WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(
                 submission.id(), submission.tenantId(), submission.workflowType(),
                 submission.displayName(), submission.description(),
                 SubmissionStatus.APPROVED, "Approved",
@@ -156,6 +168,9 @@ public class WorkflowTypeSubmissionService
                 submission.currentStep(),
                 submission.version() + 1,
                 submission.createdAt(), now));
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_APPROVED,
+                "PENDING_APPROVAL", "APPROVED", reviewerUserId));
+        return saved;
     }
 
     @Override
@@ -166,7 +181,7 @@ public class WorkflowTypeSubmissionService
         assertNotSelfApproval(submission, reviewerUserId);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return repo.save(new WorkflowTypeSubmission(
+        WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(
                 submission.id(), submission.tenantId(), submission.workflowType(),
                 submission.displayName(), submission.description(),
                 SubmissionStatus.REJECTED, "Rejected",
@@ -176,6 +191,9 @@ public class WorkflowTypeSubmissionService
                 submission.currentStep(),
                 submission.version() + 1,
                 submission.createdAt(), now));
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_REJECTED,
+                "PENDING_APPROVAL", "REJECTED", reviewerUserId));
+        return saved;
     }
 
     // ── IReviseSubmissionUseCase ──────────────────────────────────────────────
@@ -188,7 +206,7 @@ public class WorkflowTypeSubmissionService
         assertOwner(submission, actorUserId, "revise");
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return repo.save(new WorkflowTypeSubmission(
+        WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(
                 submission.id(), submission.tenantId(), submission.workflowType(),
                 submission.displayName(), submission.description(),
                 SubmissionStatus.DRAFT, DISPLAY_NAME_DRAFT,
@@ -198,6 +216,9 @@ public class WorkflowTypeSubmissionService
                 1,
                 submission.version() + 1,
                 submission.createdAt(), now));
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_REVISED,
+                "REJECTED", "DRAFT", actorUserId));
+        return saved;
     }
 
     // ── IGetSubmissionUseCase ─────────────────────────────────────────────────
@@ -220,6 +241,11 @@ public class WorkflowTypeSubmissionService
     @Override
     public List<WorkflowTypeSubmission> getRejectedForUser(String tenantId, String actorUserId) {
         return repo.findByTenantAndStatusAndUser(tenantId, SubmissionStatus.REJECTED, actorUserId);
+    }
+
+    @Override
+    public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
+        return repo.findByTenantAndStatus(tenantId, SubmissionStatus.DRAFT);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -286,7 +312,7 @@ public class WorkflowTypeSubmissionService
         // Maker-checker disabled: publish immediately without self-approval check.
         publishConfigDocuments(submission);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return repo.save(new WorkflowTypeSubmission(
+        WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(
                 submission.id(), submission.tenantId(), submission.workflowType(),
                 submission.displayName(), submission.description(),
                 SubmissionStatus.APPROVED, "Approved",
@@ -296,5 +322,29 @@ public class WorkflowTypeSubmissionService
                 submission.currentStep(),
                 submission.version() + 1,
                 submission.createdAt(), now));
+        auditRepo.save(submissionAuditEntry(saved, AuditEventType.SUBMISSION_APPROVED,
+                "DRAFT", "APPROVED", actorUserId));
+        return saved;
+    }
+
+    private static AuditEntry submissionAuditEntry(WorkflowTypeSubmission s,
+                                                    AuditEventType eventType,
+                                                    String previousState,
+                                                    String newState,
+                                                    String actorUserId) {
+        return new AuditEntry(
+                UUID.randomUUID().toString(),
+                s.tenantId(),
+                s.id(),
+                null,
+                eventType,
+                previousState,
+                newState,
+                eventType.name().toLowerCase(),
+                List.of(new AuditEntry.ChangedField("status", previousState, newState)),
+                actorUserId,
+                null,
+                Instant.now(),
+                s.id() + ":" + eventType.name() + ":" + s.version());
     }
 }

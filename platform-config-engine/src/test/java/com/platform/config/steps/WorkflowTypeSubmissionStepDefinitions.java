@@ -9,7 +9,11 @@ import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.service.WorkflowTypeSubmissionService;
 import com.platform.config.doubles.InMemoryConfigDocumentWriter;
+import com.platform.config.doubles.InMemorySubmissionAuditRepository;
 import com.platform.config.doubles.InMemoryWorkflowTypeSubmissionRepository;
+import com.platform.domain.model.AuditEntry;
+import com.platform.domain.model.AuditEventType;
+import io.cucumber.java.Before;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -28,11 +32,26 @@ public class WorkflowTypeSubmissionStepDefinitions {
     private final InMemoryWorkflowTypeSubmissionRepository repo =
             new InMemoryWorkflowTypeSubmissionRepository();
     private final InMemoryConfigDocumentWriter writer = new InMemoryConfigDocumentWriter();
+    private final InMemorySubmissionAuditRepository auditRepo = new InMemorySubmissionAuditRepository();
 
     // Rebuilt per scenario based on maker-checker flag
     private boolean makerCheckerEnabled = true;
     private WorkflowTypeSubmissionService service() {
-        return new WorkflowTypeSubmissionService(repo, writer, makerCheckerEnabled);
+        return new WorkflowTypeSubmissionService(repo, writer, auditRepo, makerCheckerEnabled);
+    }
+
+    @Before
+    public void resetAll() {
+        repo.reset();
+        writer.reset();
+        auditRepo.reset();
+        makerCheckerEnabled = true;
+        lastResult = null;
+        lastSubmissionId = null;
+        originalSubmissionId = null;
+        lastDraftConfigs = null;
+        listResult = null;
+        thrownException = null;
     }
 
     // Scenario state
@@ -268,6 +287,27 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @Then("an IllegalArgumentException is thrown")
     public void illegalArgumentExceptionThrown() {
         assertThat(thrownException).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Then("an audit entry of type {string} is recorded for the submission")
+    public void auditEntryRecorded(String eventTypeName) {
+        AuditEventType type = AuditEventType.valueOf(eventTypeName);
+        assertThat(auditRepo.findByEventType(type)).isNotEmpty();
+    }
+
+    @Then("the audit entry records actor {string}")
+    public void auditEntryRecordsActor(String userId) {
+        AuditEntry latest = auditRepo.findBySubmissionId(lastSubmissionId)
+                .stream().reduce((a, b) -> b).orElseThrow();
+        assertThat(latest.actorUserId()).isEqualTo(userId);
+    }
+
+    @Then("the audit entry records previous state {string} and new state {string}")
+    public void auditEntryRecordsStates(String prev, String next) {
+        AuditEntry latest = auditRepo.findBySubmissionId(lastSubmissionId)
+                .stream().reduce((a, b) -> b).orElseThrow();
+        assertThat(latest.previousState()).isEqualTo("null".equals(prev) ? null : prev);
+        assertThat(latest.newState()).isEqualTo("null".equals(next) ? null : next);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

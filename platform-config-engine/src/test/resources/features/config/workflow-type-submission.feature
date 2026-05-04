@@ -125,3 +125,41 @@ Feature: Workflow type submission lifecycle
     And a DRAFT submission exists for tenant "tenant-1" workflow type "SETTLEMENT_FIX" submitted by "alice"
     When the pending submissions for tenant "tenant-1" are retrieved
     Then the pending submissions list contains 1 submission
+
+  # ── Audit log ─────────────────────────────────────────────────────────────
+
+  Scenario: Creating a submission produces a SUBMISSION_CREATED audit entry
+    Given no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
+    Then an audit entry of type "SUBMISSION_CREATED" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "null" and new state "DRAFT"
+
+  Scenario: Submitting for approval produces a SUBMISSION_SUBMITTED_FOR_REVIEW audit entry
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And the submission has complete draft configs
+    When user "alice" submits the submission for approval
+    Then an audit entry of type "SUBMISSION_SUBMITTED_FOR_REVIEW" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "DRAFT" and new state "PENDING_APPROVAL"
+
+  Scenario: Approving a submission produces a SUBMISSION_APPROVED audit entry
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" approves the submission
+    Then an audit entry of type "SUBMISSION_APPROVED" is recorded for the submission
+    And the audit entry records actor "bob"
+    And the audit entry records previous state "PENDING_APPROVAL" and new state "APPROVED"
+
+  Scenario: Rejecting a submission produces a SUBMISSION_REJECTED audit entry
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" rejects the submission with reason "Field mappings are incorrect"
+    Then an audit entry of type "SUBMISSION_REJECTED" is recorded for the submission
+    And the audit entry records actor "bob"
+    And the audit entry records previous state "PENDING_APPROVAL" and new state "REJECTED"
+
+  Scenario: Revising a rejected submission produces a SUBMISSION_REVISED audit entry
+    Given a REJECTED submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" revises the submission with updated draft configs
+    Then an audit entry of type "SUBMISSION_REVISED" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "REJECTED" and new state "DRAFT"

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.audit.domain.ports.out.IAuditEntryRepository;
+import com.platform.config.domain.ports.out.ISubmissionAuditRepository;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEntry.ChangedField;
 import com.platform.domain.model.AuditEventType;
@@ -20,7 +21,11 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
-public class AuditEntryJdbcRepository implements IAuditEntryRepository, IWorkflowAuditRepository, IIngestionAuditRepository {
+public class AuditEntryJdbcRepository
+        implements IAuditEntryRepository,
+                   IWorkflowAuditRepository,
+                   IIngestionAuditRepository,
+                   ISubmissionAuditRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;

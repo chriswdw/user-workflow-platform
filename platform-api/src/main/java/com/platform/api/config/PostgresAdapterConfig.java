@@ -88,8 +88,9 @@ public class PostgresAdapterConfig {
     @Bean
     public WorkflowTypeSubmissionService workflowTypeSubmissionService(
             WorkflowTypeSubmissionJdbcRepository repo,
-            ConfigDocumentJdbcWriter writer) {
-        return new WorkflowTypeSubmissionService(repo, writer, makerCheckerEnabled);
+            ConfigDocumentJdbcWriter writer,
+            AuditEntryJdbcRepository auditRepo) {
+        return new WorkflowTypeSubmissionService(repo, writer, auditRepo, makerCheckerEnabled);
     }
 
     @Bean
