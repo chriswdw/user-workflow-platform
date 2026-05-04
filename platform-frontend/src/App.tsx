@@ -9,12 +9,12 @@ import { WizardShell } from './components/wizard/WizardShell';
 import { ApprovalQueue } from './components/wizard/ApprovalQueue';
 import { MySubmissionsView } from './components/wizard/MySubmissionsView';
 import { SourceConnectionsAdminView } from './components/admin/SourceConnectionsAdminView';
+import { AllDraftsAdminView } from './components/admin/AllDraftsAdminView';
 import { useWorkItems } from './api/useWorkItems';
-import { usePendingSubmissions } from './api/useWorkflowTypeSubmissions';
-import { useMyDraftSubmissions, useMyRejectedSubmissions } from './api/useWorkflowTypeSubmissions';
+import { useMyDraftSubmissions, useMyRejectedSubmissions, usePendingSubmissions } from './api/useWorkflowTypeSubmissions';
 import { BLOTTER_CONFIGS, WORKFLOW_TYPES } from './config/blotterConfigs';
 
-type AppView = 'blotter' | 'wizard' | 'approval-queue' | 'my-submissions' | 'admin-connections';
+type AppView = 'blotter' | 'wizard' | 'approval-queue' | 'my-submissions' | 'admin-connections' | 'admin-drafts';
 
 const queryClient = new QueryClient();
 
@@ -88,6 +88,16 @@ function MainApp() {
               Source Connections
             </button>
           )}
+
+          {role === 'PLATFORM_ADMIN' && (
+            <button
+              type="button"
+              className={`app-header-nav-btn${view === 'admin-drafts' ? ' app-header-nav-btn--active' : ''}`}
+              onClick={() => setView('admin-drafts')}
+            >
+              All Drafts
+            </button>
+          )}
         </nav>
 
         {view === 'blotter' && (
@@ -97,7 +107,7 @@ function MainApp() {
             onChange={e => setWorkflowType(e.target.value)}
           >
             {WORKFLOW_TYPES.map(t => (
-              <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+              <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>
             ))}
           </select>
         )}
@@ -131,6 +141,8 @@ function MainApp() {
         )}
 
         {view === 'admin-connections' && <SourceConnectionsAdminView />}
+
+        {view === 'admin-drafts' && <AllDraftsAdminView />}
       </main>
 
       {view === 'wizard' && <WizardShell onClose={() => setView('blotter')} />}

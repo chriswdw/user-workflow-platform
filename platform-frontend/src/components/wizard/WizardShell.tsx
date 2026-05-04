@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
+import axios from 'axios';
 import { useWizardStore } from '../../store/wizardStore';
 import { isStepComplete } from '../../utils/wizardValidation';
 import { useCreateSubmission } from '../../api/useCreateSubmission';
@@ -24,7 +25,7 @@ const STEPS = [
 const TOTAL_STEPS = STEPS.length;
 
 interface Props {
-  onClose: () => void;
+  readonly onClose: () => void;
 }
 
 export function WizardShell({ onClose }: Props) {
@@ -56,6 +57,14 @@ export function WizardShell({ onClose }: Props) {
           useWizardStore.setState({ submissionId: saved.id });
           setStep(2);
         },
+        onError: err => {
+          const is409 = axios.isAxiosError(err) && err.response?.status === 409;
+          setSubmitError(
+            is409
+              ? `A submission for "${store.workflowType}" already exists. Open My Submissions to continue it.`
+              : (err.message ?? 'Failed to create submission.')
+          );
+        },
       });
       return;
     }
@@ -64,7 +73,10 @@ export function WizardShell({ onClose }: Props) {
       const payload = buildSubmissionPayload();
       saveDraft.mutate(
         { draftConfigs: payload as unknown as Record<string, unknown>, currentStep },
-        { onSuccess: () => setStep(currentStep + 1) }
+        {
+          onSuccess: () => setStep(currentStep + 1),
+          onError: err => setSubmitError(err.message ?? 'Failed to save draft.'),
+        }
       );
       return;
     }
@@ -122,10 +134,17 @@ export function WizardShell({ onClose }: Props) {
               stepNum < currentStep ? 'done' :
               stepNum === currentStep ? 'active' : 'pending';
             return (
-              <div key={stepNum} className={`wizard-progress-step wizard-progress-step--${status}`}>
-                <span className="wizard-progress-number">{stepNum}</span>
-                <span className="wizard-progress-label">{label}</span>
-              </div>
+              <Fragment key={stepNum}>
+                <div className={`wizard-progress-step wizard-progress-step--${status}`}>
+                  <span className="wizard-progress-circle">
+                    {status === 'done' ? '✓' : stepNum}
+                  </span>
+                  <span className="wizard-progress-label">{label}</span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`wizard-progress-connector wizard-progress-connector--${status === 'done' ? 'done' : 'pending'}`} />
+                )}
+              </Fragment>
             );
           })}
         </nav>
@@ -136,6 +155,7 @@ export function WizardShell({ onClose }: Props) {
 
         <div className="wizard-footer">
           {isSaving && <span className="saving-indicator">Saving…</span>}
+          {submitError && !isSaving && <span className="wizard-footer-error">{submitError}</span>}
 
           <div className="wizard-footer-nav">
             {currentStep > 1 && (

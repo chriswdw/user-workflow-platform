@@ -1,9 +1,10 @@
 import { useDevLogin } from '../api/useDevLogin';
 
 const ROLES = [
-  { label: 'Analyst',    userId: 'analyst-1',    role: 'ANALYST',    tenantId: 'tenant-1' },
-  { label: 'Supervisor', userId: 'supervisor-1', role: 'SUPERVISOR', tenantId: 'tenant-1' },
-  { label: 'Read Only',  userId: 'readonly-1',   role: 'READ_ONLY',  tenantId: 'tenant-1' },
+  { label: 'Analyst',        userId: 'analyst-1',    role: 'ANALYST',         tenantId: 'tenant-1' },
+  { label: 'Supervisor',     userId: 'supervisor-1', role: 'SUPERVISOR',      tenantId: 'tenant-1' },
+  { label: 'Read Only',      userId: 'readonly-1',   role: 'READ_ONLY',       tenantId: 'tenant-1' },
+  { label: 'Administrator',  userId: 'admin-1',      role: 'PLATFORM_ADMIN',  tenantId: 'tenant-1' },
 ];
 
 export function LoginPage() {

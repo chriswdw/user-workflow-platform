@@ -10,7 +10,7 @@ export function usePendingSubmissions() {
   return useQuery<WorkflowTypeSubmission[]>({
     queryKey: ['workflow-type-submissions', tenantId, 'PENDING_APPROVAL'],
     queryFn: async () => {
-      const { data } = await client.get('/workflow-type-submissions', { params: { status: 'PENDING_APPROVAL' } });
+      const { data } = await client.get('/workflow-type-submissions/pending');
       return z.array(WorkflowTypeSubmissionSchema).parse(data);
     },
     enabled: !!tenantId,
@@ -24,7 +24,7 @@ export function useMyDraftSubmissions() {
   return useQuery<WorkflowTypeSubmission[]>({
     queryKey: ['workflow-type-submissions', tenantId, 'DRAFT', userId],
     queryFn: async () => {
-      const { data } = await client.get('/workflow-type-submissions', { params: { status: 'DRAFT', submittedBy: userId } });
+      const { data } = await client.get('/workflow-type-submissions/my-drafts');
       return z.array(WorkflowTypeSubmissionSchema).parse(data);
     },
     enabled: !!tenantId && !!userId,
@@ -38,9 +38,22 @@ export function useMyRejectedSubmissions() {
   return useQuery<WorkflowTypeSubmission[]>({
     queryKey: ['workflow-type-submissions', tenantId, 'REJECTED', userId],
     queryFn: async () => {
-      const { data } = await client.get('/workflow-type-submissions', { params: { status: 'REJECTED', submittedBy: userId } });
+      const { data } = await client.get('/workflow-type-submissions/my-rejected');
       return z.array(WorkflowTypeSubmissionSchema).parse(data);
     },
     enabled: !!tenantId && !!userId,
+  });
+}
+
+export function useAllDraftSubmissions() {
+  const tenantId = useAuthStore(s => s.tenantId);
+
+  return useQuery<WorkflowTypeSubmission[]>({
+    queryKey: ['workflow-type-submissions', tenantId, 'DRAFT'],
+    queryFn: async () => {
+      const { data } = await client.get('/workflow-type-submissions/all-drafts');
+      return z.array(WorkflowTypeSubmissionSchema).parse(data);
+    },
+    enabled: !!tenantId,
   });
 }

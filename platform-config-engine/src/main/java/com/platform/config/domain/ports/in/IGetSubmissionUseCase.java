@@ -9,4 +9,5 @@ public interface IGetSubmissionUseCase {
     List<WorkflowTypeSubmission> getPendingForTenant(String tenantId);
     List<WorkflowTypeSubmission> getDraftsForUser(String tenantId, String actorUserId);
     List<WorkflowTypeSubmission> getRejectedForUser(String tenantId, String actorUserId);
+    List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId);
 }

@@ -7,7 +7,9 @@
     "build": "tsc && vite build",
     "test": "jest --passWithNoTests",
     "test:bdd": "TS_NODE_PROJECT=tsconfig.cucumber.json cucumber-js --config cucumber.cjs",
-    "test:coverage": "TS_NODE_PROJECT=tsconfig.cucumber.json c8 --reporter=lcov --reporter=text --include='src/**/*.ts' cucumber-js --config cucumber.cjs"
+    "test:coverage": "TS_NODE_PROJECT=tsconfig.cucumber.json c8 --reporter=lcov --reporter=text --include='src/**/*.ts' cucumber-js --config cucumber.cjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.56.0",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@cucumber/cucumber": "^11.0.1",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",

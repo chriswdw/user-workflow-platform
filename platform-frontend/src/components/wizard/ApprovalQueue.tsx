@@ -3,7 +3,16 @@ import { usePendingSubmissions } from '../../api/useWorkflowTypeSubmissions';
 import { useApproveSubmission, useRejectSubmission } from '../../api/useSubmissionActions';
 import type { WorkflowTypeSubmission } from '../../types/WorkflowTypeSubmission';
 
-function RejectForm({ submissionId, onDone }: { submissionId: string; onDone: () => void }) {
+interface RejectFormProps {
+  readonly submissionId: string;
+  readonly onDone: () => void;
+}
+
+interface ApprovalRowProps {
+  readonly sub: WorkflowTypeSubmission;
+}
+
+function RejectForm({ submissionId, onDone }: RejectFormProps) {
   const [reason, setReason] = useState('');
   const reject = useRejectSubmission(submissionId);
 
@@ -31,7 +40,7 @@ function RejectForm({ submissionId, onDone }: { submissionId: string; onDone: ()
   );
 }
 
-function ApprovalRow({ sub }: { sub: WorkflowTypeSubmission }) {
+function ApprovalRow({ sub }: ApprovalRowProps) {
   const [rejecting, setRejecting] = useState(false);
   const approve = useApproveSubmission(sub.id);
 
@@ -40,7 +49,7 @@ function ApprovalRow({ sub }: { sub: WorkflowTypeSubmission }) {
       <td><code>{sub.workflowType}</code></td>
       <td>{sub.displayName}</td>
       <td>{sub.submittedBy}</td>
-      <td>{new Date(sub.submittedAt).toLocaleString()}</td>
+      <td>{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : '—'}</td>
       <td>
         {rejecting ? (
           <RejectForm submissionId={sub.id} onDone={() => setRejecting(false)} />

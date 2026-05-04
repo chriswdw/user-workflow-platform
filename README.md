@@ -118,8 +118,59 @@ cd platform-frontend
 npm run dev                              # Vite dev server at http://localhost:5173
 npm test                                 # Jest unit tests
 npm run test:bdd                         # Cucumber.js BDD tests
+npm run test:e2e                         # Playwright E2E tests (headless Chromium)
+npm run test:e2e:ui                      # Playwright E2E tests with interactive UI
 npm run build                            # Production build
 ```
+
+---
+
+## Frontend E2E tests (Playwright)
+
+E2E tests run a real Chromium browser against the Vite dev server. Backend calls are intercepted with `page.route()` — no Spring Boot instance is required.
+
+### First-time setup
+
+```bash
+cd platform-frontend
+npm install
+npx playwright install chromium
+```
+
+### Running the tests
+
+```bash
+# Run all E2E specs headlessly (CI / pre-PR)
+npm run test:e2e
+
+# Open the interactive Playwright UI (step-through debugging)
+npm run test:e2e:ui
+
+# Run a single spec with a visible browser window
+npx playwright test e2e/admin-nav.spec.ts --headed
+
+# View the HTML report from the last run
+npx playwright show-report
+```
+
+`npm run test:e2e` reuses an already-running `npm run dev` server if one is on port 5173; otherwise it starts one automatically.
+
+### Updating visual snapshots
+
+The `wizard-step2-layout` spec includes a pixel-diff screenshot of the wizard step 2 body. After any intentional CSS change, regenerate the baseline and commit the updated PNG:
+
+```bash
+npx playwright test e2e/wizard-step2-layout.spec.ts --update-snapshots=all
+git add e2e/wizard-step2-layout.spec.ts-snapshots/
+```
+
+### What the specs cover
+
+| Spec | Tests | What it catches |
+|---|---|---|
+| `admin-nav.spec.ts` | 4 | Admin-only nav items visible/hidden by role; `All Drafts` and `Source Connections` views render correctly |
+| `wizard-step2-layout.spec.ts` | 2 | Radio buttons render inline (bounding-box check); CSS regressions in step 2 (visual snapshot) |
+| `wizard-api-urls.spec.ts` | 5 | Save-draft PATCH URL has no `/draft` suffix; GET hooks use sub-path style (`/pending`, `/my-drafts`, `/my-rejected`) not query params |
 
 ---
 

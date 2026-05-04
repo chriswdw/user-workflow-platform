@@ -160,6 +160,13 @@ public class WorkflowTypeSubmissionController {
                 .stream().map(WorkflowTypeSubmissionResponse::from).toList());
     }
 
+    @GetMapping("/all-drafts")
+    public ResponseEntity<List<WorkflowTypeSubmissionResponse>> getAllDrafts(
+            @AuthenticationPrincipal ApiAuthentication auth) {
+        return ResponseEntity.ok(getUseCase.getAllDraftsForTenant(auth.tenantId())
+                .stream().map(WorkflowTypeSubmissionResponse::from).toList());
+    }
+
     @GetMapping("/my-drafts")
     public ResponseEntity<List<WorkflowTypeSubmissionResponse>> getMyDrafts(
             @AuthenticationPrincipal ApiAuthentication auth) {
