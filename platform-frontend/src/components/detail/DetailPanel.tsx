@@ -7,14 +7,14 @@ import { useAuthStore } from '../../store/authStore';
 import { DetailView } from './DetailView';
 import { AuditTrail } from '../audit/AuditTrail';
 
-interface Props {
-  workItemId: string;
-  onClose: () => void;
+interface DetailPanelProps {
+  readonly workItemId: string;
+  readonly onClose: () => void;
 }
 
 type Tab = 'details' | 'audit';
 
-export function DetailPanel({ workItemId, onClose }: Props) {
+export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const [tab, setTab] = useState<Tab>('details');
   const userRole = useAuthStore(s => s.role) ?? '';
 
@@ -35,8 +35,8 @@ export function DetailPanel({ workItemId, onClose }: Props) {
         {item && (
           <>
             <span className="detail-panel-id">{item.id}</span>
-            <span className={`badge badge--${item.status.toLowerCase().replace(/_/g, '-')}`}>
-              {item.status.replace(/_/g, ' ')}
+            <span className={`badge badge--${item.status.toLowerCase().replaceAll('_', '-')}`}>
+              {item.status.replaceAll('_', ' ')}
             </span>
             {item.priorityLevel && (
               <span className={`badge badge--priority-${item.priorityLevel.toLowerCase()}`}>

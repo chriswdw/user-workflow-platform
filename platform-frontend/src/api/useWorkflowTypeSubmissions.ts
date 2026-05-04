@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { WorkflowTypeSubmissionSchema, type WorkflowTypeSubmission } from '../types/WorkflowTypeSubmission';
 import { useAuthStore } from '../store/authStore';
-import client from './client';
+import { client } from './client';
 
 export function usePendingSubmissions() {
   const tenantId = useAuthStore(s => s.tenantId);

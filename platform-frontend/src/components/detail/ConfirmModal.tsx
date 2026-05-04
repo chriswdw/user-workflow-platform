@@ -1,10 +1,12 @@
-interface Props {
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+import type { MouseEventHandler } from 'react';
+
+interface ConfirmModalProps {
+  readonly message: string;
+  readonly onConfirm: MouseEventHandler<HTMLButtonElement>;
+  readonly onCancel: MouseEventHandler<HTMLButtonElement>;
 }
 
-export function ConfirmModal({ message, onConfirm, onCancel }: Props) {
+export function ConfirmModal({ message, onConfirm, onCancel }: ConfirmModalProps) {
   return (
     <dialog open className="modal-overlay" aria-modal="true">
       <div className="modal-box">

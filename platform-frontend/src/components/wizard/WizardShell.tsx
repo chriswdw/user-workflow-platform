@@ -24,11 +24,11 @@ const STEPS = [
 
 const TOTAL_STEPS = STEPS.length;
 
-interface Props {
+interface WizardShellProps {
   readonly onClose: () => void;
 }
 
-export function WizardShell({ onClose }: Props) {
+export function WizardShell({ onClose }: WizardShellProps) {
   const store = useWizardStore();
   const { currentStep, setStep, submissionId, revisingSubmissionId, buildSubmissionPayload } = store;
 

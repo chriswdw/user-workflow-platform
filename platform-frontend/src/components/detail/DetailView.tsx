@@ -5,15 +5,15 @@ import { SectionRenderer } from './SectionRenderer';
 import { ActionButton } from './ActionButton';
 import { MakerCheckerBanner } from './MakerCheckerBanner';
 
-interface Props {
-  config: DetailViewConfig;
-  item: WorkItem;
-  userRole: string;
-  onTransition: (transition: string, additionalFields?: Record<string, unknown>) => void;
-  transitionError?: string;
+interface DetailViewProps {
+  readonly config: DetailViewConfig;
+  readonly item: WorkItem;
+  readonly userRole: string;
+  readonly onTransition: (transition: string, additionalFields?: Record<string, unknown>) => void;
+  readonly transitionError?: string;
 }
 
-export function DetailView({ config, item, userRole, onTransition, transitionError }: Props) {
+export function DetailView({ config, item, userRole, onTransition, transitionError }: DetailViewProps) {
   const visibleActions = config.actions.filter(a => isActionVisible(a, item.status, userRole));
 
   return (

@@ -5,21 +5,23 @@ import { resolve } from '../../utils/fieldPathResolver';
 import { formatValue } from '../../utils/formatValue';
 import { maskIfNeeded } from '../../utils/fieldMasking';
 
-interface Props {
-  section: Section;
-  item: WorkItem;
-  userRole: string;
+interface SectionRendererProps {
+  readonly section: Section;
+  readonly item: WorkItem;
+  readonly userRole: string;
 }
 
-function FieldValue({ formatter, masked, isEditable, label }: {
-  formatter: string;
-  masked: unknown;
-  isEditable: boolean;
-  label: string;
-}) {
+interface FieldValueProps {
+  readonly formatter: string;
+  readonly masked: unknown;
+  readonly isEditable: boolean;
+  readonly label: string;
+}
+
+function FieldValue({ formatter, masked, isEditable, label }: FieldValueProps) {
   if (formatter === 'BADGE' && masked != null) {
     return (
-      <span className={`badge badge--${String(masked).toLowerCase().replace(/_/g, '-')}`}>
+      <span className={`badge badge--${formatValue(masked).toLowerCase().replaceAll('_', '-')}`}>
         {formatValue(masked, formatter)}
       </span>
     );
@@ -28,7 +30,7 @@ function FieldValue({ formatter, masked, isEditable, label }: {
     return (
       <input
         className="field-inline-edit"
-        defaultValue={masked != null ? String(masked) : ''}
+        defaultValue={masked != null ? formatValue(masked) : ''}
         aria-label={label}
       />
     );
@@ -36,7 +38,7 @@ function FieldValue({ formatter, masked, isEditable, label }: {
   return <>{formatValue(masked, formatter)}</>;
 }
 
-export function SectionRenderer({ section, item, userRole }: Props) {
+export function SectionRenderer({ section, item, userRole }: SectionRendererProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const visibleFields = section.fields.filter(

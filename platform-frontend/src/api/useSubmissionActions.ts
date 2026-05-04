@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { WorkflowTypeSubmissionSchema, type WorkflowTypeSubmission } from '../types/WorkflowTypeSubmission';
-import client from './client';
+import { client } from './client';
 
 interface SaveDraftVariables {
   readonly draftConfigs: Record<string, unknown>;

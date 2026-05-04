@@ -31,6 +31,7 @@ For local dev run: install PostgreSQL locally (no container required) and config
 Prefer direct tools (Read, Edit, Bash, grep) over spawning sub-agents. Only use the Agent tool when:
 - Exploration requires searching many locations across the codebase (subagent_type=Explore)
 - Two or more tasks are genuinely independent and can run in parallel
+- Always ask the users permission to launch sub agents and explain your reasoning as to why it is the correct approach in that instance.
 
 Never spawn a sub-agent for a single file read, a targeted grep, or a simple code edit.
 
@@ -161,9 +162,28 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 
 ## Coding Standards
 
-**Java**: records for immutable domain objects; sealed interfaces for sum types; no nulls in domain layer (use `Optional`); constructor injection only; no `@Autowired` outside `config/`; all dependency versions in `libs.versions.toml`.
+**Java**:
+- Records for immutable domain objects; sealed interfaces for sum types
+- No nulls in domain layer — use `Optional`; `Optional.empty()` never returned from repositories without documentation
+- Constructor injection only; no `@Autowired` outside `config/`
+- All dependency versions in `libs.versions.toml`
+- Extract a named interface for every service class that has more than one implementation or is injected across module boundaries — this includes domain services consumed by adapters via input ports
+- Use `final` on all injected fields and local variables that are never reassigned
+- Prefer `private` methods over package-private; only widen visibility when a test genuinely requires it
+- Single-responsibility: if a method needs a comment to explain what a block does, extract that block into a named private method
+- Favour composition over inheritance; extend only abstract base classes defined within the same module
 
-**TypeScript**: strict mode; no `any`; Zod for runtime validation at API boundaries.
+**TypeScript / React**:
+- Strict mode; no `any`; Zod for runtime validation at API boundaries
+- Define an explicit named `interface` for every component's props — inline object types in function signatures are forbidden. Name the interface `<ComponentName>Props` (e.g. `interface ActionButtonProps { ... }`)
+- All React function components must declare their props type explicitly: `function Foo(props: FooProps)` or destructured `function Foo({ bar }: FooProps)`
+- Custom hooks are named with the `use` prefix and live in `src/hooks/`; they own data fetching and state; components own rendering only
+- Prefer named exports over default exports for all components, hooks, and utilities — default exports make refactoring and search harder
+- Co-locate component-specific types in the same file as the component; shared types live in `src/types/`
+- Use `React.FC` only when a component explicitly uses `children`; otherwise use a plain function with an explicit return type
+- Event handler props are typed precisely (`React.MouseEventHandler<HTMLButtonElement>`, not `() => void`) so callers cannot pass incompatible handlers silently
+- Prefer positive null guards (`value == null`) over negative ones (`value != null`) in conditional expressions; use nullish coalescing (`??`) for simple fallbacks
+- Never coerce `unknown` or `object` values to a string via `String()` or template literals directly — write a named helper that branches on `typeof` first (primitives → `String(value)`, objects → `JSON.stringify(value)`, null/undefined → fallback); this prevents `[object Object]` rendering and satisfies Sonar's type-safety rules
 
 **PostgreSQL**: every query must use an index. For `WorkItem.fields` JSONB queries: containment queries use the GIN index; field-specific queries use expression indexes declared via `field-type-registry.fieldDeclarations[].searchable`. Flag potential seq scans before implementing — check with `EXPLAIN ANALYZE`.
 

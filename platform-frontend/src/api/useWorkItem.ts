@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { WorkItemSchema, type WorkItem } from '../types/WorkItem';
-import client from './client';
+import { client } from './client';
 
 export function useWorkItem(workItemId: string) {
   const tenantId = useAuthStore(s => s.tenantId);

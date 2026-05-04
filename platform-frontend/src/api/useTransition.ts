@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { WorkItemSchema, type WorkItem } from '../types/WorkItem';
-import client from './client';
+import { client } from './client';
 
 interface TransitionVariables {
-  transition: string;
-  additionalFields?: Record<string, unknown>;
+  readonly transition: string;
+  readonly additionalFields?: Record<string, unknown>;
 }
 
 export function useTransition(workItemId: string) {

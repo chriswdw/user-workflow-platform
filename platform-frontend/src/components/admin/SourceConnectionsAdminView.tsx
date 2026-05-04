@@ -10,7 +10,31 @@ import type { SourceConnection } from '../../types/WorkflowTypeSubmission';
 type ConnectionType = 'KAFKA' | 'DB_POLL' | 'FILE_SHARE';
 const CONNECTION_TYPES: ConnectionType[] = ['KAFKA', 'DB_POLL', 'FILE_SHARE'];
 
-function KafkaFields({ config, onChange }: { config: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+interface KafkaFieldsProps {
+  readonly config: Record<string, unknown>;
+  readonly onChange: (c: Record<string, unknown>) => void;
+}
+
+interface DbPollFieldsProps {
+  readonly config: Record<string, unknown>;
+  readonly onChange: (c: Record<string, unknown>) => void;
+}
+
+interface FileShareFieldsProps {
+  readonly config: Record<string, unknown>;
+  readonly onChange: (c: Record<string, unknown>) => void;
+}
+
+interface AddConnectionFormProps {
+  readonly onDone: () => void;
+}
+
+interface AccessModalProps {
+  readonly connection: SourceConnection;
+  readonly onClose: () => void;
+}
+
+function KafkaFields({ config, onChange }: KafkaFieldsProps) {
   return (
     <>
       <input className="form-input" placeholder="Bootstrap servers" value={(config['bootstrapServers'] as string) ?? ''} onChange={e => onChange({ ...config, bootstrapServers: e.target.value })} />
@@ -19,7 +43,7 @@ function KafkaFields({ config, onChange }: { config: Record<string, unknown>; on
   );
 }
 
-function DbPollFields({ config, onChange }: { config: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+function DbPollFields({ config, onChange }: DbPollFieldsProps) {
   return (
     <>
       <input className="form-input" placeholder="JDBC URL" value={(config['jdbcUrl'] as string) ?? ''} onChange={e => onChange({ ...config, jdbcUrl: e.target.value })} />
@@ -29,7 +53,7 @@ function DbPollFields({ config, onChange }: { config: Record<string, unknown>; o
   );
 }
 
-function FileShareFields({ config, onChange }: { config: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+function FileShareFields({ config, onChange }: FileShareFieldsProps) {
   return (
     <>
       <input className="form-input" placeholder="Path" value={(config['path'] as string) ?? ''} onChange={e => onChange({ ...config, path: e.target.value })} />
@@ -38,7 +62,7 @@ function FileShareFields({ config, onChange }: { config: Record<string, unknown>
   );
 }
 
-function AddConnectionForm({ onDone }: { onDone: () => void }) {
+function AddConnectionForm({ onDone }: AddConnectionFormProps) {
   const [displayName, setDisplayName] = useState('');
   const [type, setType] = useState<ConnectionType>('KAFKA');
   const [config, setConfig] = useState<Record<string, unknown>>({});
@@ -66,7 +90,7 @@ function AddConnectionForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function AccessModal({ connection, onClose }: { connection: SourceConnection; onClose: () => void }) {
+function AccessModal({ connection, onClose }: AccessModalProps) {
   const [tenantId, setTenantId] = useState('');
   const grant = useGrantConnectionAccess(connection.id);
   const revoke = useRevokeConnectionAccess(connection.id);

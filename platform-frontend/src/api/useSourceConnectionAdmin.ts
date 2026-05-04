@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SourceConnectionSchema, type SourceConnection } from '../types/WorkflowTypeSubmission';
-import client from './client';
+import { client } from './client';
 
 interface CreateSourceConnectionVariables {
-  displayName: string;
-  type: 'KAFKA' | 'DB_POLL' | 'FILE_SHARE';
-  config: Record<string, unknown>;
+  readonly displayName: string;
+  readonly type: 'KAFKA' | 'DB_POLL' | 'FILE_SHARE';
+  readonly config: Record<string, unknown>;
 }
 
 interface GrantAccessVariables {
-  tenantId: string;
+  readonly tenantId: string;
 }
 
 export function useCreateSourceConnection() {

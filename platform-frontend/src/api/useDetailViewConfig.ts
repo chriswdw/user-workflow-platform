@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { DetailViewConfigSchema, type DetailViewConfig } from '../types/DetailViewConfig';
-import client from './client';
+import { client } from './client';
 
 export function useDetailViewConfig(workflowType: string) {
   const tenantId = useAuthStore(s => s.tenantId);

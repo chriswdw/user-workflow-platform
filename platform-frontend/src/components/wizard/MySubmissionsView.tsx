@@ -2,11 +2,21 @@ import { useMyDraftSubmissions, useMyRejectedSubmissions } from '../../api/useWo
 import { useWizardStore } from '../../store/wizardStore';
 import type { WorkflowTypeSubmission } from '../../types/WorkflowTypeSubmission';
 
-interface Props {
-  onOpenWizard: () => void;
+interface MySubmissionsViewProps {
+  readonly onOpenWizard: () => void;
 }
 
-function DraftRow({ sub, onOpenWizard }: { sub: WorkflowTypeSubmission; onOpenWizard: () => void }) {
+interface DraftRowProps {
+  readonly sub: WorkflowTypeSubmission;
+  readonly onOpenWizard: () => void;
+}
+
+interface RejectedRowProps {
+  readonly sub: WorkflowTypeSubmission;
+  readonly onOpenWizard: () => void;
+}
+
+function DraftRow({ sub, onOpenWizard }: DraftRowProps) {
   const { hydrateForResume } = useWizardStore();
 
   function handleResume() {
@@ -27,7 +37,7 @@ function DraftRow({ sub, onOpenWizard }: { sub: WorkflowTypeSubmission; onOpenWi
   );
 }
 
-function RejectedRow({ sub, onOpenWizard }: { sub: WorkflowTypeSubmission; onOpenWizard: () => void }) {
+function RejectedRow({ sub, onOpenWizard }: RejectedRowProps) {
   const { hydrateForRevision } = useWizardStore();
 
   function handleRevise() {
@@ -48,7 +58,7 @@ function RejectedRow({ sub, onOpenWizard }: { sub: WorkflowTypeSubmission; onOpe
   );
 }
 
-export function MySubmissionsView({ onOpenWizard }: Props) {
+export function MySubmissionsView({ onOpenWizard }: MySubmissionsViewProps) {
   const { data: drafts = [], isLoading: loadingDrafts } = useMyDraftSubmissions();
   const { data: rejected = [], isLoading: loadingRejected } = useMyRejectedSubmissions();
 

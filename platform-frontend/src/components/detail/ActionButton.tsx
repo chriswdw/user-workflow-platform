@@ -3,10 +3,10 @@ import type { Action } from '../../types/DetailViewConfig';
 import { ConfirmModal } from './ConfirmModal';
 import { ActionFormModal } from './ActionFormModal';
 
-interface Props {
-  action: Action;
-  onTransition: (transition: string, additionalFields?: Record<string, unknown>) => void;
-  serverError?: string;
+interface ActionButtonProps {
+  readonly action: Action;
+  readonly onTransition: (transition: string, additionalFields?: Record<string, unknown>) => void;
+  readonly serverError?: string;
 }
 
 const styleClass: Record<Action['style'], string> = {
@@ -15,7 +15,7 @@ const styleClass: Record<Action['style'], string> = {
   DANGER: 'btn-danger',
 };
 
-export function ActionButton({ action, onTransition, serverError }: Props) {
+export function ActionButton({ action, onTransition, serverError }: ActionButtonProps) {
   const [open, setOpen] = useState(false);
   const hasInputFields = (action.inputFields ?? []).length > 0;
   const needsModal = hasInputFields || action.confirmationRequired;

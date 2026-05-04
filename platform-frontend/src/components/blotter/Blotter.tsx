@@ -8,14 +8,14 @@ import type { WorkItem } from '../../types/WorkItem';
 import { resolve } from '../../utils/fieldPathResolver';
 import { maskIfNeeded } from '../../utils/fieldMasking';
 
-interface Props {
-  config: BlotterConfig;
-  items: WorkItem[];
-  userRole: string;
-  onSelectItem: (id: string) => void;
+interface BlotterProps {
+  readonly config: BlotterConfig;
+  readonly items: readonly WorkItem[];
+  readonly userRole: string;
+  readonly onSelectItem: (id: string) => void;
 }
 
-export function Blotter({ config, items, userRole, onSelectItem }: Props) {
+export function Blotter({ config, items, userRole, onSelectItem }: BlotterProps) {
   const colDefs = useMemo<ColDef<WorkItem>[]>(() =>
     config.columns
       .filter(col => col.visible !== false)
@@ -47,7 +47,7 @@ export function Blotter({ config, items, userRole, onSelectItem }: Props) {
   return (
     <div className="ag-theme-alpine" style={{ height: 600, width: '100%' }}>
       <AgGridReact<WorkItem>
-        rowData={items}
+        rowData={[...items]}
         columnDefs={colDefs}
         onRowClicked={e => e.data && onSelectItem(e.data.id)}
       />
