@@ -26,6 +26,7 @@ dependencies {
     runtimeOnly(libs.jjwt.jackson)
     implementation(libs.bucket4j.core)
 
+    testImplementation(testFixtures(project(":platform-config-engine")))
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.spring)

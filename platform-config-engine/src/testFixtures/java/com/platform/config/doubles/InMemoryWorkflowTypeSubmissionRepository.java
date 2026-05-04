@@ -51,4 +51,8 @@ public class InMemoryWorkflowTypeSubmissionRepository implements IWorkflowTypeSu
                         && s.workflowType().equals(workflowType)
                         && s.status() != SubmissionStatus.REJECTED);
     }
+
+    public void reset() {
+        store.clear();
+    }
 }

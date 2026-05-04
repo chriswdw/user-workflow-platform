@@ -1,5 +1,10 @@
+plugins {
+    `java-test-fixtures`
+}
+
 dependencies {
     implementation(project(":platform-domain"))
+    testFixturesImplementation(project(":platform-domain"))
 
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.junit.platform.engine)

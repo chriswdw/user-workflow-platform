@@ -19,4 +19,8 @@ public class InMemoryConfigDocumentWriter implements IConfigDocumentWriter {
     public List<ConfigDocument> getAll() {
         return Collections.unmodifiableList(published);
     }
+
+    public void reset() {
+        published.clear();
+    }
 }
