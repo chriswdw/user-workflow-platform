@@ -324,11 +324,12 @@ class WorkflowConfigJdbcRepositoryTest {
     }
 
     @Test
-    void parsesConfig_withNullStatesAndTransitions() {
+    void parsesConfig_withNullTransitions_defaultsToEmptyList() {
         String json = """
                 {
                   "id": "wf-empty", "tenantId": "tenant-1", "workflowType": "EMPTY_TYPE",
-                  "initialState": "OPEN", "active": true
+                  "initialState": "OPEN", "active": true,
+                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}]
                 }
                 """;
         insertConfig("wf-empty", "tenant-1", "EMPTY_TYPE", json, true);
@@ -336,7 +337,7 @@ class WorkflowConfigJdbcRepositoryTest {
         WorkflowConfig config =
                 repository.findActiveByTenantAndWorkflowType("tenant-1", "EMPTY_TYPE").orElseThrow();
 
-        assertThat(config.states()).isEmpty();
+        assertThat(config.states()).hasSize(1);
         assertThat(config.transitions()).isEmpty();
     }
 

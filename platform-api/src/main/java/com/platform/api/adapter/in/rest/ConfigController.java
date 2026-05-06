@@ -1,7 +1,6 @@
 package com.platform.api.adapter.in.rest;
 
 import com.platform.api.config.ApiAuthentication;
-import com.platform.config.domain.exception.ConfigNotFoundException;
 import com.platform.config.domain.model.ConfigType;
 import com.platform.config.domain.ports.in.ILoadConfigUseCase;
 import org.springframework.http.ResponseEntity;
@@ -27,11 +26,7 @@ public class ConfigController {
     public ResponseEntity<Map<String, Object>> getDetailViewConfig(
             @PathVariable String workflowType,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            var doc = loadConfig.loadActive(auth.tenantId(), workflowType, ConfigType.DETAIL_VIEW_CONFIG);
-            return ResponseEntity.ok(doc.content());
-        } catch (ConfigNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        var doc = loadConfig.loadActive(auth.tenantId(), workflowType, ConfigType.DETAIL_VIEW_CONFIG);
+        return ResponseEntity.ok(doc.content());
     }
 }

@@ -1,10 +1,6 @@
 package com.platform.api.adapter.in.rest;
 
 import com.platform.api.config.ApiAuthentication;
-import com.platform.config.domain.exception.IncompleteSubmissionException;
-import com.platform.config.domain.exception.SelfApprovalException;
-import com.platform.config.domain.exception.SubmissionAlreadyExistsException;
-import com.platform.config.domain.exception.SubmissionNotFoundException;
 import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.ports.in.ICreateWorkflowTypeSubmissionUseCase;
@@ -62,17 +58,13 @@ public class WorkflowTypeSubmissionController {
     public ResponseEntity<WorkflowTypeSubmissionResponse> create(
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            var result = createUseCase.create(new CreateSubmissionCommand(
-                    auth.tenantId(), auth.userId(),
-                    (String) body.get("workflowType"),
-                    (String) body.get("displayName"),
-                    (String) body.get("description"),
-                    parseDraftConfigs(body)));
-            return ResponseEntity.status(201).body(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionAlreadyExistsException e) {
-            return ResponseEntity.status(409).build();
-        }
+        var result = createUseCase.create(new CreateSubmissionCommand(
+                auth.tenantId(), auth.userId(),
+                (String) body.get("workflowType"),
+                (String) body.get("displayName"),
+                (String) body.get("description"),
+                parseDraftConfigs(body)));
+        return ResponseEntity.status(201).body(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PatchMapping("/{id}")
@@ -81,47 +73,27 @@ public class WorkflowTypeSubmissionController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            int step = body.containsKey("currentStep") ? (Integer) body.get("currentStep") : 1;
-            var result = saveDraftUseCase.saveDraft(
-                    auth.tenantId(), id, auth.userId(),
-                    parseDraftConfigs(body), step);
-            return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        int step = body.containsKey("currentStep") ? (Integer) body.get("currentStep") : 1;
+        var result = saveDraftUseCase.saveDraft(
+                auth.tenantId(), id, auth.userId(),
+                parseDraftConfigs(body), step);
+        return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PostMapping("/{id}/submit")
     public ResponseEntity<WorkflowTypeSubmissionResponse> submit(
             @PathVariable String id,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            var result = submitUseCase.submit(auth.tenantId(), id, auth.userId());
-            return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IncompleteSubmissionException | IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        var result = submitUseCase.submit(auth.tenantId(), id, auth.userId());
+        return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PostMapping("/{id}/approve")
     public ResponseEntity<WorkflowTypeSubmissionResponse> approve(
             @PathVariable String id,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            var result = reviewUseCase.approve(auth.tenantId(), id, auth.userId());
-            return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (SelfApprovalException e) {
-            return ResponseEntity.status(403).build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        var result = reviewUseCase.approve(auth.tenantId(), id, auth.userId());
+        return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PostMapping("/{id}/reject")
@@ -129,17 +101,9 @@ public class WorkflowTypeSubmissionController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            String reason = (String) body.get("reason");
-            var result = reviewUseCase.reject(auth.tenantId(), id, auth.userId(), reason);
-            return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (SelfApprovalException e) {
-            return ResponseEntity.status(403).build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        String reason = (String) body.get("reason");
+        var result = reviewUseCase.reject(auth.tenantId(), id, auth.userId(), reason);
+        return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PostMapping("/{id}/revise")
@@ -148,14 +112,8 @@ public class WorkflowTypeSubmissionController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            var result = reviseUseCase.revise(auth.tenantId(), id, auth.userId(), parseDraftConfigs(body));
-            return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        var result = reviseUseCase.revise(auth.tenantId(), id, auth.userId(), parseDraftConfigs(body));
+        return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @GetMapping("/pending")
@@ -190,26 +148,16 @@ public class WorkflowTypeSubmissionController {
     public ResponseEntity<WorkflowTypeSubmissionResponse> getById(
             @PathVariable String id,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            return ResponseEntity.ok(
-                    WorkflowTypeSubmissionResponse.from(getUseCase.getById(auth.tenantId(), id)));
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(
+                WorkflowTypeSubmissionResponse.from(getUseCase.getById(auth.tenantId(), id)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> discard(@PathVariable String id,
                                          @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            discardUseCase.discard(auth.tenantId(), id, auth.userId(),
-                    "PLATFORM_ADMIN".equals(auth.role()));
-            return ResponseEntity.noContent().build();
-        } catch (SubmissionNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.unprocessableEntity().build();
-        }
+        discardUseCase.discard(auth.tenantId(), id, auth.userId(),
+                "PLATFORM_ADMIN".equals(auth.role()));
+        return ResponseEntity.noContent().build();
     }
 
     @SuppressWarnings("unchecked")

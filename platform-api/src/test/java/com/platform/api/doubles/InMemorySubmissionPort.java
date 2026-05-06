@@ -15,7 +15,11 @@ import com.platform.config.doubles.InMemoryConfigDocumentWriter;
 import com.platform.config.doubles.InMemorySubmissionAuditRepository;
 import com.platform.config.doubles.InMemoryWorkflowTypeSubmissionRepository;
 
+import org.springframework.dao.OptimisticLockingFailureException;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class InMemorySubmissionPort
         implements ICreateWorkflowTypeSubmissionUseCase,
@@ -32,6 +36,7 @@ public class InMemorySubmissionPort
             new InMemorySubmissionAuditRepository();
     private final InMemoryConfigDocumentWriter writer =
             new InMemoryConfigDocumentWriter();
+    private final Set<String> conflictIds = new HashSet<>();
 
     private WorkflowTypeSubmissionService service() {
         return new WorkflowTypeSubmissionService(repo, writer, auditRepo, true);
@@ -45,10 +50,15 @@ public class InMemorySubmissionPort
         return repo.findById(tenantId, submissionId).orElse(null);
     }
 
+    public void forceVersionConflict(String submissionId) {
+        conflictIds.add(submissionId);
+    }
+
     public void reset() {
         repo.reset();
         auditRepo.reset();
         writer.reset();
+        conflictIds.clear();
     }
 
     @Override
@@ -64,6 +74,10 @@ public class InMemorySubmissionPort
 
     @Override
     public WorkflowTypeSubmission submit(String tenantId, String submissionId, String actorUserId) {
+        if (conflictIds.remove(submissionId)) {
+            throw new OptimisticLockingFailureException(
+                    "Simulated concurrent modification for submission " + submissionId);
+        }
         return service().submit(tenantId, submissionId, actorUserId);
     }
 

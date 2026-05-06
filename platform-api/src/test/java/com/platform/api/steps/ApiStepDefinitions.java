@@ -159,6 +159,11 @@ public class ApiStepDefinitions {
         submissionStore.reject(tenantId, id, "bob", "Test rejection");
     }
 
+    @Given("the submission {string} is modified by another session")
+    public void submissionModifiedByAnotherSession(String id) {
+        submissionStore.forceVersionConflict(id);
+    }
+
     // ── Given — source connections ────────────────────────────────────────────
 
     @Given("a source connection {string} of type {string} exists")

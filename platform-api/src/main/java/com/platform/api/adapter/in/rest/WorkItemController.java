@@ -4,7 +4,6 @@ import com.platform.api.config.ApiAuthentication;
 import com.platform.api.domain.ports.IFindWorkItemPort;
 import com.platform.api.domain.ports.IListWorkItemsPort;
 import com.platform.domain.model.WorkItem;
-import com.platform.workflow.domain.exception.ForbiddenTransitionException;
 import com.platform.workflow.domain.model.TransitionCommand;
 import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
 import org.springframework.http.ResponseEntity;
@@ -57,16 +56,12 @@ public class WorkItemController {
     public ResponseEntity<WorkItem> triggerTransition(@PathVariable String id,
                                                        @RequestBody Map<String, Object> body,
                                                        @AuthenticationPrincipal ApiAuthentication auth) {
-        try {
-            Map<String, Object> additionalFields = body.containsKey("additionalFields")
-                    ? (Map<String, Object>) body.get("additionalFields")
-                    : Map.of();
-            WorkItem updated = transitionUseCase.transition(new TransitionCommand(
-                    id, auth.tenantId(), (String) body.get("transition"),
-                    auth.userId(), auth.role(), additionalFields));
-            return ResponseEntity.ok(updated);
-        } catch (ForbiddenTransitionException e) {
-            return ResponseEntity.status(403).build();
-        }
+        Map<String, Object> additionalFields = body.containsKey("additionalFields")
+                ? (Map<String, Object>) body.get("additionalFields")
+                : Map.of();
+        WorkItem updated = transitionUseCase.transition(new TransitionCommand(
+                id, auth.tenantId(), (String) body.get("transition"),
+                auth.userId(), auth.role(), additionalFields));
+        return ResponseEntity.ok(updated);
     }
 }
