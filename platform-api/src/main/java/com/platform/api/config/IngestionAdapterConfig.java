@@ -5,9 +5,11 @@ import com.platform.api.adapter.out.postgres.AuditEntryJdbcRepository;
 import com.platform.api.adapter.out.postgres.IdempotencyKeyJdbcRepository;
 import com.platform.api.adapter.out.postgres.IngestionConfigJdbcRepository;
 import com.platform.api.adapter.out.postgres.IngestionWorkItemJdbcRepository;
-import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
+import com.platform.domain.ports.out.IDomainEventPublisher;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
+import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.service.IngestionService;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -48,7 +50,9 @@ public class IngestionAdapterConfig {
             IdempotencyKeyJdbcRepository idempotencyRepo,
             IngestionWorkItemJdbcRepository workItemRepo,
             AuditEntryJdbcRepository auditRepo,
-            IGroupAssignmentPort groupAssignmentPort) {
-        return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupAssignmentPort);
+            IGroupAssignmentPort groupAssignmentPort,
+            IDomainEventPublisher eventPublisher,
+            MeterRegistry meterRegistry) {
+        return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupAssignmentPort, eventPublisher, meterRegistry);
     }
 }

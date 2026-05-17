@@ -9,6 +9,7 @@ import com.platform.config.domain.model.ConfigValidationViolation;
 import com.platform.config.domain.ports.in.ILoadConfigUseCase;
 import com.platform.config.domain.ports.in.IValidateConfigsUseCase;
 import com.platform.config.domain.ports.out.IConfigDocumentRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +31,11 @@ import java.util.stream.Collectors;
 public class ConfigService implements ILoadConfigUseCase, IValidateConfigsUseCase {
 
     private final IConfigDocumentRepository repository;
+    private final MeterRegistry meterRegistry;
 
-    public ConfigService(IConfigDocumentRepository repository) {
+    public ConfigService(IConfigDocumentRepository repository, MeterRegistry meterRegistry) {
         this.repository = repository;
+        this.meterRegistry = meterRegistry;
     }
 
     // ── ILoadConfigUseCase ───────────────────────────────────────────────────
@@ -55,6 +58,7 @@ public class ConfigService implements ILoadConfigUseCase, IValidateConfigsUseCas
                     "Multiple active " + configType + " found for tenantId=" + tenantId
                     + ", workflowType=" + workflowType + " — exactly one is required");
         }
+        meterRegistry.counter("config.load", "type", configType.name()).increment();
         return active.get(0);
     }
 

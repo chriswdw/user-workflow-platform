@@ -22,9 +22,6 @@ import java.util.Map;
 @RestController
 public class SourceConnectionController {
 
-    private static final String FIELD_CONNECTION_TYPE = "connectionType";
-    private static final String FIELD_CONFIG = "config";
-
     private final IManageSourceConnectionsUseCase manageUseCase;
     private final IListSourceConnectionsUseCase listUseCase;
 
@@ -37,18 +34,17 @@ public class SourceConnectionController {
     // ── Admin endpoints (/api/v1/admin/source-connections) ────────────────────
 
     @PostMapping("/api/v1/admin/source-connections")
-    @SuppressWarnings("unchecked")
     public ResponseEntity<SourceConnection> adminCreate(
-            @RequestBody Map<String, Object> body,
+            @RequestBody SourceConnectionRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
         if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
         SourceConnection created = manageUseCase.create(new SourceConnection(
                 null,
-                (String) body.get("name"),
-                (String) body.get("displayName"),
-                ConnectionType.valueOf((String) body.get(FIELD_CONNECTION_TYPE)),
-                body.containsKey(FIELD_CONFIG) ? (Map<String, Object>) body.get(FIELD_CONFIG) : Map.of(),
-                (String) body.get("credentialsRef"),
+                body.name(),
+                body.displayName(),
+                body.parsedConnectionType(),
+                body.toConnectionConfig(),
+                body.credentialsRef(),
                 auth.userId(),
                 null, null));
         return ResponseEntity.status(201).body(created);
@@ -62,22 +58,18 @@ public class SourceConnectionController {
     }
 
     @PatchMapping("/api/v1/admin/source-connections/{id}")
-    @SuppressWarnings("unchecked")
     public ResponseEntity<SourceConnection> adminUpdate(
             @PathVariable String id,
-            @RequestBody Map<String, Object> body,
+            @RequestBody SourceConnectionRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
         if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
-        ConnectionType connectionType = body.containsKey(FIELD_CONNECTION_TYPE)
-                ? ConnectionType.valueOf((String) body.get(FIELD_CONNECTION_TYPE))
-                : null;
         SourceConnection updated = manageUseCase.update(new SourceConnection(
                 id,
-                (String) body.get("name"),
-                (String) body.get("displayName"),
-                connectionType,
-                body.containsKey(FIELD_CONFIG) ? (Map<String, Object>) body.get(FIELD_CONFIG) : null,
-                (String) body.get("credentialsRef"),
+                body.name(),
+                body.displayName(),
+                body.parsedConnectionType(),
+                body.toConnectionConfig(),
+                body.credentialsRef(),
                 null, null, null));
         return ResponseEntity.ok(updated);
     }

@@ -18,6 +18,7 @@ export function LoginPage() {
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
+        <span className="login-dev-badge">DEV MODE</span>
         <h1 className="login-title">Workflow Platform</h1>
         <p className="login-subtitle">Select a role to sign in</p>
         <div className="login-divider" />

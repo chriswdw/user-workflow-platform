@@ -16,8 +16,8 @@ import com.platform.ingestion.doubles.InMemoryIngestionAuditRepository;
 import com.platform.ingestion.doubles.InMemoryIngestionConfigRepository;
 import com.platform.ingestion.doubles.InMemoryIngestionWorkItemRepository;
 import com.platform.ingestion.doubles.StubGroupAssignmentPort;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.datatable.DataTable;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -40,7 +40,7 @@ public class IngestionStepDefinitions {
     private final InMemoryIngestionAuditRepository auditRepo = new InMemoryIngestionAuditRepository();
     private final StubGroupAssignmentPort groupPort = new StubGroupAssignmentPort();
     private final IIngestRecordUseCase ingestionService =
-            new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupPort);
+            new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupPort, event -> {}, new SimpleMeterRegistry());
 
     private String tenantId = "tenant-1";
     private IngestionResult result;

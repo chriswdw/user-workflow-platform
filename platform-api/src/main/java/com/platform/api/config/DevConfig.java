@@ -12,6 +12,7 @@ import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
+import com.platform.domain.ports.out.IDomainEventPublisher;
 import com.platform.workflow.domain.exception.ForbiddenTransitionException;
 import com.platform.workflow.domain.model.TransitionCommand;
 import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
@@ -21,12 +22,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * In-memory fallback implementations for all port interfaces.
@@ -77,16 +78,16 @@ public class DevConfig {
     // ── Shared in-memory store ────────────────────────────────────────────────
 
     @Bean
-    public ConcurrentHashMap<String, WorkItem> devWorkItemStore() {
+    public ConcurrentMap<String, WorkItem> devWorkItemStore() {
         ConcurrentHashMap<String, WorkItem> store = new ConcurrentHashMap<>();
         seed().forEach(item -> store.put(storeKey(item.tenantId(), item.id()), item));
         return store;
     }
 
     @Bean
-    public ConcurrentHashMap<String, List<AuditEntry>> devAuditStore() {
+    public ConcurrentMap<String, List<AuditEntry>> devAuditStore() {
         ConcurrentHashMap<String, List<AuditEntry>> store = new ConcurrentHashMap<>();
-        seedAudit().forEach((key, entries) -> store.put(key, entries));
+        seedAudit().forEach(store::put);
         return store;
     }
 
@@ -94,13 +95,19 @@ public class DevConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public IFindWorkItemPort findWorkItemPort(ConcurrentHashMap<String, WorkItem> store) {
+    public IDomainEventPublisher domainEventPublisher() {
+        return event -> {};
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public IFindWorkItemPort findWorkItemPort(ConcurrentMap<String, WorkItem> store) {
         return (tenantId, workItemId) -> Optional.ofNullable(store.get(storeKey(tenantId, workItemId)));
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public IListWorkItemsPort listWorkItemsPort(ConcurrentHashMap<String, WorkItem> store) {
+    public IListWorkItemsPort listWorkItemsPort(ConcurrentMap<String, WorkItem> store) {
         return (tenantId, workflowType) -> store.values().stream()
                 .filter(w -> tenantId.equals(w.tenantId()) && workflowType.equals(w.workflowType()))
                 .toList();
@@ -108,7 +115,7 @@ public class DevConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public ITransitionWorkItemUseCase transitionWorkItemUseCase(ConcurrentHashMap<String, WorkItem> store) {
+    public ITransitionWorkItemUseCase transitionWorkItemUseCase(ConcurrentMap<String, WorkItem> store) {
         return (TransitionCommand cmd) -> {
             String key = storeKey(cmd.tenantId(), cmd.workItemId());
             WorkItem current = store.get(key);
@@ -126,7 +133,7 @@ public class DevConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    public IQueryAuditTrailUseCase queryAuditTrailUseCase(ConcurrentHashMap<String, List<AuditEntry>> store) {
+    public IQueryAuditTrailUseCase queryAuditTrailUseCase(ConcurrentMap<String, List<AuditEntry>> store) {
         return (AuditQuery query) -> {
             String key = storeKey(query.tenantId(), query.workItemId());
             return store.getOrDefault(key, List.of());
@@ -209,7 +216,8 @@ public class DevConfig {
         Instant now = Instant.now();
         return List.of(
             item(WI_001, TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
-                UNDER_REVIEW, GROUP_OPS, 750, "CRITICAL", now.minusSeconds(7200),
+                new ItemState(UNDER_REVIEW, GROUP_OPS, 750, "CRITICAL"),
+                now.minusSeconds(7200),
                 Map.of(
                     F_TRADE, Map.of(
                         "ref", "TRD-20241015-001",
@@ -220,7 +228,8 @@ public class DevConfig {
                         "lei", "G5GSEF7VJP5I7OUK5573"))),
 
             item("wi-002", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
-                UNDER_REVIEW, GROUP_OPS, 400, "HIGH", now.minusSeconds(3600),
+                new ItemState(UNDER_REVIEW, GROUP_OPS, 400, "HIGH"),
+                now.minusSeconds(3600),
                 Map.of(
                     F_TRADE, Map.of(
                         "ref", "TRD-20241015-002",
@@ -231,7 +240,8 @@ public class DevConfig {
                         "lei", "7LTWFZYICNSX8D621K86"))),
 
             item(WI_003, TENANT_1, SETTLEMENT_EX, SourceType.DB_POLL,
-                ESCALATED, GROUP_SENIOR, 850, "CRITICAL", now.minusSeconds(18000),
+                new ItemState(ESCALATED, GROUP_SENIOR, 850, "CRITICAL"),
+                now.minusSeconds(18000),
                 Map.of(
                     F_TRADE, Map.of(
                         "ref", "TRD-20241014-087",
@@ -242,7 +252,8 @@ public class DevConfig {
                         "lei", "8I5DZWZKVSZI1NUHU748"))),
 
             item("wi-004", TENANT_1, SETTLEMENT_EX, SourceType.FILE_UPLOAD,
-                CLOSED, GROUP_OPS, 50, "LOW", now.minusSeconds(86400),
+                new ItemState(CLOSED, GROUP_OPS, 50, "LOW"),
+                now.minusSeconds(86400),
                 Map.of(
                     F_TRADE, Map.of(
                         "ref", "TRD-20241013-044",
@@ -253,7 +264,8 @@ public class DevConfig {
                         "lei", "MLU0ZO3ML4LN2LL2TL39"))),
 
             item("wi-005", TENANT_1, SETTLEMENT_EX, SourceType.KAFKA,
-                UNDER_REVIEW, GROUP_OPS, 300, "MEDIUM", now.minusSeconds(1800),
+                new ItemState(UNDER_REVIEW, GROUP_OPS, 300, "MEDIUM"),
+                now.minusSeconds(1800),
                 Map.of(
                     F_TRADE, Map.of(
                         "ref", "TRD-20241015-031",
@@ -302,15 +314,16 @@ public class DevConfig {
         return tenantId + ":" + workItemId;
     }
 
+    private record ItemState(String status, String group, int priorityScore, String priorityLevel) {}
+
     private static WorkItem item(String id, String tenantId, String workflowType,
-                                  SourceType source, String status, String group,
-                                  int priorityScore, String priorityLevel, Instant createdAt,
-                                  Map<String, Object> fields) {
+                                  SourceType source, ItemState state,
+                                  Instant createdAt, Map<String, Object> fields) {
         return new WorkItem(id, tenantId, workflowType,
                 UUID.randomUUID().toString(), null,
                 source, "src-" + id, id + "-idem",
-                status, group, false, fields,
-                priorityScore, priorityLevel, createdAt,
+                state.status(), state.group(), false, fields,
+                state.priorityScore(), state.priorityLevel(), createdAt,
                 null, null, 1, "system", createdAt, createdAt);
     }
 

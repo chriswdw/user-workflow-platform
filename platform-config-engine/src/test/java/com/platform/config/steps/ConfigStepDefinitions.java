@@ -10,6 +10,7 @@ import com.platform.config.domain.ports.in.IValidateConfigsUseCase;
 import com.platform.config.domain.service.ConfigService;
 import com.platform.config.doubles.InMemoryConfigDocumentRepository;
 import io.cucumber.java.en.Given;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
@@ -26,7 +27,7 @@ public class ConfigStepDefinitions {
 
     // In-memory doubles — fresh per scenario
     private final InMemoryConfigDocumentRepository repo = new InMemoryConfigDocumentRepository();
-    private final ConfigService configService = new ConfigService(repo);
+    private final ConfigService configService = new ConfigService(repo, new SimpleMeterRegistry());
 
     // Scenario state
     private ConfigDocument loadedDoc;

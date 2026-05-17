@@ -7,17 +7,12 @@ import com.platform.api.adapter.out.postgres.EmbeddedPostgresProvider;
 import com.platform.api.adapter.out.postgres.IdempotencyKeyJdbcRepository;
 import com.platform.api.adapter.out.postgres.IngestionConfigJdbcRepository;
 import com.platform.api.adapter.out.postgres.IngestionWorkItemJdbcRepository;
-import com.platform.domain.model.SourceType;
 import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.service.IngestionService;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -215,7 +210,7 @@ class KafkaIngestionEndToEndTest {
                 IngestionWorkItemJdbcRepository workItemRepo,
                 AuditEntryJdbcRepository auditRepo,
                 IGroupAssignmentPort groupPort) {
-            return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupPort);
+            return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupPort, event -> {}, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
         }
 
         @Bean
@@ -242,7 +237,7 @@ class KafkaIngestionEndToEndTest {
                     new org.apache.kafka.common.serialization.StringDeserializer(),
                     new org.apache.kafka.common.serialization.StringDeserializer());
             var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
-                    (record, ex) -> new TopicPartition(DLQ_TOPIC, record.partition()));
+                    (consumerRecord, ex) -> new TopicPartition(DLQ_TOPIC, consumerRecord.partition()));
             var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
             factory.setConsumerFactory(consumerFactory);
             factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 0L)));
@@ -261,8 +256,8 @@ class KafkaIngestionEndToEndTest {
         ResultCaptor(IIngestRecordUseCase delegate) { this.delegate = delegate; }
 
         @Override
-        public IngestionResult ingest(RawInboundRecord record) {
-            IngestionResult result = delegate.ingest(record);
+        public IngestionResult ingest(RawInboundRecord inboundRecord) {
+            IngestionResult result = delegate.ingest(inboundRecord);
             results.add(result);
             latch.countDown();
             return result;

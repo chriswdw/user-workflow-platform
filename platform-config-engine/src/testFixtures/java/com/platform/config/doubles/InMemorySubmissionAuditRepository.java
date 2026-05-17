@@ -1,13 +1,13 @@
 package com.platform.config.doubles;
 
-import com.platform.config.domain.ports.out.ISubmissionAuditRepository;
 import com.platform.domain.model.AuditEntry;
+import com.platform.domain.ports.out.IAuditRepository;
 import com.platform.domain.model.AuditEventType;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class InMemorySubmissionAuditRepository implements ISubmissionAuditRepository {
+public class InMemorySubmissionAuditRepository implements IAuditRepository {
 
     private final List<AuditEntry> entries = new ArrayList<>();
 

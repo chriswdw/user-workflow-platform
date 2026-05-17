@@ -16,6 +16,8 @@ interface BlotterProps {
 }
 
 export function Blotter({ config, items, userRole, onSelectItem }: BlotterProps) {
+  const warnedFields = useMemo(() => new Set<string>(), []);
+
   const colDefs = useMemo<ColDef<WorkItem>[]>(() =>
     config.columns
       .filter(col => col.visible !== false)
@@ -28,24 +30,26 @@ export function Blotter({ config, items, userRole, onSelectItem }: BlotterProps)
         valueGetter: (params: ValueGetterParams<WorkItem>) => {
           if (!params.data) return undefined;
           const item = params.data;
-          // Resolve from top-level fields first, then from the nested fields map
           const topLevel = item[col.field as keyof WorkItem];
           const raw = topLevel !== undefined
             ? topLevel
             : resolve(item.fields as Record<string, unknown>, col.field);
 
           if (raw === undefined) {
-            console.warn(`blotter: field path not found: ${col.field}`);
+            if (!warnedFields.has(col.field)) {
+              console.warn(`blotter: field path not found: ${col.field}`);
+              warnedFields.add(col.field);
+            }
             return '—';
           }
           return maskIfNeeded(raw, col.maskingRoles, userRole);
         },
       })),
-    [config.columns, userRole]
+    [config.columns, userRole, warnedFields]
   );
 
   return (
-    <div className="ag-theme-alpine" style={{ height: 600, width: '100%' }}>
+    <div className="ag-theme-alpine blotter-grid">
       <AgGridReact<WorkItem>
         rowData={[...items]}
         columnDefs={colDefs}

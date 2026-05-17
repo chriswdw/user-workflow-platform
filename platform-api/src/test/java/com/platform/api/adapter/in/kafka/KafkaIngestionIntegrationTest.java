@@ -12,7 +12,7 @@ import com.platform.ingestion.domain.model.UnknownColumnPolicy;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.ports.out.IIdempotencyKeyRepository;
-import com.platform.ingestion.domain.ports.out.IIngestionAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 import com.platform.ingestion.domain.ports.out.IIngestionConfigRepository;
 import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 import com.platform.ingestion.domain.service.IngestionService;
@@ -21,7 +21,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +36,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
@@ -211,7 +209,7 @@ class KafkaIngestionIntegrationTest {
             var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
             factory.setConsumerFactory(ingestionConsumerFactory);
             var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
-                    (record, ex) -> new TopicPartition(DLQ_TOPIC, record.partition()));
+                    (consumerRecord, ex) -> new TopicPartition(DLQ_TOPIC, consumerRecord.partition()));
             factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 0L)));
             return factory;
         }
@@ -269,7 +267,7 @@ class KafkaIngestionIntegrationTest {
         }
 
         @Bean
-        IIngestionAuditRepository ingestionAuditRepository() { return entry -> {}; }
+        IAuditRepository ingestionAuditRepository() { return entry -> {}; }
 
         @Bean
         IGroupAssignmentPort groupAssignmentPort() {
@@ -287,10 +285,11 @@ class KafkaIngestionIntegrationTest {
                 IIngestionConfigRepository configRepository,
                 IIdempotencyKeyRepository idempotencyRepository,
                 IIngestionWorkItemRepository workItemRepository,
-                IIngestionAuditRepository auditRepository,
+                IAuditRepository auditRepository,
                 IGroupAssignmentPort groupAssignmentPort) {
             return new IngestionService(configRepository, idempotencyRepository,
-                    workItemRepository, auditRepository, groupAssignmentPort);
+                    workItemRepository, auditRepository, groupAssignmentPort, event -> {},
+                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
         }
 
         @Bean
@@ -316,8 +315,8 @@ class KafkaIngestionIntegrationTest {
         ResultCaptor(IIngestRecordUseCase delegate) { this.delegate = delegate; }
 
         @Override
-        public IngestionResult ingest(RawInboundRecord record) {
-            IngestionResult result = delegate.ingest(record);
+        public IngestionResult ingest(RawInboundRecord inboundRecord) {
+            IngestionResult result = delegate.ingest(inboundRecord);
             results.add(result);
             latch.countDown();
             return result;

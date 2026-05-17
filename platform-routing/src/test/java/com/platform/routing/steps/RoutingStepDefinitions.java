@@ -2,7 +2,6 @@ package com.platform.routing.steps;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.routing.domain.model.ConditionNode;
 import com.platform.routing.domain.model.GroupCondition;
@@ -17,6 +16,7 @@ import com.platform.routing.domain.ports.in.IRouteWorkItemUseCase;
 import com.platform.routing.domain.service.RoutingService;
 import com.platform.routing.doubles.InMemoryAuditRepository;
 import com.platform.routing.doubles.InMemoryRoutingConfigRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -41,7 +41,7 @@ public class RoutingStepDefinitions {
     // In-memory doubles — fresh per scenario
     private final InMemoryRoutingConfigRepository routingConfigRepo = new InMemoryRoutingConfigRepository();
     private final InMemoryAuditRepository auditRepo = new InMemoryAuditRepository();
-    private final IRouteWorkItemUseCase routingService = new RoutingService(routingConfigRepo, auditRepo);
+    private final IRouteWorkItemUseCase routingService = new RoutingService(routingConfigRepo, auditRepo, new SimpleMeterRegistry());
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Scenario state

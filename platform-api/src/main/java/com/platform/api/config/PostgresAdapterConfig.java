@@ -11,8 +11,14 @@ import com.platform.api.adapter.out.postgres.WorkItemJdbcRepository;
 import com.platform.audit.domain.service.AuditService;
 import com.platform.config.domain.service.ConfigService;
 import com.platform.config.domain.service.SourceConnectionService;
-import com.platform.config.domain.service.WorkflowTypeSubmissionService;
+import com.platform.config.domain.service.SubmissionCreationService;
+import com.platform.config.domain.service.SubmissionDraftService;
+import com.platform.config.domain.service.SubmissionLifecycleService;
+import com.platform.config.domain.service.SubmissionQueryService;
+import com.platform.config.domain.service.SubmissionReviewService;
+import com.platform.domain.ports.out.IDomainEventPublisher;
 import com.platform.workflow.domain.service.WorkflowService;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -74,23 +80,53 @@ public class PostgresAdapterConfig {
     }
 
     @Bean
-    public ConfigService configService(ConfigDocumentJdbcRepository configRepo) {
-        return new ConfigService(configRepo);
+    public ConfigService configService(ConfigDocumentJdbcRepository configRepo, MeterRegistry meterRegistry) {
+        return new ConfigService(configRepo, meterRegistry);
     }
 
     @Bean
     public WorkflowService workflowService(WorkItemJdbcRepository workItemRepo,
                                             WorkflowConfigJdbcRepository workflowConfigRepo,
-                                            AuditEntryJdbcRepository auditRepo) {
-        return new WorkflowService(workItemRepo, workflowConfigRepo, auditRepo);
+                                            AuditEntryJdbcRepository auditRepo,
+                                            IDomainEventPublisher eventPublisher,
+                                            MeterRegistry meterRegistry) {
+        return new WorkflowService(workItemRepo, workflowConfigRepo, auditRepo, eventPublisher, meterRegistry);
     }
 
     @Bean
-    public WorkflowTypeSubmissionService workflowTypeSubmissionService(
+    public SubmissionCreationService submissionCreationService(
             WorkflowTypeSubmissionJdbcRepository repo,
             ConfigDocumentJdbcWriter writer,
             AuditEntryJdbcRepository auditRepo) {
-        return new WorkflowTypeSubmissionService(repo, writer, auditRepo, makerCheckerEnabled);
+        return new SubmissionCreationService(repo, writer, auditRepo, makerCheckerEnabled);
+    }
+
+    @Bean
+    public SubmissionDraftService submissionDraftService(
+            WorkflowTypeSubmissionJdbcRepository repo,
+            AuditEntryJdbcRepository auditRepo) {
+        return new SubmissionDraftService(repo, auditRepo);
+    }
+
+    @Bean
+    public SubmissionLifecycleService submissionLifecycleService(
+            WorkflowTypeSubmissionJdbcRepository repo,
+            AuditEntryJdbcRepository auditRepo) {
+        return new SubmissionLifecycleService(repo, auditRepo);
+    }
+
+    @Bean
+    public SubmissionReviewService submissionReviewService(
+            WorkflowTypeSubmissionJdbcRepository repo,
+            ConfigDocumentJdbcWriter writer,
+            AuditEntryJdbcRepository auditRepo) {
+        return new SubmissionReviewService(repo, writer, auditRepo);
+    }
+
+    @Bean
+    public SubmissionQueryService submissionQueryService(
+            WorkflowTypeSubmissionJdbcRepository repo) {
+        return new SubmissionQueryService(repo);
     }
 
     @Bean

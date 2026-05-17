@@ -6,6 +6,7 @@ import com.platform.api.domain.ports.IListWorkItemsPort;
 import com.platform.domain.model.WorkItem;
 import com.platform.workflow.domain.model.TransitionCommand;
 import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/work-items")
@@ -52,16 +52,12 @@ public class WorkItemController {
     }
 
     @PostMapping("/{id}/transitions")
-    @SuppressWarnings("unchecked")
     public ResponseEntity<WorkItem> triggerTransition(@PathVariable String id,
-                                                       @RequestBody Map<String, Object> body,
+                                                       @Valid @RequestBody TriggerTransitionRequest body,
                                                        @AuthenticationPrincipal ApiAuthentication auth) {
-        Map<String, Object> additionalFields = body.containsKey("additionalFields")
-                ? (Map<String, Object>) body.get("additionalFields")
-                : Map.of();
         WorkItem updated = transitionUseCase.transition(new TransitionCommand(
-                id, auth.tenantId(), (String) body.get("transition"),
-                auth.userId(), auth.role(), additionalFields));
+                id, auth.tenantId(), body.transition(),
+                auth.userId(), auth.role(), body.additionalFields()));
         return ResponseEntity.ok(updated);
     }
 }

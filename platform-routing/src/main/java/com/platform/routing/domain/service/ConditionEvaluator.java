@@ -28,6 +28,7 @@ final class ConditionEvaluator {
     private ConditionEvaluator() {}
 
     static boolean evaluate(ConditionNode node, Map<String, Object> fields) {
+        if (node == null) return true;
         return switch (node) {
             case LeafCondition leaf -> evaluateLeaf(leaf, fields);
             case GroupCondition group -> evaluateGroup(group, fields);

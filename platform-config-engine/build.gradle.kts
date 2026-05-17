@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":platform-domain"))
+    implementation(libs.micrometer.core)
     testFixturesImplementation(project(":platform-domain"))
 
     testImplementation(libs.cucumber.java)

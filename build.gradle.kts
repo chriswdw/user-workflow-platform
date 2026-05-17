@@ -36,18 +36,54 @@ subprojects {
             xml.required = true
             html.required = true
         }
-        // Exclude generated classes, Spring Boot config, and Cucumber runners from coverage
+        // Exclude generated classes, Spring Boot config/auto-config, and Cucumber runners from coverage
         classDirectories.setFrom(
             files(classDirectories.files.map {
                 fileTree(it) {
                     exclude(
                         "**/*Application*",
+                        "**/*AutoConfiguration*",
                         "**/config/**",
                         "**/CucumberSuiteTest*"
                     )
                 }
             })
         )
+    }
+
+    tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+        dependsOn(tasks.named("jacocoTestReport"))
+        violationRules {
+            rule {
+                excludes = listOf(
+                    "*..*Application",
+                    "*..*AutoConfiguration",
+                    "*..config.*",
+                    "*..CucumberSuiteTest"
+                )
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = "0.80".toBigDecimal()
+                }
+            }
+        }
+        classDirectories.setFrom(
+            files(classDirectories.files.map {
+                fileTree(it) {
+                    exclude(
+                        "**/*Application*",
+                        "**/*AutoConfiguration*",
+                        "**/config/**",
+                        "**/CucumberSuiteTest*"
+                    )
+                }
+            })
+        )
+    }
+
+    tasks.named("check") {
+        dependsOn(tasks.named("jacocoTestCoverageVerification"))
     }
 }
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useWorkItem } from '../../api/useWorkItem';
 import { useAuditTrail } from '../../api/useAuditTrail';
 import { useDetailViewConfig } from '../../api/useDetailViewConfig';
@@ -16,6 +17,14 @@ type Tab = 'details' | 'audit';
 
 export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const [tab, setTab] = useState<Tab>('details');
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   const userRole = useAuthStore(s => s.role) ?? '';
 
   const { data: item, isLoading: itemLoading, isError: itemError } = useWorkItem(workItemId);
@@ -26,7 +35,10 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const loading = itemLoading || configLoading;
 
   const handleTransition = (transition: string, additionalFields?: Record<string, unknown>) => {
-    fireTransition({ transition, additionalFields });
+    fireTransition(
+      { transition, additionalFields },
+      { onSuccess: () => toast.success(`Transition "${transition}" applied.`) }
+    );
   };
 
   return (
@@ -45,23 +57,52 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
             )}
           </>
         )}
-        <button className="detail-panel-close" onClick={onClose} aria-label="Close">×</button>
+        <button type="button" className="detail-panel-close" onClick={onClose} aria-label="Close">✕</button>
       </header>
 
-      <nav className="detail-panel-tabs">
-        <button className={tab === 'details' ? 'tab tab--active' : 'tab'} onClick={() => setTab('details')}>
+      <nav className="detail-panel-tabs" role="tablist" aria-label="Work item details">
+        <button
+          type="button"
+          role="tab"
+          id="tab-details"
+          aria-selected={tab === 'details'}
+          aria-controls="panel-details"
+          className={tab === 'details' ? 'tab tab--active' : 'tab'}
+          onClick={() => setTab('details')}
+        >
           Details
         </button>
-        <button className={tab === 'audit' ? 'tab tab--active' : 'tab'} onClick={() => setTab('audit')}>
+        <button
+          type="button"
+          role="tab"
+          id="tab-audit"
+          aria-selected={tab === 'audit'}
+          aria-controls="panel-audit"
+          className={tab === 'audit' ? 'tab tab--active' : 'tab'}
+          onClick={() => setTab('audit')}
+        >
           Audit Trail
         </button>
       </nav>
 
-      <div className="detail-panel-body">
-        {loading && <p style={{ padding: 24, color: 'var(--color-text-muted)' }}>Loading…</p>}
-        {itemError && <p style={{ padding: 24, color: 'var(--color-danger)' }}>Failed to load item.</p>}
-
-        {!loading && item && config && tab === 'details' && (
+      <div
+        role="tabpanel"
+        id="panel-details"
+        aria-labelledby="tab-details"
+        className="detail-panel-body"
+        hidden={tab !== 'details'}
+      >
+        {loading && (
+          <div role="status" aria-live="polite" aria-label="Loading item details" className="skeleton-container">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton skeleton-block" style={{ width: i % 2 === 0 ? '70%' : '50%' }} />
+            ))}
+          </div>
+        )}
+        {itemError && (
+          <div role="alert" className="status-text status-text--error" style={{ padding: '24px' }}>Failed to load item.</div>
+        )}
+        {!loading && item && config && (
           <DetailView
             config={config}
             item={item}
@@ -70,8 +111,16 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
             transitionError={transitionError?.message}
           />
         )}
+      </div>
 
-        {tab === 'audit' && <AuditTrail entries={auditEntries} />}
+      <div
+        role="tabpanel"
+        id="panel-audit"
+        aria-labelledby="tab-audit"
+        className="detail-panel-body"
+        hidden={tab !== 'audit'}
+      >
+        <AuditTrail entries={auditEntries} />
       </div>
     </div>
   );

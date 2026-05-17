@@ -1,13 +1,13 @@
 package com.platform.ingestion.doubles;
 
 import com.platform.domain.model.AuditEntry;
-import com.platform.ingestion.domain.ports.out.IIngestionAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class InMemoryIngestionAuditRepository implements IIngestionAuditRepository {
+public class InMemoryIngestionAuditRepository implements IAuditRepository {
 
     private final List<AuditEntry> entries = new ArrayList<>();
 

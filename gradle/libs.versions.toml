@@ -30,6 +30,7 @@ bucket4j-core = { module = "com.bucket4j:bucket4j-core", version.ref = "bucket4j
 
 # Observability
 spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator",  version.ref = "spring-boot" }
+micrometer-core                = { module = "io.micrometer:micrometer-core",                           version = "1.13.5" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
 otel-exporter-otlp             = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
@@ -50,8 +51,9 @@ jackson-databind       = { module = "com.fasterxml.jackson.core:jackson-databind
 # Spring Boot (used by infrastructure modules)
 spring-boot-starter              = { module = "org.springframework.boot:spring-boot-starter",              version.ref = "spring-boot" }
 spring-boot-starter-web          = { module = "org.springframework.boot:spring-boot-starter-web",          version.ref = "spring-boot" }
-spring-boot-starter-data-jpa     = { module = "org.springframework.boot:spring-boot-starter-data-jpa",     version.ref = "spring-boot" }
-spring-boot-starter-jdbc         = { module = "org.springframework.boot:spring-boot-starter-jdbc",         version.ref = "spring-boot" }
+spring-boot-starter-data-jpa        = { module = "org.springframework.boot:spring-boot-starter-data-jpa",        version.ref = "spring-boot" }
+spring-boot-starter-jdbc            = { module = "org.springframework.boot:spring-boot-starter-jdbc",            version.ref = "spring-boot" }
+spring-boot-starter-validation      = { module = "org.springframework.boot:spring-boot-starter-validation",      version.ref = "spring-boot" }
 spring-boot-starter-security     = { module = "org.springframework.boot:spring-boot-starter-security",     version.ref = "spring-boot" }
 spring-boot-starter-test         = { module = "org.springframework.boot:spring-boot-starter-test",         version.ref = "spring-boot" }
 

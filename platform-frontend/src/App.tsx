@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useWizardStore } from './store/wizardStore';
 import { LoginPage } from './components/LoginPage';
@@ -53,7 +54,7 @@ function MainApp() {
 
           <button
             type="button"
-            className="app-header-nav-btn"
+            className={`app-header-nav-btn${view === 'wizard' ? ' app-header-nav-btn--active' : ''}`}
             onClick={openWizard}
           >
             Create Workflow Type
@@ -100,17 +101,17 @@ function MainApp() {
           )}
         </nav>
 
-        {view === 'blotter' && (
-          <select
-            className="app-header-select"
-            value={workflowType}
-            onChange={e => setWorkflowType(e.target.value)}
-          >
-            {WORKFLOW_TYPES.map(t => (
-              <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>
-            ))}
-          </select>
-        )}
+        <select
+          className="app-header-select"
+          value={workflowType}
+          onChange={e => setWorkflowType(e.target.value)}
+          disabled={view !== 'blotter'}
+          aria-label="Workflow type"
+        >
+          {WORKFLOW_TYPES.map(t => (
+            <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>
+          ))}
+        </select>
 
         <span className="app-header-user">{userId} · {role}</span>
         <button className="app-header-logout" onClick={clearAuth}>Logout</button>
@@ -119,9 +120,22 @@ function MainApp() {
       <main className="app-main">
         {view === 'blotter' && (
           <>
-            {isLoading && <p style={{ color: 'var(--color-text-muted)' }}>Loading…</p>}
-            {isError && <p style={{ color: 'var(--color-danger)' }}>Failed to load work items.</p>}
-            {!isLoading && !isError && config && (
+            {isLoading && (
+              <div role="status" aria-live="polite" aria-label="Loading work items" className="skeleton-container">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="skeleton skeleton-row" />
+                ))}
+              </div>
+            )}
+            {isError && (
+              <div role="alert" className="status-text status-text--error">Failed to load work items.</div>
+            )}
+            {!isLoading && !isError && config && items.length === 0 && (
+              <div className="blotter-empty">
+                <p>No work items for <strong>{workflowType.replaceAll('_', ' ')}</strong>.</p>
+              </div>
+            )}
+            {!isLoading && !isError && config && items.length > 0 && (
               <div className="blotter-container">
                 <Blotter
                   config={config}
@@ -153,6 +167,8 @@ function MainApp() {
           onClose={() => setSelectedItemId(null)}
         />
       )}
+
+      <Toaster position="bottom-right" toastOptions={{ duration: 3000 }} />
     </div>
   );
 }

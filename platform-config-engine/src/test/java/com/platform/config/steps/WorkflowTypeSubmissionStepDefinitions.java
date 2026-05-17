@@ -7,7 +7,11 @@ import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
-import com.platform.config.domain.service.WorkflowTypeSubmissionService;
+import com.platform.config.domain.service.SubmissionCreationService;
+import com.platform.config.domain.service.SubmissionDraftService;
+import com.platform.config.domain.service.SubmissionLifecycleService;
+import com.platform.config.domain.service.SubmissionQueryService;
+import com.platform.config.domain.service.SubmissionReviewService;
 import com.platform.config.doubles.InMemoryConfigDocumentWriter;
 import com.platform.config.doubles.InMemorySubmissionAuditRepository;
 import com.platform.config.doubles.InMemoryWorkflowTypeSubmissionRepository;
@@ -34,10 +38,26 @@ public class WorkflowTypeSubmissionStepDefinitions {
     private final InMemoryConfigDocumentWriter writer = new InMemoryConfigDocumentWriter();
     private final InMemorySubmissionAuditRepository auditRepo = new InMemorySubmissionAuditRepository();
 
-    // Rebuilt per scenario based on maker-checker flag
     private boolean makerCheckerEnabled = true;
-    private WorkflowTypeSubmissionService service() {
-        return new WorkflowTypeSubmissionService(repo, writer, auditRepo, makerCheckerEnabled);
+
+    private SubmissionCreationService creationService() {
+        return new SubmissionCreationService(repo, writer, auditRepo, makerCheckerEnabled);
+    }
+
+    private SubmissionDraftService draftService() {
+        return new SubmissionDraftService(repo, auditRepo);
+    }
+
+    private SubmissionLifecycleService lifecycleService() {
+        return new SubmissionLifecycleService(repo, auditRepo);
+    }
+
+    private SubmissionReviewService reviewService() {
+        return new SubmissionReviewService(repo, writer, auditRepo);
+    }
+
+    private SubmissionQueryService queryService() {
+        return new SubmissionQueryService(repo);
     }
 
     @Before
@@ -64,14 +84,14 @@ public class WorkflowTypeSubmissionStepDefinitions {
 
     // ── Given ────────────────────────────────────────────────────────────────
 
-    @Given("no submission exists for tenant {string} and workflow type {string}")
-    public void noSubmissionExists(String tenantId, String workflowType) {
+    @Given("no submission exists for tenant {string}")
+    public void noSubmissionExists(String tenantId) {
         // repo starts empty per scenario — nothing to do
     }
 
     @Given("a DRAFT submission exists for tenant {string} workflow type {string} submitted by {string}")
     public void draftSubmissionExists(String tenantId, String workflowType, String submittedBy) {
-        lastResult = service().create(new CreateSubmissionCommand(
+        lastResult = creationService().create(new CreateSubmissionCommand(
                 tenantId, submittedBy, workflowType, workflowType + " Display", null,
                 incompleteDraftConfigs()));
         lastSubmissionId = lastResult.id();
@@ -82,24 +102,24 @@ public class WorkflowTypeSubmissionStepDefinitions {
     public void pendingSubmissionExists(String tenantId, String workflowType, String submittedBy) {
         draftSubmissionExists(tenantId, workflowType, submittedBy);
         setCompleteConfigs(tenantId, workflowType, submittedBy);
-        lastResult = service().submit(tenantId, lastSubmissionId, submittedBy);
+        lastResult = lifecycleService().submit(tenantId, lastSubmissionId, submittedBy);
     }
 
     @Given("a REJECTED submission exists for tenant {string} workflow type {string} submitted by {string}")
     public void rejectedSubmissionExists(String tenantId, String workflowType, String submittedBy) {
         pendingSubmissionExists(tenantId, workflowType, submittedBy);
-        lastResult = service().reject(tenantId, lastSubmissionId, "bob", "Test rejection");
+        lastResult = reviewService().reject(tenantId, lastSubmissionId, "bob", "Test rejection");
     }
 
     @Given("an APPROVED submission exists for tenant {string} workflow type {string} submitted by {string}")
     public void approvedSubmissionExists(String tenantId, String workflowType, String submittedBy) {
         pendingSubmissionExists(tenantId, workflowType, submittedBy);
-        lastResult = service().approve(tenantId, lastSubmissionId, "bob");
+        lastResult = reviewService().approve(tenantId, lastSubmissionId, "bob");
     }
 
     @Given("the submission has complete draft configs")
     public void submissionHasCompleteDraftConfigs() {
-        lastResult = service().saveDraft(
+        lastResult = draftService().saveDraft(
                 lastResult.tenantId(), lastSubmissionId, lastResult.submittedBy(),
                 completeDraftConfigs(), lastResult.currentStep());
     }
@@ -119,7 +139,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} creates a submission for workflow type {string} with display name {string}")
     public void userCreatesSubmission(String userId, String workflowType, String displayName) {
         try {
-            lastResult = service().create(new CreateSubmissionCommand(
+            lastResult = creationService().create(new CreateSubmissionCommand(
                     "tenant-1", userId, workflowType, displayName, null, completeDraftConfigs()));
             lastSubmissionId = lastResult.id();
             originalSubmissionId = lastSubmissionId;
@@ -131,7 +151,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} submits the submission for approval")
     public void userSubmitsForApproval(String userId) {
         try {
-            lastResult = service().submit(lastResult.tenantId(), lastSubmissionId, userId);
+            lastResult = lifecycleService().submit(lastResult.tenantId(), lastSubmissionId, userId);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -140,7 +160,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} approves the submission")
     public void userApprovesSubmission(String userId) {
         try {
-            lastResult = service().approve(lastResult.tenantId(), lastSubmissionId, userId);
+            lastResult = reviewService().approve(lastResult.tenantId(), lastSubmissionId, userId);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -149,7 +169,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} rejects the submission with reason {string}")
     public void userRejectsSubmission(String userId, String reason) {
         try {
-            lastResult = service().reject(lastResult.tenantId(), lastSubmissionId, userId, reason);
+            lastResult = reviewService().reject(lastResult.tenantId(), lastSubmissionId, userId, reason);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -158,7 +178,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} saves draft progress at step {int}")
     public void userSavesDraftProgress(String userId, int step) {
         try {
-            lastResult = service().saveDraft(
+            lastResult = draftService().saveDraft(
                     lastResult.tenantId(), lastSubmissionId, userId,
                     lastResult.draftConfigs(), step);
         } catch (Exception e) {
@@ -169,7 +189,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} discards the submission as owner")
     public void userDiscardsAsOwner(String userId) {
         try {
-            service().discard(lastResult.tenantId(), lastSubmissionId, userId, false);
+            draftService().discard(lastResult.tenantId(), lastSubmissionId, userId, false);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -178,7 +198,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @When("user {string} discards the submission as admin")
     public void userDiscardsAsAdmin(String userId) {
         try {
-            service().discard(lastResult.tenantId(), lastSubmissionId, userId, true);
+            draftService().discard(lastResult.tenantId(), lastSubmissionId, userId, true);
         } catch (Exception e) {
             thrownException = e;
         }
@@ -188,7 +208,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     public void userRevisesSubmission(String userId) {
         lastDraftConfigs = completeDraftConfigs();
         try {
-            lastResult = service().revise(
+            lastResult = lifecycleService().revise(
                     lastResult.tenantId(), lastSubmissionId, userId, lastDraftConfigs);
         } catch (Exception e) {
             thrownException = e;
@@ -197,17 +217,17 @@ public class WorkflowTypeSubmissionStepDefinitions {
 
     @When("the pending submissions for tenant {string} are retrieved")
     public void pendingSubmissionsRetrieved(String tenantId) {
-        listResult = service().getPendingForTenant(tenantId);
+        listResult = queryService().getPendingForTenant(tenantId);
     }
 
     @When("the draft submissions for user {string} in tenant {string} are retrieved")
     public void draftSubmissionsRetrieved(String userId, String tenantId) {
-        listResult = service().getDraftsForUser(tenantId, userId);
+        listResult = queryService().getDraftsForUser(tenantId, userId);
     }
 
     @And("the submission is loaded by id")
     public void submissionLoadedById() {
-        lastResult = service().getById(lastResult.tenantId(), lastSubmissionId);
+        lastResult = queryService().getById(lastResult.tenantId(), lastSubmissionId);
     }
 
     // ── Then ─────────────────────────────────────────────────────────────────
@@ -341,7 +361,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void setCompleteConfigs(String tenantId, String workflowType, String submittedBy) {
-        service().saveDraft(tenantId, lastSubmissionId, submittedBy, completeDraftConfigs(), 6);
+        draftService().saveDraft(tenantId, lastSubmissionId, submittedBy, completeDraftConfigs(), 6);
         lastResult = repo.findById(tenantId, lastSubmissionId).orElseThrow();
     }
 

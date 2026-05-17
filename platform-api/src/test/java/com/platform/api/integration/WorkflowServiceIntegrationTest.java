@@ -60,7 +60,7 @@ class WorkflowServiceIntegrationTest {
             new AuditEntryJdbcRepository(jdbc, objectMapper);
 
     private final WorkflowService service =
-            new WorkflowService(workItemRepo, configRepo, auditRepo);
+            new WorkflowService(workItemRepo, configRepo, auditRepo, event -> {}, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
 
     @BeforeEach
     void truncate() {

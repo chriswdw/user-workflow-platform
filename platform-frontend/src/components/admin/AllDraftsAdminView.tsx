@@ -4,6 +4,7 @@ import { useAllDraftSubmissions } from '../../api/useWorkflowTypeSubmissions';
 import { useDiscardSubmission } from '../../api/useSubmissionActions';
 import type { WorkflowTypeSubmission } from '../../types/WorkflowTypeSubmission';
 import { useWizardStore } from '../../store/wizardStore';
+import { ConfirmModal } from '../detail/ConfirmModal';
 
 const STEP_LABELS = ['', 'Basic Info', 'Source', 'Sample', 'Fields', 'Blotter', 'Detail View', 'Review'];
 
@@ -20,6 +21,7 @@ interface SubmissionDetailProps {
 function SubmissionDetail({ sub, onClose, onOpenWizard }: SubmissionDetailProps) {
   const { hydrateForResume, hydrateForRevision } = useWizardStore();
   const discard = useDiscardSubmission(sub.id);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function handleContinue() {
     hydrateForResume(sub);
@@ -31,10 +33,9 @@ function SubmissionDetail({ sub, onClose, onOpenWizard }: SubmissionDetailProps)
     onOpenWizard();
   }
 
-  function handleDiscard() {
-    if (window.confirm('Discard this draft? This cannot be undone.')) {
-      discard.mutate(undefined, { onSuccess: onClose });
-    }
+  function handleDiscardConfirmed() {
+    discard.mutate(undefined, { onSuccess: onClose });
+    setConfirmOpen(false);
   }
 
   return (
@@ -82,12 +83,20 @@ function SubmissionDetail({ sub, onClose, onOpenWizard }: SubmissionDetailProps)
           </button>
         )}
         {sub.statusCode === 'DRAFT' && (
-          <button type="button" className="btn btn-danger" onClick={handleDiscard}
+          <button type="button" className="btn btn-danger" onClick={() => setConfirmOpen(true)}
                   disabled={discard.isPending}>
             Discard
           </button>
         )}
       </div>
+
+      {confirmOpen && (
+        <ConfirmModal
+          message="Discard this draft? This cannot be undone."
+          onConfirm={handleDiscardConfirmed}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 package com.platform.config.domain.service;
 
+import com.platform.config.domain.exception.SourceConnectionNotFoundException;
 import com.platform.config.domain.ports.in.IListSourceConnectionsUseCase;
 import com.platform.config.domain.ports.in.IManageSourceConnectionsUseCase;
 import com.platform.config.domain.ports.out.ISourceConnectionRepository;
@@ -38,8 +39,7 @@ public class SourceConnectionService
     @Override
     public SourceConnection update(SourceConnection connection) {
         SourceConnection existing = repo.findById(connection.id())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Source connection not found: " + connection.id()));
+                .orElseThrow(() -> new SourceConnectionNotFoundException(connection.id()));
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return repo.save(new SourceConnection(
                 existing.id(),

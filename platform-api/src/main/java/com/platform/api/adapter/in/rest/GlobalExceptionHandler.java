@@ -3,11 +3,14 @@ package com.platform.api.adapter.in.rest;
 import com.platform.config.domain.exception.ConfigNotFoundException;
 import com.platform.config.domain.exception.IncompleteSubmissionException;
 import com.platform.config.domain.exception.SelfApprovalException;
+import com.platform.config.domain.exception.SourceConnectionNotFoundException;
 import com.platform.config.domain.exception.SubmissionAlreadyExistsException;
 import com.platform.config.domain.exception.SubmissionNotFoundException;
 import com.platform.workflow.domain.exception.ForbiddenTransitionException;
 import com.platform.workflow.domain.exception.InvalidTransitionException;
 import com.platform.workflow.domain.exception.ValidationFailedException;
+import com.platform.workflow.domain.exception.WorkItemNotFoundException;
+import com.platform.workflow.domain.exception.WorkflowConfigNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -22,9 +25,17 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler({SubmissionNotFoundException.class, ConfigNotFoundException.class})
+    @ExceptionHandler({SubmissionNotFoundException.class, ConfigNotFoundException.class,
+                        WorkItemNotFoundException.class, SourceConnectionNotFoundException.class})
     public ProblemDetail handleNotFound(RuntimeException ex) {
         return problem(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(WorkflowConfigNotFoundException.class)
+    public ProblemDetail handleMisconfiguration(WorkflowConfigNotFoundException ex) {
+        String correlationId = MDC.get("correlationId");
+        log.error("correlationId={} Configuration not found: {}", correlationId, ex.getMessage());
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal configuration error — contact support");
     }
 
     @ExceptionHandler(SubmissionAlreadyExistsException.class)
@@ -40,6 +51,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({SelfApprovalException.class, ForbiddenTransitionException.class})
     public ProblemDetail handleForbidden(RuntimeException ex) {
         return problem(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleBadRequest(IllegalArgumentException ex) {
+        return problem(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler({IncompleteSubmissionException.class, InvalidTransitionException.class,

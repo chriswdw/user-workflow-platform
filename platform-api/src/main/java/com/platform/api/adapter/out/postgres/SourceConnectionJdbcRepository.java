@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.config.domain.ports.out.ISourceConnectionRepository;
+import com.platform.domain.model.ConnectionConfig;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceConnectionAccess;
@@ -49,7 +50,7 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                 .addValue("name", c.name())
                 .addValue("displayName", c.displayName())
                 .addValue("connectionType", c.connectionType().name())
-                .addValue("config", toJson(c.config()))
+                .addValue("config", configToJson(c.config()))
                 .addValue("credentialsRef", c.credentialsRef())
                 .addValue("createdBy", c.createdBy())
                 .addValue("createdAt", c.createdAt())
@@ -134,12 +135,13 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
     }
 
     private SourceConnection mapRow(ResultSet rs, int rowNum) throws SQLException {
+        ConnectionType type = ConnectionType.valueOf(rs.getString("connection_type"));
         return new SourceConnection(
                 rs.getString("id"),
                 rs.getString("name"),
                 rs.getString("display_name"),
-                ConnectionType.valueOf(rs.getString("connection_type")),
-                parseJson(rs.getString("config")),
+                type,
+                parseConfig(rs.getString("config"), type),
                 rs.getString("credentials_ref"),
                 rs.getString("created_by"),
                 rs.getObject("created_at", OffsetDateTime.class),
@@ -147,17 +149,44 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
         );
     }
 
-    private String toJson(Map<String, Object> map) {
+    private String configToJson(ConnectionConfig config) {
         try {
+            Map<String, Object> map = switch (config) {
+                case ConnectionConfig.KafkaConfig(var bootstrapServers, var topicName) -> Map.of(
+                        "type", "KAFKA",
+                        "bootstrapServers", bootstrapServers,
+                        "topicName", topicName);
+                case ConnectionConfig.DbPollConfig(var jdbcUrl, var query, var pollIntervalSeconds) -> Map.of(
+                        "type", "DB_POLL",
+                        "jdbcUrl", jdbcUrl,
+                        "query", query,
+                        "pollIntervalSeconds", pollIntervalSeconds);
+                case ConnectionConfig.FileShareConfig(var path, var filePattern) -> Map.of(
+                        "type", "FILE_SHARE",
+                        "path", path,
+                        "filePattern", filePattern);
+            };
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialise config to JSONB", e);
         }
     }
 
-    private Map<String, Object> parseJson(String json) {
+    private ConnectionConfig parseConfig(String json, ConnectionType type) {
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
+            return switch (type) {
+                case KAFKA -> new ConnectionConfig.KafkaConfig(
+                        (String) map.get("bootstrapServers"),
+                        (String) map.get("topicName"));
+                case DB_POLL -> new ConnectionConfig.DbPollConfig(
+                        (String) map.get("jdbcUrl"),
+                        (String) map.get("query"),
+                        ((Number) map.getOrDefault("pollIntervalSeconds", 60)).intValue());
+                case FILE_SHARE -> new ConnectionConfig.FileShareConfig(
+                        (String) map.get("path"),
+                        (String) map.get("filePattern"));
+            };
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to deserialise config from JSONB", e);
         }

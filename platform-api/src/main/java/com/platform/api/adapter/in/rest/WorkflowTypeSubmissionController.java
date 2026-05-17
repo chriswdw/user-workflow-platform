@@ -10,6 +10,7 @@ import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
 import com.platform.config.domain.ports.in.ISaveDraftUseCase;
 import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/workflow-type-submissions")
@@ -54,29 +54,26 @@ public class WorkflowTypeSubmissionController {
     }
 
     @PostMapping
-    @SuppressWarnings("unchecked")
     public ResponseEntity<WorkflowTypeSubmissionResponse> create(
-            @RequestBody Map<String, Object> body,
+            @Valid @RequestBody CreateSubmissionRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
         var result = createUseCase.create(new CreateSubmissionCommand(
                 auth.tenantId(), auth.userId(),
-                (String) body.get("workflowType"),
-                (String) body.get("displayName"),
-                (String) body.get("description"),
-                parseDraftConfigs(body)));
+                body.workflowType(),
+                body.displayName(),
+                body.description(),
+                draftConfigsOrEmpty(body.draftConfigs())));
         return ResponseEntity.status(201).body(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PatchMapping("/{id}")
-    @SuppressWarnings("unchecked")
     public ResponseEntity<WorkflowTypeSubmissionResponse> saveDraft(
             @PathVariable String id,
-            @RequestBody Map<String, Object> body,
+            @RequestBody SaveDraftRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        int step = body.containsKey("currentStep") ? (Integer) body.get("currentStep") : 1;
         var result = saveDraftUseCase.saveDraft(
                 auth.tenantId(), id, auth.userId(),
-                parseDraftConfigs(body), step);
+                draftConfigsOrEmpty(body.draftConfigs()), body.currentStep());
         return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
@@ -99,20 +96,19 @@ public class WorkflowTypeSubmissionController {
     @PostMapping("/{id}/reject")
     public ResponseEntity<WorkflowTypeSubmissionResponse> reject(
             @PathVariable String id,
-            @RequestBody Map<String, Object> body,
+            @RequestBody RejectSubmissionRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        String reason = (String) body.get("reason");
-        var result = reviewUseCase.reject(auth.tenantId(), id, auth.userId(), reason);
+        var result = reviewUseCase.reject(auth.tenantId(), id, auth.userId(), body.reason());
         return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
     @PostMapping("/{id}/revise")
-    @SuppressWarnings("unchecked")
     public ResponseEntity<WorkflowTypeSubmissionResponse> revise(
             @PathVariable String id,
-            @RequestBody Map<String, Object> body,
+            @RequestBody ReviseSubmissionRequest body,
             @AuthenticationPrincipal ApiAuthentication auth) {
-        var result = reviseUseCase.revise(auth.tenantId(), id, auth.userId(), parseDraftConfigs(body));
+        var result = reviseUseCase.revise(auth.tenantId(), id, auth.userId(),
+                draftConfigsOrEmpty(body.draftConfigs()));
         return ResponseEntity.ok(WorkflowTypeSubmissionResponse.from(result));
     }
 
@@ -160,19 +156,7 @@ public class WorkflowTypeSubmissionController {
         return ResponseEntity.noContent().build();
     }
 
-    @SuppressWarnings("unchecked")
-    private static DraftConfigs parseDraftConfigs(Map<String, Object> body) {
-        Object raw = body.get("draftConfigs");
-        if (!(raw instanceof Map<?, ?> map)) {
-            return new DraftConfigs(null, null, null, null, null, null);
-        }
-        Map<String, Object> dc = (Map<String, Object>) map;
-        return new DraftConfigs(
-                (Map<String, Object>) dc.get("workflowTypeDefinition"),
-                (Map<String, Object>) dc.get("fieldTypeRegistry"),
-                (Map<String, Object>) dc.get("ingestionSourceConfig"),
-                (Map<String, Object>) dc.get("workflowConfig"),
-                (Map<String, Object>) dc.get("blotterConfig"),
-                (Map<String, Object>) dc.get("detailViewConfig"));
+    private static DraftConfigs draftConfigsOrEmpty(DraftConfigs draftConfigs) {
+        return draftConfigs != null ? draftConfigs : new DraftConfigs(null, null, null, null, null, null);
     }
 }

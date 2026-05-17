@@ -7,7 +7,6 @@ import com.platform.config.domain.model.WorkflowTypeSubmission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.OffsetDateTime;
@@ -107,6 +106,16 @@ class WorkflowTypeSubmissionJdbcRepositoryTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).id()).isEqualTo("s-u1");
+    }
+
+    @Test
+    void deleteById_removesRecord() {
+        repository.save(submission("sub-del", "tenant-A", "TRADE_BREAK",
+                SubmissionStatus.DRAFT, "Draft", "user-1", 1));
+
+        repository.deleteById("tenant-A", "sub-del");
+
+        assertThat(repository.findById("tenant-A", "sub-del")).isEmpty();
     }
 
     @Test

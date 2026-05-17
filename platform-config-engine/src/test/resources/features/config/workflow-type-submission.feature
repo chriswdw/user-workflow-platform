@@ -1,7 +1,7 @@
 Feature: Workflow type submission lifecycle
 
   Scenario: Business analyst creates a draft submission
-    Given no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    Given no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then the submission status is "DRAFT"
     And the submission workflow type is "TRADE_BREAK"
@@ -105,18 +105,18 @@ Feature: Workflow type submission lifecycle
 
   Scenario: Maker-checker disabled — submission auto-approves on create
     Given maker-checker is disabled
-    And no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    And no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then the submission status is "APPROVED"
 
   Scenario: Maker-checker disabled — configs are immediately active after create
     Given maker-checker is disabled
-    And no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    And no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then 6 config documents have been published
 
   Scenario: Submission with invalid workflowType pattern is rejected at creation
-    Given no submission exists for tenant "tenant-1" and workflow type "invalid-type"
+    Given no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "invalid-type" with display name "Invalid"
     Then an IllegalArgumentException is thrown
 
@@ -129,7 +129,7 @@ Feature: Workflow type submission lifecycle
   # ── Audit log ─────────────────────────────────────────────────────────────
 
   Scenario: Creating a submission produces a SUBMISSION_CREATED audit entry
-    Given no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    Given no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then an audit entry of type "SUBMISSION_CREATED" is recorded for the submission
     And the audit entry records actor "alice"

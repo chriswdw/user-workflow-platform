@@ -10,7 +10,11 @@ import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
 import com.platform.config.domain.ports.in.ISaveDraftUseCase;
 import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
-import com.platform.config.domain.service.WorkflowTypeSubmissionService;
+import com.platform.config.domain.service.SubmissionCreationService;
+import com.platform.config.domain.service.SubmissionDraftService;
+import com.platform.config.domain.service.SubmissionLifecycleService;
+import com.platform.config.domain.service.SubmissionQueryService;
+import com.platform.config.domain.service.SubmissionReviewService;
 import com.platform.config.doubles.InMemoryConfigDocumentWriter;
 import com.platform.config.doubles.InMemorySubmissionAuditRepository;
 import com.platform.config.doubles.InMemoryWorkflowTypeSubmissionRepository;
@@ -38,8 +42,24 @@ public class InMemorySubmissionPort
             new InMemoryConfigDocumentWriter();
     private final Set<String> conflictIds = new HashSet<>();
 
-    private WorkflowTypeSubmissionService service() {
-        return new WorkflowTypeSubmissionService(repo, writer, auditRepo, true);
+    private SubmissionCreationService creationService() {
+        return new SubmissionCreationService(repo, writer, auditRepo, true);
+    }
+
+    private SubmissionDraftService draftService() {
+        return new SubmissionDraftService(repo, auditRepo);
+    }
+
+    private SubmissionLifecycleService lifecycleService() {
+        return new SubmissionLifecycleService(repo, auditRepo);
+    }
+
+    private SubmissionReviewService reviewService() {
+        return new SubmissionReviewService(repo, writer, auditRepo);
+    }
+
+    private SubmissionQueryService queryService() {
+        return new SubmissionQueryService(repo);
     }
 
     public void seed(WorkflowTypeSubmission submission) {
@@ -63,13 +83,13 @@ public class InMemorySubmissionPort
 
     @Override
     public WorkflowTypeSubmission create(CreateSubmissionCommand command) {
-        return service().create(command);
+        return creationService().create(command);
     }
 
     @Override
     public WorkflowTypeSubmission saveDraft(String tenantId, String submissionId,
                                              String actorUserId, DraftConfigs partialDraftConfigs, int currentStep) {
-        return service().saveDraft(tenantId, submissionId, actorUserId, partialDraftConfigs, currentStep);
+        return draftService().saveDraft(tenantId, submissionId, actorUserId, partialDraftConfigs, currentStep);
     }
 
     @Override
@@ -78,53 +98,53 @@ public class InMemorySubmissionPort
             throw new OptimisticLockingFailureException(
                     "Simulated concurrent modification for submission " + submissionId);
         }
-        return service().submit(tenantId, submissionId, actorUserId);
+        return lifecycleService().submit(tenantId, submissionId, actorUserId);
     }
 
     @Override
     public WorkflowTypeSubmission approve(String tenantId, String submissionId, String reviewerUserId) {
-        return service().approve(tenantId, submissionId, reviewerUserId);
+        return reviewService().approve(tenantId, submissionId, reviewerUserId);
     }
 
     @Override
     public WorkflowTypeSubmission reject(String tenantId, String submissionId,
                                           String reviewerUserId, String reason) {
-        return service().reject(tenantId, submissionId, reviewerUserId, reason);
+        return reviewService().reject(tenantId, submissionId, reviewerUserId, reason);
     }
 
     @Override
     public WorkflowTypeSubmission revise(String tenantId, String submissionId,
                                           String actorUserId, DraftConfigs updatedDraftConfigs) {
-        return service().revise(tenantId, submissionId, actorUserId, updatedDraftConfigs);
+        return lifecycleService().revise(tenantId, submissionId, actorUserId, updatedDraftConfigs);
     }
 
     @Override
     public WorkflowTypeSubmission getById(String tenantId, String submissionId) {
-        return service().getById(tenantId, submissionId);
+        return queryService().getById(tenantId, submissionId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getPendingForTenant(String tenantId) {
-        return service().getPendingForTenant(tenantId);
+        return queryService().getPendingForTenant(tenantId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getDraftsForUser(String tenantId, String actorUserId) {
-        return service().getDraftsForUser(tenantId, actorUserId);
+        return queryService().getDraftsForUser(tenantId, actorUserId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getRejectedForUser(String tenantId, String actorUserId) {
-        return service().getRejectedForUser(tenantId, actorUserId);
+        return queryService().getRejectedForUser(tenantId, actorUserId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
-        return service().getAllDraftsForTenant(tenantId);
+        return queryService().getAllDraftsForTenant(tenantId);
     }
 
     @Override
     public void discard(String tenantId, String submissionId, String actorUserId, boolean isAdmin) {
-        service().discard(tenantId, submissionId, actorUserId, isAdmin);
+        draftService().discard(tenantId, submissionId, actorUserId, isAdmin);
     }
 }

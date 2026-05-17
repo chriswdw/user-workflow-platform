@@ -80,6 +80,7 @@ body {
   cursor: pointer;
 }
 .app-header-select option { color: var(--color-text); background: #fff; }
+.app-header-select:disabled { opacity: .4; cursor: not-allowed; }
 
 .app-header-user {
   margin-left: auto;
@@ -146,6 +147,20 @@ body {
   font-size: 13px;
   color: var(--color-text-muted);
   margin-bottom: 16px;
+}
+
+.login-dev-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
 
 .login-divider {
@@ -325,6 +340,7 @@ body {
   overflow-y: auto;
   padding: 0;
 }
+.detail-panel-body[hidden] { display: none; }
 
 /* ── Sections ────────────────────────────────────────────────────────────── */
 .section {
@@ -583,6 +599,24 @@ dialog.modal-overlay {
   box-shadow: var(--shadow-sm);
 }
 
+.blotter-grid {
+  width: 100%;
+  /* 52px header + 20px top padding + 20px bottom padding */
+  height: calc(100vh - 92px);
+  min-height: 400px;
+}
+
+.blotter-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
 /* ── ag-Grid overrides ───────────────────────────────────────────────────── */
 .ag-theme-alpine {
   --ag-header-background-color: #f8fafc;
@@ -702,6 +736,8 @@ dialog.modal-overlay {
 }
 
 .wizard-footer-nav { display: flex; gap: 10px; margin-left: auto; }
+.btn--prev::before { content: '← '; }
+.btn--next::after  { content: ' →'; }
 .saving-indicator    { font-size: 13px; color: var(--color-text-muted); align-self: center; }
 .wizard-footer-error { font-size: 13px; color: var(--color-danger); align-self: center; }
 
@@ -781,3 +817,190 @@ dialog.modal-overlay {
 .data-table-row--clickable { cursor: pointer; }
 .data-table-row--clickable:hover { background: var(--color-bg); }
 .data-table-row--selected { background: var(--color-wizard-active-bg) !important; }
+
+/* ── Header nav buttons ────────────────────────────────────────────────── */
+.app-header-nav { display: flex; align-items: center; gap: 4px; }
+
+.app-header-nav-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,.8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.app-header-nav-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+.app-header-nav-btn--active {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border-color: rgba(255,255,255,.25);
+}
+
+/* ── Count badge (nav badges) ──────────────────────────────────────────── */
+.badge--count {
+  background: var(--color-primary);
+  color: #fff;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── Standalone form classes (wizard steps use these) ──────────────────── */
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+.form-input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+.form-input--error { border-color: var(--color-danger); }
+.form-input--error:focus { box-shadow: 0 0 0 3px rgba(220,38,38,.1); }
+textarea.form-input { min-height: 80px; resize: vertical; }
+
+.required { color: var(--color-danger); margin-left: 2px; }
+
+/* ── Icon button (close buttons on wizard + admin panels) ──────────────── */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  font-size: 16px;
+  color: rgba(255,255,255,.7);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.btn-icon:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+/* ── Data table (admin drafts / approval queue tables) ─────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-bottom: 2px solid var(--color-border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: var(--color-bg); }
+
+/* ── View layout helpers ───────────────────────────────────────────────── */
+.view-container { padding: 20px; }
+
+.view-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+.status-text {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  padding: 16px 0;
+}
+.status-text--error { color: var(--color-danger); }
+
+/* ── Submission detail action buttons (admin panel side panel) ─────────── */
+.submission-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+/* ── Admin split open state ────────────────────────────────────────────── */
+.admin-split--open .admin-split-main {
+  border-right: 1px solid var(--color-border);
+}
+
+/* ── Screen-reader only (visually hidden) ──────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Clickable wizard progress steps ──────────────────────────────────── */
+.wizard-progress-step--clickable {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  transition: opacity .15s;
+}
+.wizard-progress-step--clickable:hover { opacity: .75; }
+
+/* ── Loading skeleton ──────────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.skeleton { animation: skeleton-pulse 1.5s ease-in-out infinite; }
+
+.skeleton-row {
+  height: 40px;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.skeleton-block {
+  height: 20px;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.skeleton-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

@@ -1,6 +1,5 @@
 package com.platform.workflow.steps;
 
-import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.WorkItem;
 import com.platform.domain.shared.FieldPathResolver;
@@ -21,8 +20,8 @@ import com.platform.workflow.domain.service.WorkflowService;
 import com.platform.workflow.doubles.InMemoryWorkflowAuditRepository;
 import com.platform.workflow.doubles.InMemoryWorkflowConfigRepository;
 import com.platform.workflow.doubles.InMemoryWorkItemRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.datatable.DataTable;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -35,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Cucumber step definitions for the workflow feature.
@@ -49,7 +47,7 @@ public class WorkflowStepDefinitions {
     private final InMemoryWorkflowConfigRepository configRepo = new InMemoryWorkflowConfigRepository();
     private final InMemoryWorkflowAuditRepository auditRepo = new InMemoryWorkflowAuditRepository();
     private final ITransitionWorkItemUseCase workflowService =
-            new WorkflowService(workItemRepo, configRepo, auditRepo);
+            new WorkflowService(workItemRepo, configRepo, auditRepo, event -> {}, new SimpleMeterRegistry());
 
     // Scenario state
     private String tenantId;
