@@ -26,6 +26,18 @@ docker compose -f docker/observability/docker-compose.yml up    # Full Grafana s
 
 For local dev run: install PostgreSQL locally (no container required) and configure `spring.datasource.url` in `application-local.yml`.
 
+### Frontend commands (run from `platform-frontend/`)
+
+```bash
+npm run dev               # Vite dev server on http://localhost:5173
+npm run build             # TypeScript check + production build
+npm run test              # Jest unit tests
+npm run test:bdd          # Cucumber.js BDD tests
+npm run test:coverage     # BDD tests with c8 coverage report
+npm run test:e2e          # Playwright end-to-end tests (requires dev server running or starts it automatically)
+npm run test:e2e:ui       # Playwright with interactive UI
+```
+
 ## Agent Tool Usage
 
 Prefer direct tools (Read, Edit, Bash, grep) over spawning sub-agents. Only use the Agent tool when:
@@ -45,6 +57,7 @@ Every backend module follows this layout:
 module/src/main/java/.../
   domain/
     model/       — Java records and sealed interfaces; no framework imports
+    exception/   — domain exception types thrown by services (optional; used where exception taxonomy is non-trivial)
     ports/in/    — input port interfaces (use cases the domain exposes)
     ports/out/   — output port interfaces (repos, messaging, external APIs)
     service/     — domain services implementing input ports; injected with output ports
@@ -63,7 +76,7 @@ module/src/main/java/.../
 **Rules enforced on every PR:**
 - Domain services declare constructor dependencies on output port interfaces only — never on concrete adapters
 - All wiring in `config/` — no `@Autowired` in domain or adapter classes
-- Every port must have an in-memory test double in the test source set
+- Every port must have an in-memory test double in the `testFixtures` source set (`src/testFixtures/java/`) so other modules can consume them as `testFixtures(project(":module"))` dependencies
 - Domain services tested with no Spring context; adapters tested in isolation against port contracts
 - Cucumber scenarios drive domain services directly via input ports using in-memory doubles
 
@@ -71,15 +84,16 @@ module/src/main/java/.../
 
 | Module | Responsibility |
 |---|---|
-| `platform-domain` | Shared model: WorkItem, WorkflowState, RoutingRule, AuditEntry |
-| `platform-config-engine` | Loads, validates, hot-reloads JSON config from PostgreSQL |
+| `platform-domain` | Shared model: `WorkItem`, `AuditEntry`, `AuditEventType`, `SourceConnection`, `ConnectionConfig`, `ConnectionType`, `SourceType`, `DomainEvent`; shared output ports `IAuditRepository`, `IDomainEventPublisher` |
+| `platform-config-engine` | Loads, validates, hot-reloads JSON config from PostgreSQL; full workflow-type submission lifecycle (create → draft → submit-for-approval → review/approve/reject → revise → discard); source connection management |
 | `platform-ingestion` | Kafka consumer, DB polling, file upload — normalise to WorkItem |
 | `platform-routing` | Rule evaluator + group assignment; pure domain, no infrastructure |
 | `platform-workflow` | State machine, transition execution, action dispatcher |
 | `platform-audit` | Immutable audit log; domain enforces append-only |
-| `platform-api` | Spring MVC REST, JWT security, rate limiting, API versioning |
+| `platform-api` | Spring MVC REST, JWT security, rate limiting, API versioning; Kafka domain-event publisher |
 | `platform-observability` | Shared Micrometer config, structured logging, trace propagation |
-| `platform-frontend` | React/Vite application |
+
+`platform-frontend` is **not** a Gradle module. It is a standalone Node.js/Vite/React project in `platform-frontend/`. Run frontend commands from that directory with `npm run …` (see frontend commands below).
 
 ## Tech Stack
 
@@ -88,7 +102,7 @@ module/src/main/java/.../
 - **Messaging**: Apache Kafka (Spring Kafka)
 - **Frontend**: React + TypeScript, ag-Grid (blotter), React Hook Form (config editors), Zustand, React Query, Vite
 - **Security**: Spring Security + JWT, RBAC, field-level encryption
-- **Testing**: JUnit 5 + Cucumber (backend) with `io.zonky.test:embedded-postgres` + `@EmbeddedKafka` — no Docker required; Jest + React Testing Library + Cucumber.js (frontend)
+- **Testing**: JUnit 5 + Cucumber (backend) with `io.zonky.test:embedded-postgres` + `@EmbeddedKafka` — no Docker required; Jest + React Testing Library + Cucumber.js + Playwright (frontend — e2e tests live in `e2e/`, run with `npm run test:e2e`)
 - **Observability**: Prometheus → Mimir, Grafana, Loki, Tempo, Pyroscope — all via Micrometer/OTLP
 
 ## Financial Services Constraints
@@ -129,7 +143,7 @@ Every non-trivial feature starts with `EnterPlanMode`. The plan must include JSO
 After plan approval, the first files written are:
 1. JSON schema files → `/schemas/`
 2. Cucumber `.feature` files → `src/test/resources/features/<module>/`
-3. In-memory port test doubles for any new output ports (in test source set)
+3. In-memory port test doubles for any new output ports (in `testFixtures` source set — `src/testFixtures/java/`)
 4. Cucumber step definition stubs (failing)
 
 **Step 3 — Verify RED**
@@ -138,7 +152,7 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 **Step 4 — Write production code, then verify GREEN**
 `./gradlew build cucumber` must pass with no failures before the task is considered done.
 
-**Why in-memory adapters matter**: Cucumber step definitions call domain services directly via input ports using in-memory implementations — no Spring context, no database, no Kafka. New output ports must have an in-memory implementation before a BDD test can fail correctly. This is the mechanism that enforces hexagonal architecture through the test process.
+**Why in-memory adapters matter**: Cucumber step definitions call domain services directly via input ports using in-memory implementations — no Spring context, no database, no Kafka. New output ports must have an in-memory implementation in `testFixtures` before a BDD test can fail correctly. Placing them in `testFixtures` (not `test`) means they are reusable across modules via `testFixtures(project(":module"))` Gradle dependencies. This is the mechanism that enforces hexagonal architecture through the test process.
 
 ## Code Coverage
 
@@ -177,7 +191,7 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 - Strict mode; no `any`; Zod for runtime validation at API boundaries
 - Define an explicit named `interface` for every component's props — inline object types in function signatures are forbidden. Name the interface `<ComponentName>Props` (e.g. `interface ActionButtonProps { ... }`)
 - All React function components must declare their props type explicitly: `function Foo(props: FooProps)` or destructured `function Foo({ bar }: FooProps)`
-- Custom hooks are named with the `use` prefix and live in `src/hooks/`; they own data fetching and state; components own rendering only
+- Custom hooks are named with the `use` prefix; data-fetching hooks (React Query wrappers) live in `src/api/`; pure state/logic hooks live in `src/hooks/`; components own rendering only
 - Prefer named exports over default exports for all components, hooks, and utilities — default exports make refactoring and search harder
 - Co-locate component-specific types in the same file as the component; shared types live in `src/types/`
 - Use `React.FC` only when a component explicitly uses `children`; otherwise use a plain function with an explicit return type
