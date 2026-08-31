@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.sonarqube") version "5.0.0.4638"
+    id("org.sonarqube") version "7.4.0.8496"
     id("org.openrewrite.rewrite") version "7.39.0"
 }
 
