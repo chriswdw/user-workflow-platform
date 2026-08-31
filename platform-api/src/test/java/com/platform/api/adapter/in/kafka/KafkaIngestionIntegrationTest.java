@@ -1,6 +1,7 @@
 package com.platform.api.adapter.in.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
 import com.platform.ingestion.domain.model.FieldMapping;
@@ -298,7 +299,7 @@ class KafkaIngestionIntegrationTest {
         }
 
         @Bean
-        ObjectMapper objectMapper() { return new ObjectMapper(); }
+        ObjectMapper objectMapper() { return new JsonMapper(); }
 
         @Bean
         TestDlqListener testDlqListener() { return new TestDlqListener(); }

@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.audit.domain.ports.out.IAuditEntryRepository;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEntry.ChangedField;
@@ -10,6 +9,7 @@ import com.platform.domain.model.AuditEventType;
 import com.platform.domain.ports.out.IAuditRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -110,7 +110,7 @@ public class AuditEntryJdbcRepository
                             "newValue", f.newValue() != null ? f.newValue() : ""))
                     .toList();
             return objectMapper.writeValueAsString(raw);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise changedFields to JSONB", e);
         }
     }
@@ -124,7 +124,7 @@ public class AuditEntryJdbcRepository
                             m.get("previousValue"),
                             m.get("newValue")))
                     .toList();
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise changedFields from JSONB", e);
         }
     }

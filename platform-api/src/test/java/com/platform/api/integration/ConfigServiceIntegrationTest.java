@@ -1,6 +1,7 @@
 package com.platform.api.integration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.api.adapter.out.postgres.ConfigDocumentJdbcRepository;
 import com.platform.api.adapter.out.postgres.EmbeddedPostgresProvider;
 import com.platform.config.domain.exception.ConfigIntegrityException;
@@ -32,7 +33,7 @@ class ConfigServiceIntegrationTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final ConfigDocumentJdbcRepository repository =
             new ConfigDocumentJdbcRepository(jdbc, objectMapper);

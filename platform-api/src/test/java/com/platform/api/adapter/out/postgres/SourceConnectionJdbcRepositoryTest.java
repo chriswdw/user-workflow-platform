@@ -1,6 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.domain.model.ConnectionConfig;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
@@ -21,7 +22,7 @@ class SourceConnectionJdbcRepositoryTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final SourceConnectionJdbcRepository repository =
             new SourceConnectionJdbcRepository(jdbc, objectMapper);

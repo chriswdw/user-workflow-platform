@@ -1,6 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.config.domain.model.ConfigType;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
@@ -30,7 +31,7 @@ class MultiTenantIsolationTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final WorkItemJdbcRepository workItems =
             new WorkItemJdbcRepository(jdbc, objectMapper);

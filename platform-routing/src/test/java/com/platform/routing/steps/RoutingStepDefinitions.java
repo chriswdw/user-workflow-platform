@@ -1,7 +1,9 @@
 package com.platform.routing.steps;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.routing.domain.model.ConditionNode;
 import com.platform.routing.domain.model.GroupCondition;
@@ -42,7 +44,7 @@ public class RoutingStepDefinitions {
     private final InMemoryRoutingConfigRepository routingConfigRepo = new InMemoryRoutingConfigRepository();
     private final InMemoryAuditRepository auditRepo = new InMemoryAuditRepository();
     private final IRouteWorkItemUseCase routingService = new RoutingService(routingConfigRepo, auditRepo, new SimpleMeterRegistry());
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new JsonMapper();
 
     // Scenario state
     private String tenantId;
@@ -223,15 +225,15 @@ public class RoutingStepDefinitions {
      * Parses a JSON condition node (LEAF or GROUP) into the ConditionNode sealed hierarchy.
      */
     private ConditionNode parseConditionNode(JsonNode node) {
-        String type = node.get("type").asText();
+        String type = node.get("type").asString();
         return switch (type) {
             case "LEAF" -> new LeafCondition(
-                    node.get("field").asText(),
-                    Operator.valueOf(node.get("operator").asText()),
+                    node.get("field").asString(),
+                    Operator.valueOf(node.get("operator").asString()),
                     parseLeafValue(node.get("value"))
             );
             case "GROUP" -> new GroupCondition(
-                    LogicalOperator.valueOf(node.get("logicalOperator").asText()),
+                    LogicalOperator.valueOf(node.get("logicalOperator").asString()),
                     StreamSupport.stream(node.get("children").spliterator(), false)
                             .map(this::parseConditionNode)
                             .toList()
@@ -246,9 +248,9 @@ public class RoutingStepDefinitions {
         }
         if (valueNode.isArray()) {
             return StreamSupport.stream(valueNode.spliterator(), false)
-                    .map(JsonNode::asText)
+                    .map(JsonNode::asString)
                     .toList();
         }
-        return valueNode.asText();
+        return valueNode.asString();
     }
 }

@@ -22,9 +22,7 @@ dependencies {
     testImplementation(libs.embedded.postgres)
     implementation(libs.spring.kafka)
     testImplementation(libs.spring.kafka.test)
-    implementation(libs.jjwt.api)
-    runtimeOnly(libs.jjwt.impl)
-    runtimeOnly(libs.jjwt.jackson)
+    implementation(libs.nimbus.jose.jwt)
     implementation(libs.bucket4j.core)
 
     testImplementation(testFixtures(project(":platform-config-engine")))
@@ -33,9 +31,8 @@ dependencies {
     testImplementation(libs.cucumber.spring)
     testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.platform.suite)
-    testImplementation(libs.jjwt.api)
-    testRuntimeOnly(libs.jjwt.impl)
-    testRuntimeOnly(libs.jjwt.jackson)
+    testImplementation(libs.nimbus.jose.jwt)
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test:4.0.8")
 }
 
 tasks.register("cucumber") {

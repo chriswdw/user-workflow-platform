@@ -1,6 +1,7 @@
 package com.platform.api.integration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.api.adapter.in.kafka.WorkItemKafkaConsumer;
 import com.platform.api.adapter.out.postgres.AuditEntryJdbcRepository;
 import com.platform.api.adapter.out.postgres.EmbeddedPostgresProvider;
@@ -175,7 +176,7 @@ class KafkaIngestionEndToEndTest {
         }
 
         @Bean
-        ObjectMapper objectMapper() { return new ObjectMapper(); }
+        ObjectMapper objectMapper() { return new JsonMapper(); }
 
         @Bean
         IngestionConfigJdbcRepository ingestionConfigRepo(NamedParameterJdbcTemplate jdbc, ObjectMapper om) {

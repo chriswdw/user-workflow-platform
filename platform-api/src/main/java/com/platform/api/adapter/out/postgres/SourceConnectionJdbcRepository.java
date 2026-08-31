@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.ports.out.ISourceConnectionRepository;
 import com.platform.domain.model.ConnectionConfig;
 import com.platform.domain.model.ConnectionType;
@@ -10,6 +9,7 @@ import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceConnectionAccess;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -167,7 +167,7 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                         "filePattern", filePattern);
             };
             return objectMapper.writeValueAsString(map);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise config to JSONB", e);
         }
     }
@@ -187,7 +187,7 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
                         (String) map.get("path"),
                         (String) map.get("filePattern"));
             };
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise config from JSONB", e);
         }
     }

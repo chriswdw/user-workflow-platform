@@ -17,3 +17,7 @@ tasks.register("cucumber") {
     description = "Runs the Cucumber BDD scenarios for platform-routing."
     dependsOn(tasks.test)
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-parameters")
+}
