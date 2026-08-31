@@ -1,8 +1,7 @@
 package com.platform.api.adapter.in.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.domain.model.SourceType;
 import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
@@ -30,7 +29,7 @@ public class WorkItemKafkaConsumer {
             topics = "${platform.ingestion.kafka.topic:work-items.ingest}",
             containerFactory = "ingestionKafkaListenerContainerFactory"
     )
-    public void handle(@Payload String payload) throws JsonProcessingException {
+    public void handle(@Payload String payload) {
         RawInboundRecord record = parsePayload(payload);
         IngestionResult result = ingestUseCase.ingest(record);
         switch (result) {
@@ -48,7 +47,7 @@ public class WorkItemKafkaConsumer {
     }
 
     @SuppressWarnings("unchecked")
-    private RawInboundRecord parsePayload(String payload) throws JsonProcessingException {
+    private RawInboundRecord parsePayload(String payload) {
         Map<String, Object> map = objectMapper.readValue(payload, new TypeReference<>() {});
         Map<String, String> rawFields = (Map<String, String>) map.getOrDefault("rawFields", Map.of());
         return new RawInboundRecord(

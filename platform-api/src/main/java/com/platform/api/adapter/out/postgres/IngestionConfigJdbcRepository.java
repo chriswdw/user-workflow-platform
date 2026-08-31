@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.model.ConfigType;
 import com.platform.domain.model.SourceType;
 import com.platform.ingestion.domain.model.FieldMapping;
@@ -12,6 +11,7 @@ import com.platform.ingestion.domain.model.UnknownColumnPolicy;
 import com.platform.ingestion.domain.ports.out.IIngestionConfigRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.util.List;
 import java.util.Map;
@@ -71,7 +71,7 @@ public class IngestionConfigJdbcRepository implements IIngestionConfigRepository
                     (String) m.get("idempotencyExplicitField"),
                     (String) m.get("initialState")
             );
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise IngestionConfig from JSONB", e);
         }
     }

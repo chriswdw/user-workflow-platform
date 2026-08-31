@@ -1,12 +1,12 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.ports.out.IConfigDocumentWriter;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import tools.jackson.core.JacksonException;
 
 import java.util.List;
 
@@ -46,7 +46,7 @@ public class ConfigDocumentJdbcWriter implements IConfigDocumentWriter {
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise config document content to JSONB", e);
         }
     }

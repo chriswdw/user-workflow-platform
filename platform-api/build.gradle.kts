@@ -32,6 +32,7 @@ dependencies {
     testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.platform.suite)
     testImplementation(libs.jjwt.api)
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test:4.0.8")
     testRuntimeOnly(libs.jjwt.impl)
     testRuntimeOnly(libs.jjwt.jackson)
 }

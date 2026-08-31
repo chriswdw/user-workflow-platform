@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
@@ -10,6 +9,7 @@ import com.platform.config.domain.ports.out.IWorkflowTypeSubmissionRepository;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -167,7 +167,7 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise draft_configs to JSONB", e);
         }
     }
@@ -178,7 +178,7 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
             return objectMapper.readerFor(DraftConfigs.class)
                     .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                     .readValue(json);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise draft_configs from JSONB", e);
         }
     }

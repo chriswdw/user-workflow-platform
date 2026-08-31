@@ -1,6 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +18,7 @@ class ConfigDocumentJdbcRepositoryTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final ConfigDocumentJdbcRepository repository =
             new ConfigDocumentJdbcRepository(jdbc, objectMapper);

@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.workflow.domain.model.OnFailure;
 import com.platform.workflow.domain.model.TransitionAction;
 import com.platform.workflow.domain.model.TransitionActionType;
@@ -14,6 +13,7 @@ import com.platform.workflow.domain.model.WorkflowTransition;
 import com.platform.workflow.domain.ports.out.IWorkflowConfigRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -114,7 +114,7 @@ public class WorkflowConfigJdbcRepository implements IWorkflowConfigRepository {
     private Map<String, Object> parseJson(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise workflow config from JSONB", e);
         }
     }

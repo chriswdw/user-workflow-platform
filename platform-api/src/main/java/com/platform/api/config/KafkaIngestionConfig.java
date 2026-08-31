@@ -1,6 +1,6 @@
 package com.platform.api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.api.adapter.in.kafka.WorkItemKafkaConsumer;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
 import org.apache.kafka.clients.consumer.ConsumerConfig;

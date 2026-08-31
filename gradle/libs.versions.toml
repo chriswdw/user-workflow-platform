@@ -1,16 +1,16 @@
 [versions]
-spring-boot          = "3.3.5"
+spring-boot          = "4.0.8"
 spring-dependency-mgmt = "1.1.6"
 cucumber             = "7.18.1"
 jjwt                 = "0.12.6"
 bucket4j             = "8.10.1"
 logstash-logback     = "7.4"
-junit5               = "5.11.0"
-junit-platform       = "1.11.0"
-jackson              = "2.17.2"
+junit5               = "6.0.3"
+junit-platform       = "6.0.3"
+jackson              = "3.1.5"
 assertj              = "3.26.3"
 embedded-postgres    = "2.0.7"
-spring-kafka         = "3.2.4"
+spring-kafka         = "4.0.7"
 liquibase            = "4.29.2"
 postgresql           = "42.7.4"
 rewrite-spring       = "6.37.1"
@@ -47,7 +47,7 @@ junit5-params          = { module = "org.junit.jupiter:junit-jupiter-params",   
 assertj-core           = { module = "org.assertj:assertj-core",                    version.ref = "assertj" }
 
 # Jackson
-jackson-databind       = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-databind       = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
 
 # Spring Boot (used by infrastructure modules)
 spring-boot-starter              = { module = "org.springframework.boot:spring-boot-starter",              version.ref = "spring-boot" }

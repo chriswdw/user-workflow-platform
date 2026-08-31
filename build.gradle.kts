@@ -10,6 +10,8 @@ rewrite {
 
 dependencies {
     rewrite(libs.rewrite.spring)
+
+    runtimeOnly("javax.xml.bind:jaxb-api:2.3.1")
 }
 
 allprojects {
@@ -124,4 +126,8 @@ tasks.register("simulatePriority") {
     doLast {
         println("simulatePriority: not yet implemented — add implementation to platform-workflow")
     }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-parameters")
 }

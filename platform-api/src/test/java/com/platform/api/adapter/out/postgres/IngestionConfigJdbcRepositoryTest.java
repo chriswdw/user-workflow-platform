@@ -1,6 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.domain.model.SourceType;
 import com.platform.ingestion.domain.model.IdempotencyKeyStrategy;
 import com.platform.ingestion.domain.model.IngestionConfig;
@@ -19,7 +20,7 @@ class IngestionConfigJdbcRepositoryTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final IngestionConfigJdbcRepository repository =
             new IngestionConfigJdbcRepository(jdbc, objectMapper);

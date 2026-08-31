@@ -1,13 +1,13 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
 import com.platform.config.domain.ports.out.IConfigDocumentRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -66,7 +66,7 @@ public class ConfigDocumentJdbcRepository implements IConfigDocumentRepository {
     private Map<String, Object> parseJson(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise config document content from JSONB", e);
         }
     }
