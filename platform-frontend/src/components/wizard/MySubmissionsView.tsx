@@ -27,7 +27,7 @@ function DraftRow({ sub, onOpenWizard }: DraftRowProps) {
   }
 
   function handleDiscard() {
-    if (window.confirm('Discard this draft? This cannot be undone.')) {
+    if (globalThis.confirm('Discard this draft? This cannot be undone.')) {
       discard.mutate();
     }
   }
@@ -57,7 +57,7 @@ function RejectedRow({ sub, onOpenWizard }: RejectedRowProps) {
   }
 
   function handleDiscard() {
-    if (window.confirm('Discard this rejected submission? This cannot be undone.')) {
+    if (globalThis.confirm('Discard this rejected submission? This cannot be undone.')) {
       discard.mutate();
     }
   }

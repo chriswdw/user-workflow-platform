@@ -19,6 +19,8 @@ type AppView = 'blotter' | 'wizard' | 'approval-queue' | 'my-submissions' | 'adm
 
 const queryClient = new QueryClient();
 
+const SKELETON_ROW_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-row-${i}`);
+
 function MainApp() {
   const { role, userId, clearAuth } = useAuthStore();
   const [view, setView] = useState<AppView>('blotter');
@@ -122,8 +124,8 @@ function MainApp() {
           <>
             {isLoading && (
               <div role="status" aria-live="polite" aria-label="Loading work items" className="skeleton-container">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="skeleton skeleton-row" />
+                {SKELETON_ROW_IDS.map(id => (
+                  <div key={id} className="skeleton skeleton-row" />
                 ))}
               </div>
             )}

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String CORRELATION_ID = "correlationId";
 
     @ExceptionHandler({SubmissionNotFoundException.class, ConfigNotFoundException.class,
                         WorkItemNotFoundException.class, SourceConnectionNotFoundException.class})
@@ -33,7 +34,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(WorkflowConfigNotFoundException.class)
     public ProblemDetail handleMisconfiguration(WorkflowConfigNotFoundException ex) {
-        String correlationId = MDC.get("correlationId");
+        String correlationId = MDC.get(CORRELATION_ID);
         log.error("correlationId={} Configuration not found: {}", correlationId, ex.getMessage());
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal configuration error — contact support");
     }
@@ -66,19 +67,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
-        String correlationId = MDC.get("correlationId");
+        String correlationId = MDC.get(CORRELATION_ID);
         log.error("correlationId={} Unhandled exception", correlationId, ex);
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         pd.setDetail("An unexpected error occurred");
-        if (correlationId != null) pd.setProperty("correlationId", correlationId);
+        if (correlationId != null) pd.setProperty(CORRELATION_ID, correlationId);
         return pd;
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail) {
         ProblemDetail pd = ProblemDetail.forStatus(status);
         pd.setDetail(detail);
-        String correlationId = MDC.get("correlationId");
-        if (correlationId != null) pd.setProperty("correlationId", correlationId);
+        String correlationId = MDC.get(CORRELATION_ID);
+        if (correlationId != null) pd.setProperty(CORRELATION_ID, correlationId);
         return pd;
     }
 }

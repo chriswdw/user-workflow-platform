@@ -30,7 +30,7 @@ function FieldValue({ formatter, masked, isEditable, label }: FieldValueProps) {
     return (
       <input
         className="field-inline-edit"
-        defaultValue={masked != null ? formatValue(masked) : ''}
+        defaultValue={masked == null ? '' : formatValue(masked)}
         aria-label={label}
       />
     );
@@ -65,9 +65,9 @@ export function SectionRenderer({ section, item, userRole }: SectionRendererProp
         <dl>
           {visibleFields.map(f => {
             const topLevel = item[f.field as keyof WorkItem];
-            const raw = topLevel !== undefined
-              ? topLevel
-              : resolve(item.fields as Record<string, unknown>, f.field);
+            const raw = topLevel === undefined
+              ? resolve(item.fields, f.field)
+              : topLevel;
             const masked = maskIfNeeded(raw, f.visibleRoles, userRole);
             const isEditable = !!f.editable &&
               (!f.editableInStates || f.editableInStates.includes(item.status));

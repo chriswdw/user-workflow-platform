@@ -74,7 +74,7 @@ body {
   padding: 4px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255,255,255,.25);
-  background: rgba(255,255,255,.1);
+  background: #272e3e;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
@@ -85,7 +85,7 @@ body {
 .app-header-user {
   margin-left: auto;
   font-size: 13px;
-  opacity: .75;
+  color: #c3c5ca;
 }
 
 .app-header-logout {
@@ -833,9 +833,9 @@ dialog.modal-overlay {
   transition: background .15s, color .15s;
   white-space: nowrap;
 }
-.app-header-nav-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+.app-header-nav-btn:hover { background: #272e3e; color: #fff; }
 .app-header-nav-btn--active {
-  background: rgba(255,255,255,.15);
+  background: #333a49;
   color: #fff;
   border-color: rgba(255,255,255,.25);
 }
@@ -894,7 +894,7 @@ textarea.form-input { min-height: 80px; resize: vertical; }
   cursor: pointer;
   transition: background .15s, color .15s;
 }
-.btn-icon:hover { background: rgba(255,255,255,.15); color: #fff; }
+.btn-icon:hover { background: #333a49; color: #fff; }
 
 /* ── Data table (admin drafts / approval queue tables) ─────────────────── */
 .data-table {

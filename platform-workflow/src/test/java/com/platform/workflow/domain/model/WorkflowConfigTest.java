@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkflowConfigTest {
@@ -88,6 +89,7 @@ class WorkflowConfigTest {
                              new WorkflowState("CLOSED", true, List.of()));
         var transitions = List.of(new WorkflowTransition(
                 "close", "OPEN", "CLOSED", TransitionTrigger.USER_ACTION, null, List.of(), false, List.of(), List.of()));
-        new WorkflowConfig("id", "t1", "TYPE", "OPEN", states, transitions, true);
+        assertThatCode(() -> new WorkflowConfig("id", "t1", "TYPE", "OPEN", states, transitions, true))
+                .doesNotThrowAnyException();
     }
 }

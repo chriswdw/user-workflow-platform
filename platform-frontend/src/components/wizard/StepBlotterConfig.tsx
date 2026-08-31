@@ -10,12 +10,12 @@ export function StepBlotterConfig() {
     return blotterColumns.some(c => c.fieldPath === path);
   }
 
-  function toggle(path: string, checked: boolean) {
-    if (checked) {
-      setBlotterColumns([...blotterColumns, { fieldPath: path, headerName: path }]);
-    } else {
-      setBlotterColumns(blotterColumns.filter(c => c.fieldPath !== path));
-    }
+  function addColumn(path: string) {
+    setBlotterColumns([...blotterColumns, { fieldPath: path, headerName: path }]);
+  }
+
+  function removeColumn(path: string) {
+    setBlotterColumns(blotterColumns.filter(c => c.fieldPath !== path));
   }
 
   function updateColumn(fieldPath: string, patch: Partial<BlotterColumnDraft>) {
@@ -40,7 +40,7 @@ export function StepBlotterConfig() {
                 <input
                   type="checkbox"
                   checked={isSelected(path)}
-                  onChange={e => toggle(path, e.target.checked)}
+                  onChange={e => (e.target.checked ? addColumn(path) : removeColumn(path))}
                 />
                 <code>{path}</code>
               </label>
@@ -74,7 +74,7 @@ export function StepBlotterConfig() {
                       checked={col.sortable ?? false}
                       onChange={e => updateColumn(path, { sortable: e.target.checked })}
                     />
-                    Sortable
+                    {' '}Sortable
                   </label>
                 </div>
               )}

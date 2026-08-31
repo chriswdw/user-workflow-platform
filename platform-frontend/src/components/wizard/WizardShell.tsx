@@ -24,6 +24,14 @@ const STEPS = [
 
 const TOTAL_STEPS = STEPS.length;
 
+type WizardStepStatus = 'done' | 'active' | 'pending';
+
+function resolveStepStatus(stepNum: number, currentStep: number): WizardStepStatus {
+  if (stepNum < currentStep) return 'done';
+  if (stepNum === currentStep) return 'active';
+  return 'pending';
+}
+
 interface WizardShellProps {
   readonly onClose: () => void;
 }
@@ -137,9 +145,7 @@ export function WizardShell({ onClose }: WizardShellProps) {
         <nav className="wizard-progress" aria-label="Wizard steps">
           {STEPS.map((label, i) => {
             const stepNum = i + 1;
-            const status =
-              stepNum < currentStep ? 'done' :
-              stepNum === currentStep ? 'active' : 'pending';
+            const status = resolveStepStatus(stepNum, currentStep);
             return (
               <Fragment key={stepNum}>
                 {status === 'done' ? (

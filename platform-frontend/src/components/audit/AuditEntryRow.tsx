@@ -14,8 +14,15 @@ const eventTypeColor: Record<string, string> = {
 
 function formatFieldValue(value: unknown): string {
   if (value == null) return '—';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function expandToggleIndicator(hasChangedFields: boolean, expanded: boolean): string {
+  if (!hasChangedFields) return '';
+  return expanded ? '▲' : '▶';
 }
 
 export function AuditEntryRow({ entry }: AuditEntryRowProps) {
@@ -35,7 +42,7 @@ export function AuditEntryRow({ entry }: AuditEntryRowProps) {
         <td>{entry.previousState ?? '—'}</td>
         <td>{entry.newState ?? '—'}</td>
         <td>{entry.transitionName ?? '—'}</td>
-        <td>{entry.changedFields.length > 0 ? (expanded ? '▲' : '▶') : ''}</td>
+        <td>{expandToggleIndicator(entry.changedFields.length > 0, expanded)}</td>
       </tr>
       {expanded && entry.changedFields.length > 0 && (
         <tr style={rowStyle}>

@@ -31,9 +31,9 @@ export function Blotter({ config, items, userRole, onSelectItem }: BlotterProps)
           if (!params.data) return undefined;
           const item = params.data;
           const topLevel = item[col.field as keyof WorkItem];
-          const raw = topLevel !== undefined
-            ? topLevel
-            : resolve(item.fields as Record<string, unknown>, col.field);
+          const raw = topLevel === undefined
+            ? resolve(item.fields, col.field)
+            : topLevel;
 
           if (raw === undefined) {
             if (!warnedFields.has(col.field)) {

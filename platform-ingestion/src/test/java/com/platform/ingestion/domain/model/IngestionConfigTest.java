@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class IngestionConfigTest {
@@ -33,17 +34,19 @@ class IngestionConfigTest {
 
     @Test
     void constructor_explicitFieldStrategyWithField_succeeds() {
-        new IngestionConfig(
+        assertThatCode(() -> new IngestionConfig(
                 "tenant", "TYPE", SourceType.KAFKA, List.of(),
                 UnknownColumnPolicy.IGNORE, IdempotencyKeyStrategy.EXPLICIT_FIELD,
-                null, "trade_id", "OPEN");
+                null, "trade_id", "OPEN"))
+                .doesNotThrowAnyException();
     }
 
     @Test
     void constructor_compositeHashWithFields_succeeds() {
-        new IngestionConfig(
+        assertThatCode(() -> new IngestionConfig(
                 "tenant", "TYPE", SourceType.KAFKA, List.of(),
                 UnknownColumnPolicy.IGNORE, IdempotencyKeyStrategy.COMPOSITE_HASH,
-                List.of("trade_id", "venue"), null, "OPEN");
+                List.of("trade_id", "venue"), null, "OPEN"))
+                .doesNotThrowAnyException();
     }
 }

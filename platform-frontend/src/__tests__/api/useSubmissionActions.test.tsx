@@ -42,7 +42,11 @@ beforeEach(() => {
   mockedPost.mockResolvedValue({ data: VALID_SUBMISSION });
 });
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+interface WrapperProps {
+  readonly children: React.ReactNode;
+}
+
+function Wrapper({ children }: WrapperProps) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 

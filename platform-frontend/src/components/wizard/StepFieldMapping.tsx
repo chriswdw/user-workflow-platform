@@ -1,6 +1,13 @@
+import { useRef } from 'react';
 import { useWizardStore, type FieldMappingRow } from '../../store/wizardStore';
 
 const FIELD_TYPES: FieldMappingRow['type'][] = ['STRING', 'DECIMAL', 'DATE', 'BOOLEAN'];
+
+let rowKeySeq = 0;
+function nextRowKey(): string {
+  rowKeySeq += 1;
+  return `mapping-row-${rowKeySeq}`;
+}
 
 export function StepFieldMapping() {
   const { sampleFields, fieldMappings, idempotencyKeyField, setFieldMappings, setIdempotencyKeyField } =
@@ -11,17 +18,24 @@ export function StepFieldMapping() {
       ? fieldMappings
       : sampleFields.map(f => ({ fieldPath: f, displayName: f, type: 'STRING', required: false }));
 
+  const rowKeysRef = useRef<string[]>(rows.map(() => nextRowKey()));
+  if (rowKeysRef.current.length !== rows.length) {
+    rowKeysRef.current = rows.map((_, i) => rowKeysRef.current[i] ?? nextRowKey());
+  }
+
   function updateRow(index: number, patch: Partial<FieldMappingRow>) {
     const updated = rows.map((r, i) => (i === index ? { ...r, ...patch } : r));
     setFieldMappings(updated);
   }
 
   function addRow() {
+    rowKeysRef.current = [...rowKeysRef.current, nextRowKey()];
     setFieldMappings([...rows, { fieldPath: '', displayName: '', type: 'STRING', required: false }]);
   }
 
   function removeRow(index: number) {
     const updated = rows.filter((_, i) => i !== index);
+    rowKeysRef.current = rowKeysRef.current.filter((_, i) => i !== index);
     setFieldMappings(updated);
     if (idempotencyKeyField === rows[index]?.fieldPath) {
       setIdempotencyKeyField(null);
@@ -46,7 +60,7 @@ export function StepFieldMapping() {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i}>
+            <tr key={rowKeysRef.current[i]}>
               <td>
                 {sampleFields.length > 0 ? (
                   <span className="field-tag">{sampleFields[i] ?? row.fieldPath}</span>

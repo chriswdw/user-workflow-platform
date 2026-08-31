@@ -49,7 +49,11 @@ afterEach(() => {
   useAuthStore.setState({ token: null, tenantId: null, userId: null, role: null });
 });
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+interface WrapperProps {
+  readonly children: React.ReactNode;
+}
+
+function Wrapper({ children }: WrapperProps) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 

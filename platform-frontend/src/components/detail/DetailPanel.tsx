@@ -15,6 +15,11 @@ interface DetailPanelProps {
 
 type Tab = 'details' | 'audit';
 
+const DETAIL_SKELETON_BLOCKS = Array.from({ length: 6 }, (_, i) => ({
+  id: `detail-skeleton-${i}`,
+  width: i % 2 === 0 ? '70%' : '50%',
+}));
+
 export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const [tab, setTab] = useState<Tab>('details');
 
@@ -60,7 +65,7 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
         <button type="button" className="detail-panel-close" onClick={onClose} aria-label="Close">✕</button>
       </header>
 
-      <nav className="detail-panel-tabs" role="tablist" aria-label="Work item details">
+      <div className="detail-panel-tabs" role="tablist" aria-label="Work item details">
         <button
           type="button"
           role="tab"
@@ -83,7 +88,7 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
         >
           Audit Trail
         </button>
-      </nav>
+      </div>
 
       <div
         role="tabpanel"
@@ -94,8 +99,8 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
       >
         {loading && (
           <div role="status" aria-live="polite" aria-label="Loading item details" className="skeleton-container">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="skeleton skeleton-block" style={{ width: i % 2 === 0 ? '70%' : '50%' }} />
+            {DETAIL_SKELETON_BLOCKS.map(block => (
+              <div key={block.id} className="skeleton skeleton-block" style={{ width: block.width }} />
             ))}
           </div>
         )}

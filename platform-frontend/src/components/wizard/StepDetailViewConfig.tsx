@@ -1,13 +1,26 @@
+import { useRef } from 'react';
 import { useWizardStore, type DetailSectionDraft } from '../../store/wizardStore';
 
 const LAYOUTS: DetailSectionDraft['layout'][] = ['TWO_COLUMN', 'ONE_COLUMN', 'TABLE'];
 const FORMATTERS = ['', 'CURRENCY', 'DATE', 'DATETIME', 'PERCENTAGE', 'BADGE', 'TEXT'];
 
+let sectionKeySeq = 0;
+function nextSectionKey(): string {
+  sectionKeySeq += 1;
+  return `section-${sectionKeySeq}`;
+}
+
 export function StepDetailViewConfig() {
   const { fieldMappings, detailSections, setDetailSections } = useWizardStore();
   const targetPaths = fieldMappings.map(m => m.fieldPath).filter(Boolean);
 
+  const sectionKeysRef = useRef<string[]>(detailSections.map(() => nextSectionKey()));
+  if (sectionKeysRef.current.length !== detailSections.length) {
+    sectionKeysRef.current = detailSections.map((_, i) => sectionKeysRef.current[i] ?? nextSectionKey());
+  }
+
   function addSection() {
+    sectionKeysRef.current = [...sectionKeysRef.current, nextSectionKey()];
     setDetailSections([
       ...detailSections,
       { sectionName: `Section ${detailSections.length + 1}`, layout: 'TWO_COLUMN', collapsible: false, fields: [] },
@@ -15,6 +28,7 @@ export function StepDetailViewConfig() {
   }
 
   function removeSection(index: number) {
+    sectionKeysRef.current = sectionKeysRef.current.filter((_, i) => i !== index);
     setDetailSections(detailSections.filter((_, i) => i !== index));
   }
 
@@ -53,7 +67,7 @@ export function StepDetailViewConfig() {
       <p className="form-hint">Define sections that appear in the work item detail panel.</p>
 
       {detailSections.map((section, si) => (
-        <div key={si} className="detail-section-card">
+        <div key={sectionKeysRef.current[si]} className="detail-section-card">
           <div className="detail-section-header">
             <input
               type="text"
@@ -82,7 +96,7 @@ export function StepDetailViewConfig() {
                 checked={section.collapsible ?? false}
                 onChange={e => updateSection(si, { collapsible: e.target.checked })}
               />
-              Collapsible
+              {' '}Collapsible
             </label>
             <button
               type="button"
