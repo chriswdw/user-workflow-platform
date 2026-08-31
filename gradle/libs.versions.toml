@@ -51,7 +51,6 @@ jackson-databind       = { module = "com.fasterxml.jackson.core:jackson-databind
 # Spring Boot (used by infrastructure modules)
 spring-boot-starter              = { module = "org.springframework.boot:spring-boot-starter",              version.ref = "spring-boot" }
 spring-boot-starter-web          = { module = "org.springframework.boot:spring-boot-starter-web",          version.ref = "spring-boot" }
-spring-boot-starter-data-jpa     = { module = "org.springframework.boot:spring-boot-starter-data-jpa",     version.ref = "spring-boot" }
 spring-boot-starter-jdbc         = { module = "org.springframework.boot:spring-boot-starter-jdbc",         version.ref = "spring-boot" }
 spring-boot-starter-security     = { module = "org.springframework.boot:spring-boot-starter-security",     version.ref = "spring-boot" }
 spring-boot-starter-test         = { module = "org.springframework.boot:spring-boot-starter-test",         version.ref = "spring-boot" }

@@ -1,6 +1,15 @@
 plugins {
     java
     id("org.sonarqube") version "5.0.0.4638"
+    id("org.openrewrite.rewrite") version "7.39.0"
+}
+
+rewrite {
+    activeRecipe("org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0")
+}
+
+dependencies {
+    rewrite("org.openrewrite.recipe:rewrite-spring:6.9.0")
 }
 
 allprojects {
