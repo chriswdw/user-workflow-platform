@@ -8,6 +8,7 @@ import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceConnectionAccess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.OffsetDateTime;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SourceConnectionJdbcRepositoryTest {
 
@@ -127,6 +129,21 @@ class SourceConnectionJdbcRepositoryTest {
         List<SourceConnection> result = repository.findAccessibleByTenantAndType("tenant-A", ConnectionType.KAFKA);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findById_throwsIllegalStateWhenConfigIsNotAJsonObject() {
+        // config is valid JSONB but not a JSON object, so Jackson's Map<String,Object>
+        // deserialisation fails — simulates data corruption upstream of this adapter.
+        repository.save(kafkaConnection("conn-corrupt", "kafka-corrupt", "Kafka Corrupt", null));
+        jdbc.update("UPDATE source_connections SET config = CAST(:config AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("config", "[\"not\", \"an\", \"object\"]")
+                        .addValue("id", "conn-corrupt"));
+
+        assertThatThrownBy(() -> repository.findById("conn-corrupt"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise config from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

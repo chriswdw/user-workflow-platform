@@ -57,6 +57,17 @@ Feature: Workflow state machine transitions
     When user "alice" with role "ANALYST" attempts transition "reject"
     Then a ValidationFailedException is thrown
 
+  Scenario: NEQ validation rule passes when field does not equal the excluded value
+    Given the workflow config has a transition "reject" from "UNDER_REVIEW" to "CLOSED" for role "ANALYST" requiring field "trade.status" NEQ "SETTLED"
+    And the work item has field "trade.status" set to "PENDING"
+    When user "alice" with role "ANALYST" executes transition "reject"
+    Then the work item status is "CLOSED"
+
+  Scenario: A validation rule with an unsupported operator fails clearly instead of silently passing
+    Given the workflow config has a transition "flag-review" from "UNDER_REVIEW" to "CLOSED" for role "ANALYST" requiring field "trade.status" with unsupported operator "GT" and value "0"
+    When user "alice" with role "ANALYST" attempts transition "flag-review"
+    Then an IllegalArgumentException is thrown for the unsupported operator
+
   Scenario: Transition with additional fields merges values and writes a FIELD_UPDATE audit entry
     When user "alice" with role "ANALYST" executes transition "close-resolved" with additional fields:
       | resolution.reason | Counterparty confirmed settlement |

@@ -234,7 +234,7 @@ class KafkaIngestionEndToEndTest {
         ConcurrentKafkaListenerContainerFactory<String, String> ingestionKafkaListenerContainerFactory(
                 EmbeddedKafkaBroker broker, KafkaTemplate<String, String> kafkaTemplate) {
             var consumerFactory = new DefaultKafkaConsumerFactory<>(
-                    KafkaTestUtils.consumerProps("e2e-group", "false", broker),
+                    KafkaTestUtils.consumerProps(broker, "e2e-group", false),
                     new org.apache.kafka.common.serialization.StringDeserializer(),
                     new org.apache.kafka.common.serialization.StringDeserializer());
             var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,

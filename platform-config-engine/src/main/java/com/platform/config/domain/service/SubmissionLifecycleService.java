@@ -31,7 +31,7 @@ public class SubmissionLifecycleService implements ISubmitForApprovalUseCase, IR
     public WorkflowTypeSubmission submit(String tenantId, String submissionId, String actorUserId) {
         WorkflowTypeSubmission submission = load(tenantId, submissionId);
         SubmissionGuards.assertStatus(submission, SubmissionStatus.DRAFT, "submit");
-        SubmissionGuards.assertOwner(submission, actorUserId, "submit");
+        SubmissionGuards.assertOwner(submission, actorUserId);
 
         if (!submission.draftConfigs().isComplete()) {
             throw new IncompleteSubmissionException(
@@ -59,7 +59,7 @@ public class SubmissionLifecycleService implements ISubmitForApprovalUseCase, IR
                                           String actorUserId, DraftConfigs updatedDraftConfigs) {
         WorkflowTypeSubmission submission = load(tenantId, submissionId);
         SubmissionGuards.assertStatus(submission, SubmissionStatus.REJECTED, "revise");
-        SubmissionGuards.assertOwner(submission, actorUserId, "revise");
+        SubmissionGuards.assertOwner(submission, actorUserId);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         WorkflowTypeSubmission saved = repo.save(new WorkflowTypeSubmission(

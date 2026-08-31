@@ -5,8 +5,6 @@ import com.platform.config.domain.exception.ConfigNotFoundException;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
 import com.platform.config.domain.model.ConfigValidationResult;
-import com.platform.config.domain.ports.in.ILoadConfigUseCase;
-import com.platform.config.domain.ports.in.IValidateConfigsUseCase;
 import com.platform.config.domain.service.ConfigService;
 import com.platform.config.doubles.InMemoryConfigDocumentRepository;
 import io.cucumber.java.en.Given;

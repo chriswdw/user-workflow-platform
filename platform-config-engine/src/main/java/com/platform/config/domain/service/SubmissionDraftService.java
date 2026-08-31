@@ -31,7 +31,7 @@ public class SubmissionDraftService implements ISaveDraftUseCase, IDiscardSubmis
                                              int currentStep) {
         WorkflowTypeSubmission submission = load(tenantId, submissionId);
         SubmissionGuards.assertStatus(submission, SubmissionStatus.DRAFT, "saveDraft");
-        SubmissionGuards.assertOwner(submission, actorUserId, "saveDraft");
+        SubmissionGuards.assertOwner(submission, actorUserId);
 
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return repo.save(new WorkflowTypeSubmission(
@@ -56,7 +56,7 @@ public class SubmissionDraftService implements ISaveDraftUseCase, IDiscardSubmis
                     + "; only DRAFT or REJECTED submissions may be discarded");
         }
         if (!isAdmin) {
-            SubmissionGuards.assertOwner(submission, actorUserId, "discard");
+            SubmissionGuards.assertOwner(submission, actorUserId);
         }
         repo.deleteById(tenantId, submissionId);
         auditRepo.save(SubmissionGuards.submissionAuditEntry(submission, AuditEventType.SUBMISSION_DISCARDED,

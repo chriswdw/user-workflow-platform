@@ -130,6 +130,21 @@ class WorkItemJdbcRepositoryTest {
                 .hasMessageContaining("wi-1");
     }
 
+    @Test
+    void findById_throwsIllegalStateWhenFieldsColumnIsNotAJsonObject() {
+        // fields is JSONB and passes Postgres's own cast, but isn't a JSON object — simulates
+        // data corruption or a schema mismatch upstream of this adapter (e.g. a bad migration).
+        WorkItem item = workItem("wi-corrupt", "tenant-1", "SETTLEMENT_EXCEPTION", "UNDER_REVIEW", 500);
+        insert(item);
+        jdbc.update("UPDATE work_items SET fields = CAST(:fields AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource().addValue("fields", "[\"not\", \"an\", \"object\"]")
+                        .addValue("id", "wi-corrupt"));
+
+        assertThatThrownBy(() -> repository.findById("tenant-1", "wi-corrupt"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise fields from JSONB");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static WorkItem workItem(String id, String tenantId, String workflowType,

@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({IncompleteSubmissionException.class, InvalidTransitionException.class,
                        ValidationFailedException.class, IllegalStateException.class})
     public ProblemDetail handleUnprocessable(RuntimeException ex) {
-        return problem(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        return problem(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

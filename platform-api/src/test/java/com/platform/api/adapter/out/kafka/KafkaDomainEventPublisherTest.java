@@ -42,13 +42,13 @@ class KafkaDomainEventPublisherTest {
 
         ArgumentCaptor<ProducerRecord<String, String>> captor = ArgumentCaptor.forClass(ProducerRecord.class);
         verify(kafkaTemplate).send(captor.capture());
-        ProducerRecord<String, String> record = captor.getValue();
+        ProducerRecord<String, String> producerRecord = captor.getValue();
 
-        assertThat(record.topic()).isEqualTo(TOPIC);
-        assertThat(record.key()).isEqualTo("wi-1");
-        assertThat(record.value()).isEqualTo("{\"eventId\":\"evt-1\"}");
-        assertThat(headerValue(record, "X-Correlation-ID")).isEqualTo("corr-1");
-        assertThat(headerValue(record, "eventType")).isEqualTo("WORK_ITEM_CREATED");
+        assertThat(producerRecord.topic()).isEqualTo(TOPIC);
+        assertThat(producerRecord.key()).isEqualTo("wi-1");
+        assertThat(producerRecord.value()).isEqualTo("{\"eventId\":\"evt-1\"}");
+        assertThat(headerValue(producerRecord, "X-Correlation-ID")).isEqualTo("corr-1");
+        assertThat(headerValue(producerRecord, "eventType")).isEqualTo("WORK_ITEM_CREATED");
     }
 
     @Test
@@ -62,10 +62,10 @@ class KafkaDomainEventPublisherTest {
 
         ArgumentCaptor<ProducerRecord<String, String>> captor = ArgumentCaptor.forClass(ProducerRecord.class);
         verify(kafkaTemplate).send(captor.capture());
-        ProducerRecord<String, String> record = captor.getValue();
+        ProducerRecord<String, String> producerRecord = captor.getValue();
 
-        assertThat(record.headers().lastHeader("X-Correlation-ID")).isNull();
-        assertThat(headerValue(record, "eventType")).isEqualTo("WORK_ITEM_UPDATED");
+        assertThat(producerRecord.headers().lastHeader("X-Correlation-ID")).isNull();
+        assertThat(headerValue(producerRecord, "eventType")).isEqualTo("WORK_ITEM_UPDATED");
     }
 
     @Test
@@ -79,8 +79,8 @@ class KafkaDomainEventPublisherTest {
         verify(kafkaTemplate, never()).send(any(ProducerRecord.class));
     }
 
-    private static String headerValue(ProducerRecord<String, String> record, String key) {
-        Header header = record.headers().lastHeader(key);
+    private static String headerValue(ProducerRecord<String, String> producerRecord, String key) {
+        Header header = producerRecord.headers().lastHeader(key);
         return header == null ? null : new String(header.value(), StandardCharsets.UTF_8);
     }
 }

@@ -114,7 +114,7 @@ Given('a submission with id {string} and currentStep {int} and no draftConfigs',
 
 Given('a submission with draftConfigs containing sampleFields {string}', (fieldsCsv: string) => {
   const sampleFields = fieldsCsv.split(',').map(f => f.trim());
-  submission = makeSubmission('sub-hydrate', 2, { sampleFields });
+  submission = makeSubmission('sub-hydrate', 2, { fieldTypeRegistry: { sampleFields } });
 });
 
 When('I hydrate the store for resume', () => {

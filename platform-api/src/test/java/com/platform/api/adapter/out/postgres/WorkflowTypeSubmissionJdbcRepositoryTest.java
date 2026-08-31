@@ -8,6 +8,7 @@ import com.platform.config.domain.model.WorkflowTypeSubmission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.OffsetDateTime;
@@ -129,6 +130,23 @@ class WorkflowTypeSubmissionJdbcRepositoryTest {
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_REJ")).isFalse();
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_DRAFT")).isTrue();
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_MISSING")).isFalse();
+    }
+
+    @Test
+    void findById_throwsIllegalStateWhenDraftConfigsDoesNotMatchExpectedShape() {
+        // draft_configs binds to the strongly-typed DraftConfigs record; a field with the wrong
+        // JSON type (a string where an object is expected) fails Jackson's POJO binding —
+        // simulates data corruption or a schema mismatch upstream of this adapter.
+        repository.save(submission("sub-corrupt", "tenant-A", "SETTLEMENT_EXCEPTION",
+                SubmissionStatus.DRAFT, "Draft", "user-1", 1));
+        jdbc.update("UPDATE workflow_type_submissions SET draft_configs = CAST(:dc AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("dc", "{\"workflowTypeDefinition\": \"not-an-object\"}")
+                        .addValue("id", "sub-corrupt"));
+
+        assertThatThrownBy(() -> repository.findById("tenant-A", "sub-corrupt"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise draft_configs from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

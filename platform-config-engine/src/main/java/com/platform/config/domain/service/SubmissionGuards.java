@@ -27,7 +27,7 @@ final class SubmissionGuards {
         }
     }
 
-    static void assertOwner(WorkflowTypeSubmission s, String actorUserId, String op) {
+    static void assertOwner(WorkflowTypeSubmission s, String actorUserId) {
         if (!s.submittedBy().equals(actorUserId)) {
             throw new IllegalStateException(
                     "User " + actorUserId + " is not the owner of submission " + s.id());

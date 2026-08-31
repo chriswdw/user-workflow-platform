@@ -65,10 +65,10 @@ class ConfigDocumentJdbcWriterTest {
             }
         };
         ConfigDocumentJdbcWriter failingWriter = new ConfigDocumentJdbcWriter(jdbc, failingMapper);
+        List<ConfigDocument> docs = List.of(
+                doc("doc-err", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.ROUTING_CONFIG));
 
-        assertThatThrownBy(() -> failingWriter.saveAll(List.of(
-                doc("doc-err", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.ROUTING_CONFIG)
-        )))
+        assertThatThrownBy(() -> failingWriter.saveAll(docs))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Failed to serialise config document content to JSONB");
     }

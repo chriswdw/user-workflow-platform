@@ -55,7 +55,8 @@ class WorkflowConfigTest {
     @Test
     void constructor_initialStateNotInStates_throws() {
         var states = List.of(new WorkflowState("OPEN", false, List.of("ANALYST")));
-        assertThatThrownBy(() -> new WorkflowConfig("id", "t1", "TYPE", "NONEXISTENT", states, List.of(), true))
+        var noTransitions = List.<WorkflowTransition>of();
+        assertThatThrownBy(() -> new WorkflowConfig("id", "t1", "TYPE", "NONEXISTENT", states, noTransitions, true))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("initialState")
                 .hasMessageContaining("NONEXISTENT");

@@ -4,7 +4,6 @@ import com.platform.config.domain.exception.IncompleteSubmissionException;
 import com.platform.config.domain.exception.SelfApprovalException;
 import com.platform.config.domain.exception.SubmissionAlreadyExistsException;
 import com.platform.config.domain.model.DraftConfigs;
-import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.service.SubmissionCreationService;
@@ -23,11 +22,8 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -101,7 +97,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
     @Given("a PENDING_APPROVAL submission exists for tenant {string} workflow type {string} submitted by {string}")
     public void pendingSubmissionExists(String tenantId, String workflowType, String submittedBy) {
         draftSubmissionExists(tenantId, workflowType, submittedBy);
-        setCompleteConfigs(tenantId, workflowType, submittedBy);
+        setCompleteConfigs(tenantId, submittedBy);
         lastResult = lifecycleService().submit(tenantId, lastSubmissionId, submittedBy);
     }
 
@@ -360,7 +356,7 @@ public class WorkflowTypeSubmissionStepDefinitions {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private void setCompleteConfigs(String tenantId, String workflowType, String submittedBy) {
+    private void setCompleteConfigs(String tenantId, String submittedBy) {
         draftService().saveDraft(tenantId, lastSubmissionId, submittedBy, completeDraftConfigs(), 6);
         lastResult = repo.findById(tenantId, lastSubmissionId).orElseThrow();
     }

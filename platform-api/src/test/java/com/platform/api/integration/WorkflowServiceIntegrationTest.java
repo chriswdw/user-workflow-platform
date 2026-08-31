@@ -8,7 +8,6 @@ import com.platform.api.adapter.out.postgres.WorkflowConfigJdbcRepository;
 import com.platform.api.adapter.out.postgres.WorkItemJdbcRepository;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
-import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
 import com.platform.workflow.domain.exception.ForbiddenTransitionException;
 import com.platform.workflow.domain.exception.InvalidTransitionException;
@@ -98,9 +97,9 @@ class WorkflowServiceIntegrationTest {
     void transition_throwsForbiddenWhenActorRoleIsNotPermitted() {
         insertWorkItem("wi-2", "OPEN", "ops-team", Map.of());
         insertWorkflowConfig("wf-role", closeTransitionConfig());
+        TransitionCommand command = command("wi-2", "close", "analyst-1", "VIEWER", Map.of());
 
-        assertThatThrownBy(() ->
-                service.transition(command("wi-2", "close", "analyst-1", "VIEWER", Map.of())))
+        assertThatThrownBy(() -> service.transition(command))
                 .isInstanceOf(ForbiddenTransitionException.class)
                 .hasMessageContaining("VIEWER");
     }
@@ -111,9 +110,9 @@ class WorkflowServiceIntegrationTest {
     void transition_throwsInvalidTransitionWhenWorkItemIsInWrongFromState() {
         insertWorkItem("wi-3", "CLOSED", "ops-team", Map.of());
         insertWorkflowConfig("wf-state", closeTransitionConfig());
+        TransitionCommand command = command("wi-3", "close", "analyst-1", "ANALYST", Map.of());
 
-        assertThatThrownBy(() ->
-                service.transition(command("wi-3", "close", "analyst-1", "ANALYST", Map.of())))
+        assertThatThrownBy(() -> service.transition(command))
                 .isInstanceOf(InvalidTransitionException.class)
                 .hasMessageContaining("fromState");
     }
@@ -122,9 +121,9 @@ class WorkflowServiceIntegrationTest {
     void transition_throwsInvalidTransitionWhenTransitionNameIsUnknown() {
         insertWorkItem("wi-4", "OPEN", "ops-team", Map.of());
         insertWorkflowConfig("wf-unknown", closeTransitionConfig());
+        TransitionCommand command = command("wi-4", "nonexistent", "analyst-1", "ANALYST", Map.of());
 
-        assertThatThrownBy(() ->
-                service.transition(command("wi-4", "nonexistent", "analyst-1", "ANALYST", Map.of())))
+        assertThatThrownBy(() -> service.transition(command))
                 .isInstanceOf(InvalidTransitionException.class)
                 .hasMessageContaining("nonexistent");
     }
@@ -135,9 +134,9 @@ class WorkflowServiceIntegrationTest {
     void transition_throwsValidationFailedWhenRequiredFieldIsAbsent() {
         insertWorkItem("wi-5", "OPEN", "ops-team", Map.of());
         insertWorkflowConfig("wf-vr", closeTransitionWithValidationRuleConfig());
+        TransitionCommand command = command("wi-5", "close", "analyst-1", "ANALYST", Map.of());
 
-        assertThatThrownBy(() ->
-                service.transition(command("wi-5", "close", "analyst-1", "ANALYST", Map.of())))
+        assertThatThrownBy(() -> service.transition(command))
                 .isInstanceOf(ValidationFailedException.class)
                 .hasMessageContaining("tradeRef");
     }
@@ -186,8 +185,7 @@ class WorkflowServiceIntegrationTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> resolution = (Map<String, Object>) result.fields().get("resolution");
-        assertThat(resolution).isNotNull();
-        assertThat(resolution.get("reason")).isEqualTo("Manual fix");
+        assertThat(resolution).isNotNull().containsEntry("reason", "Manual fix");
 
         List<AuditEntry> entries = auditRepo.findByTenantAndWorkItemId(TENANT, "wi-8");
         assertThat(entries).hasSize(2);

@@ -4,7 +4,6 @@ import com.platform.config.domain.ports.in.IListSourceConnectionsUseCase;
 import com.platform.config.domain.ports.in.IManageSourceConnectionsUseCase;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
-import com.platform.domain.model.SourceConnectionAccess;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

@@ -32,16 +32,16 @@ public class KafkaDomainEventPublisher implements IDomainEventPublisher {
     public void publish(DomainEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(event);
-            ProducerRecord<String, String> record = new ProducerRecord<>(topic, event.workItemId(), payload);
+            ProducerRecord<String, String> producerRecord = new ProducerRecord<>(topic, event.workItemId(), payload);
             if (event.correlationId() != null) {
-                record.headers().add(new RecordHeader(
+                producerRecord.headers().add(new RecordHeader(
                         "X-Correlation-ID",
                         event.correlationId().getBytes(StandardCharsets.UTF_8)));
             }
-            record.headers().add(new RecordHeader(
+            producerRecord.headers().add(new RecordHeader(
                     "eventType",
                     event.eventType().getBytes(StandardCharsets.UTF_8)));
-            kafkaTemplate.send(record);
+            kafkaTemplate.send(producerRecord);
         } catch (JacksonException e) {
             log.error("correlationId={} Failed to serialise domain event type={}", event.correlationId(), event.eventType(), e);
         }

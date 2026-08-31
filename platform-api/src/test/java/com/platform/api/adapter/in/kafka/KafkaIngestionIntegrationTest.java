@@ -189,7 +189,7 @@ class KafkaIngestionIntegrationTest {
 
         @Bean
         ConsumerFactory<String, String> ingestionConsumerFactory(EmbeddedKafkaBroker broker) {
-            Map<String, Object> props = KafkaTestUtils.consumerProps("test-ingestion-group", "false", broker);
+            Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-ingestion-group", false);
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             return new DefaultKafkaConsumerFactory<>(props);
@@ -197,7 +197,7 @@ class KafkaIngestionIntegrationTest {
 
         @Bean
         ConsumerFactory<String, String> dlqConsumerFactory(EmbeddedKafkaBroker broker) {
-            Map<String, Object> props = KafkaTestUtils.consumerProps("test-dlq-group", "false", broker);
+            Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-dlq-group", false);
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             return new DefaultKafkaConsumerFactory<>(props);

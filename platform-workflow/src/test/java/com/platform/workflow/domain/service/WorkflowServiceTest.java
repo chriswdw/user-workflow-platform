@@ -70,7 +70,9 @@ class WorkflowServiceTest {
 
     @Test
     void transition_workItemNotFound_throwsWorkItemNotFoundException() {
-        assertThatThrownBy(() -> service.transition(command("nonexistent", "close", "ANALYST")))
+        TransitionCommand cmd = command("nonexistent", "close", "ANALYST");
+
+        assertThatThrownBy(() -> service.transition(cmd))
                 .isInstanceOf(WorkItemNotFoundException.class)
                 .hasMessageContaining("nonexistent");
     }
@@ -83,16 +85,18 @@ class WorkflowServiceTest {
                 "group", false, Map.of(), null, null, null, null, null, 1, "user",
                 Instant.now(), Instant.now());
         workItemRepo.save(other);
+        TransitionCommand cmd = new TransitionCommand("wi-other", TENANT, "close", "user", "ANALYST", Map.of());
 
-        assertThatThrownBy(() -> service.transition(
-                new TransitionCommand("wi-other", TENANT, "close", "user", "ANALYST", Map.of())))
+        assertThatThrownBy(() -> service.transition(cmd))
                 .isInstanceOf(WorkflowConfigNotFoundException.class)
                 .hasMessageContaining("UNKNOWN_TYPE");
     }
 
     @Test
     void transition_unknownTransitionName_throwsInvalidTransitionException() {
-        assertThatThrownBy(() -> service.transition(command("wi-1", "nonexistent", "ANALYST")))
+        TransitionCommand cmd = command("wi-1", "nonexistent", "ANALYST");
+
+        assertThatThrownBy(() -> service.transition(cmd))
                 .isInstanceOf(InvalidTransitionException.class)
                 .hasMessageContaining("nonexistent");
     }
@@ -100,16 +104,18 @@ class WorkflowServiceTest {
     @Test
     void transition_wrongFromState_throwsInvalidTransitionException() {
         workItemRepo.save(workItem("wi-closed", "CLOSED"));
+        TransitionCommand cmd = new TransitionCommand("wi-closed", TENANT, "close", "user", "ANALYST", Map.of());
 
-        assertThatThrownBy(() -> service.transition(
-                new TransitionCommand("wi-closed", TENANT, "close", "user", "ANALYST", Map.of())))
+        assertThatThrownBy(() -> service.transition(cmd))
                 .isInstanceOf(InvalidTransitionException.class)
                 .hasMessageContaining("fromState");
     }
 
     @Test
     void transition_disallowedRole_throwsForbiddenTransitionException() {
-        assertThatThrownBy(() -> service.transition(command("wi-1", "close", "READ_ONLY")))
+        TransitionCommand cmd = command("wi-1", "close", "READ_ONLY");
+
+        assertThatThrownBy(() -> service.transition(cmd))
                 .isInstanceOf(ForbiddenTransitionException.class)
                 .hasMessageContaining("READ_ONLY");
     }

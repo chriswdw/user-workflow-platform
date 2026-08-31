@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ConfigDocumentJdbcRepositoryTest {
 
@@ -90,6 +91,26 @@ class ConfigDocumentJdbcRepositoryTest {
         assertThat(repository.findAllActiveByTenant("tenant-A"))
                 .extracting(ConfigDocument::id)
                 .containsExactly("doc-A");
+    }
+
+    @Test
+    void findAllActiveByTenant_throwsIllegalStateWhenContentIsNotAJsonObject() {
+        // content is valid JSONB but not a JSON object — simulates data corruption upstream of
+        // this adapter, since this query has no filter on the content column's shape.
+        jdbc.update("""
+                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+                VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', true)
+                """,
+                new MapSqlParameterSource()
+                        .addValue("id", "doc-corrupt")
+                        .addValue("tenantId", "tenant-1")
+                        .addValue("workflowType", "SETTLEMENT_EXCEPTION")
+                        .addValue("configType", ConfigType.WORKFLOW_CONFIG.name())
+                        .addValue("content", "[\"not\", \"an\", \"object\"]"));
+
+        assertThatThrownBy(() -> repository.findAllActiveByTenant("tenant-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise config document content from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

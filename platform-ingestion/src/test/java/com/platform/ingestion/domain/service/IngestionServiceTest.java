@@ -54,7 +54,7 @@ class IngestionServiceTest {
 
     @Test
     void ingest_newRecord_returnsCreated() {
-        IngestionResult result = service.ingest(record(Map.of("tradeRef", "TRD-001", "amount", "1000")));
+        IngestionResult result = service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001", "amount", "1000")));
 
         assertThat(result).isInstanceOf(IngestionResult.Created.class);
         assertThat(((IngestionResult.Created) result).workItem().status()).isEqualTo("OPEN");
@@ -62,14 +62,14 @@ class IngestionServiceTest {
 
     @Test
     void ingest_newRecord_savesWorkItem() {
-        service.ingest(record(Map.of("tradeRef", "TRD-001")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
 
         assertThat(workItemRepo.all()).hasSize(1);
     }
 
     @Test
     void ingest_newRecord_recordsIngestionAuditEntry() {
-        service.ingest(record(Map.of("tradeRef", "TRD-001")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
 
         assertThat(auditRepo.all())
                 .anyMatch(e -> e.eventType() == AuditEventType.INGESTION);
@@ -77,16 +77,16 @@ class IngestionServiceTest {
 
     @Test
     void ingest_duplicateIdempotencyKey_returnsDuplicate() {
-        service.ingest(record(Map.of("tradeRef", "TRD-001")));
-        IngestionResult result = service.ingest(record(Map.of("tradeRef", "TRD-001")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
+        IngestionResult result = service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
 
         assertThat(result).isInstanceOf(IngestionResult.Duplicate.class);
     }
 
     @Test
     void ingest_duplicateIdempotencyKey_recordsDuplicateAuditEntry() {
-        service.ingest(record(Map.of("tradeRef", "TRD-001")));
-        service.ingest(record(Map.of("tradeRef", "TRD-001")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-001")));
 
         assertThat(auditRepo.all())
                 .anyMatch(e -> e.eventType() == AuditEventType.DUPLICATE_INGESTION_DISCARDED);
@@ -94,7 +94,7 @@ class IngestionServiceTest {
 
     @Test
     void ingest_missingRequiredField_returnsRejected() {
-        IngestionResult result = service.ingest(record(Map.of("amount", "1000")));
+        IngestionResult result = service.ingest(inboundRecord(Map.of("amount", "1000")));
 
         assertThat(result).isInstanceOf(IngestionResult.Rejected.class);
         assertThat(((IngestionResult.Rejected) result).reason()).contains("tradeRef");
@@ -102,7 +102,7 @@ class IngestionServiceTest {
 
     @Test
     void ingest_unknownColumnWithIgnorePolicy_succeeds() {
-        IngestionResult result = service.ingest(record(Map.of("tradeRef", "TRD-002", "unknown", "value")));
+        IngestionResult result = service.ingest(inboundRecord(Map.of("tradeRef", "TRD-002", "unknown", "value")));
 
         assertThat(result).isInstanceOf(IngestionResult.Created.class);
     }
@@ -116,7 +116,7 @@ class IngestionServiceTest {
                 IdempotencyKeyStrategy.EXPLICIT_FIELD,
                 null, "tradeRef", "OPEN"));
 
-        IngestionResult result = service.ingest(record(Map.of("tradeRef", "TRD-003", "unknown", "value")));
+        IngestionResult result = service.ingest(inboundRecord(Map.of("tradeRef", "TRD-003", "unknown", "value")));
 
         assertThat(result).isInstanceOf(IngestionResult.Rejected.class);
     }
@@ -141,23 +141,24 @@ class IngestionServiceTest {
                 IdempotencyKeyStrategy.COMPOSITE_HASH,
                 List.of("tradeRef", "amount"), null, "OPEN"));
 
-        service.ingest(record(Map.of("tradeRef", "TRD-004", "amount", "500")));
-        IngestionResult dup = service.ingest(record(Map.of("tradeRef", "TRD-004", "amount", "500")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-004", "amount", "500")));
+        IngestionResult dup = service.ingest(inboundRecord(Map.of("tradeRef", "TRD-004", "amount", "500")));
 
         assertThat(dup).isInstanceOf(IngestionResult.Duplicate.class);
     }
 
     @Test
     void ingest_fieldsAreMappedToNestedStructure() {
-        service.ingest(record(Map.of("tradeRef", "TRD-005", "amount", "9999")));
+        service.ingest(inboundRecord(Map.of("tradeRef", "TRD-005", "amount", "9999")));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> trade = (Map<String, Object>) workItemRepo.all().get(0).fields().get("trade");
-        assertThat(trade).containsEntry("ref", "TRD-005");
-        assertThat(trade).containsEntry("amount", "9999");
+        assertThat(trade)
+                .containsEntry("ref", "TRD-005")
+                .containsEntry("amount", "9999");
     }
 
-    private RawInboundRecord record(Map<String, String> fields) {
+    private RawInboundRecord inboundRecord(Map<String, String> fields) {
         return new RawInboundRecord(TENANT, WORKFLOW_TYPE, SourceType.KAFKA, "src-1", fields, "maker-1");
     }
 }

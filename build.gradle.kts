@@ -48,14 +48,19 @@ subprojects {
             xml.required = true
             html.required = true
         }
-        // Exclude generated classes, Spring Boot config/auto-config, and Cucumber runners from coverage
+        // Exclude generated classes, Spring Boot config/auto-config, and Cucumber runners from coverage.
+        // NOTE: the config/** exclusion is scoped to com/platform/<module>/config/** (the Spring
+        // @Configuration wiring subpackage every module has, per CLAUDE.md) rather than a bare
+        // "**/config/**" — a bare pattern also matches platform-config-engine's entire base package
+        // (com.platform.config.*, since that module's domain happens to be named "config"), which
+        // silently excluded the whole module from coverage reporting.
         classDirectories.setFrom(
             files(classDirectories.files.map {
                 fileTree(it) {
                     exclude(
                         "**/*Application*",
                         "**/*AutoConfiguration*",
-                        "**/config/**",
+                        "com/platform/*/config/**",
                         "**/CucumberSuiteTest*"
                     )
                 }
@@ -70,7 +75,7 @@ subprojects {
                 excludes = listOf(
                     "*..*Application",
                     "*..*AutoConfiguration",
-                    "*..config.*",
+                    "com.platform.*.config.*",
                     "*..CucumberSuiteTest"
                 )
                 limit {
@@ -86,7 +91,7 @@ subprojects {
                     exclude(
                         "**/*Application*",
                         "**/*AutoConfiguration*",
-                        "**/config/**",
+                        "com/platform/*/config/**",
                         "**/CucumberSuiteTest*"
                     )
                 }

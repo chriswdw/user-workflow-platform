@@ -91,13 +91,13 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleUnprocessable_coversAllRegisteredUnprocessableTypes() {
         assertThat(handler.handleUnprocessable(new IncompleteSubmissionException("missing field")).getStatus())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+                .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value());
         assertThat(handler.handleUnprocessable(new InvalidTransitionException("bad transition")).getStatus())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+                .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value());
         assertThat(handler.handleUnprocessable(new ValidationFailedException("invalid")).getStatus())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+                .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value());
         assertThat(handler.handleUnprocessable(new IllegalStateException("bad state")).getStatus())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+                .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value());
     }
 
     @Test

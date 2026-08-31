@@ -112,8 +112,10 @@ class SubmissionServiceIntegrationTest {
     void discard_pendingApproval_throwsIllegalStateException() {
         WorkflowTypeSubmission created = creationService().create(completeCreateCommand("alice"));
         lifecycleService().submit(TENANT, created.id(), "alice");
+        var draftService = draftService();
+        var submissionId = created.id();
 
-        assertThatThrownBy(() -> draftService().discard(TENANT, created.id(), "alice", false))
+        assertThatThrownBy(() -> draftService.discard(TENANT, submissionId, "alice", false))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(SubmissionStatus.PENDING_APPROVAL.name());
     }
@@ -121,8 +123,10 @@ class SubmissionServiceIntegrationTest {
     @Test
     void discard_nonOwnerNonAdmin_throwsIllegalStateException() {
         WorkflowTypeSubmission created = creationService().create(createCommand("alice"));
+        var draftService = draftService();
+        var submissionId = created.id();
 
-        assertThatThrownBy(() -> draftService().discard(TENANT, created.id(), "charlie", false))
+        assertThatThrownBy(() -> draftService.discard(TENANT, submissionId, "charlie", false))
                 .isInstanceOf(IllegalStateException.class);
     }
 

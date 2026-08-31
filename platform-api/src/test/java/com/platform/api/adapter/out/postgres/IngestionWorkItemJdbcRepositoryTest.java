@@ -51,8 +51,7 @@ class IngestionWorkItemJdbcRepositoryTest {
         repository.save(item);
 
         WorkItem fromDb = queryRepository.findById("tenant-1", "wi-ing-2").orElseThrow();
-        assertThat(fromDb.fields()).containsKey("tradeRef");
-        assertThat(fromDb.fields().get("tradeRef")).isEqualTo("TRD-ING-001");
+        assertThat(fromDb.fields()).containsEntry("tradeRef", "TRD-ING-001");
     }
 
     @Test
