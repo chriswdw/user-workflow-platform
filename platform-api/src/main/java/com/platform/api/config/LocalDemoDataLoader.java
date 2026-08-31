@@ -1,13 +1,13 @@
 package com.platform.api.config;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -151,7 +151,7 @@ public class LocalDemoDataLoader {
     private static String toJson(ObjectMapper mapper, Map<String, Object> fields) {
         try {
             return mapper.writeValueAsString(fields);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise demo fields to JSONB", e);
         }
     }

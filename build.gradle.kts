@@ -1,6 +1,17 @@
 plugins {
     java
-    id("org.sonarqube") version "5.0.0.4638"
+    id("org.sonarqube") version "7.4.0.8496"
+    id("org.openrewrite.rewrite") version "7.39.0"
+}
+
+rewrite {
+    activeRecipe("org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0")
+}
+
+dependencies {
+    rewrite(libs.rewrite.spring)
+
+    runtimeOnly("javax.xml.bind:jaxb-api:2.3.1")
 }
 
 allprojects {
@@ -115,4 +126,8 @@ tasks.register("simulatePriority") {
     doLast {
         println("simulatePriority: not yet implemented — add implementation to platform-workflow")
     }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-parameters")
 }

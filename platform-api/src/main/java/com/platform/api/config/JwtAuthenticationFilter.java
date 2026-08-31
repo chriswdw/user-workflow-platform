@@ -1,9 +1,9 @@
 package com.platform.api.config;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,17 +11,17 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.crypto.SecretKey;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.Base64;
+import java.util.Date;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final SecretKey signingKey;
+    private final byte[] secretKeyBytes;
 
     public JwtAuthenticationFilter(String base64Secret) {
-        byte[] keyBytes = Base64.getDecoder().decode(base64Secret);
-        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+        this.secretKeyBytes = Base64.getDecoder().decode(base64Secret);
     }
 
     @Override
@@ -34,17 +34,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         String token = header.substring(7);
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            SignedJWT signedJwt = SignedJWT.parse(token);
+            MACVerifier verifier = new MACVerifier(secretKeyBytes);
+            if (!signedJwt.verify(verifier)) {
+                chain.doFilter(request, response);
+                return;
+            }
+            JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
+            Date expiration = claims.getExpirationTime();
+            if (expiration == null || expiration.before(new Date())) {
+                chain.doFilter(request, response);
+                return;
+            }
             String userId = claims.getSubject();
-            String role = claims.get("role", String.class);
-            String tenantId = claims.get("tenantId", String.class);
+            String role = claims.getStringClaim("role");
+            String tenantId = claims.getStringClaim("tenantId");
             SecurityContextHolder.getContext()
                     .setAuthentication(new ApiAuthentication(userId, role, tenantId));
-        } catch (JwtException ignored) {
+        } catch (ParseException | JOSEException ignored) {
             // invalid token — leave SecurityContext empty; Spring Security returns 401
         }
         chain.doFilter(request, response);

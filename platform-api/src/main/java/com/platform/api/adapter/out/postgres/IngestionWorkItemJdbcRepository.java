@@ -1,13 +1,13 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.domain.model.WorkItem;
 import com.platform.ingestion.domain.exception.DuplicateIdempotencyKeyException;
 import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -77,7 +77,7 @@ public class IngestionWorkItemJdbcRepository implements IIngestionWorkItemReposi
     private String toJson(java.util.Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise fields to JSONB", e);
         }
     }

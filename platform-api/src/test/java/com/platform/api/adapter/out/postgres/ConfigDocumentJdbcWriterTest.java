@@ -1,14 +1,14 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.exc.StreamWriteException;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,7 @@ class ConfigDocumentJdbcWriterTest {
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
 
     private final ConfigDocumentJdbcWriter writer =
-            new ConfigDocumentJdbcWriter(jdbc, new ObjectMapper());
+            new ConfigDocumentJdbcWriter(jdbc, new JsonMapper());
 
     @BeforeEach
     void truncate() {
@@ -60,8 +60,8 @@ class ConfigDocumentJdbcWriterTest {
     void saveAll_serializationFailure_throwsIllegalStateException() {
         ObjectMapper failingMapper = new ObjectMapper() {
             @Override
-            public String writeValueAsString(Object value) throws JsonProcessingException {
-                throw new JsonGenerationException("simulated failure", (com.fasterxml.jackson.core.JsonGenerator) null);
+            public String writeValueAsString(Object value) {
+                throw new StreamWriteException((tools.jackson.core.JsonGenerator) null, "simulated failure");
             }
         };
         ConfigDocumentJdbcWriter failingWriter = new ConfigDocumentJdbcWriter(jdbc, failingMapper);

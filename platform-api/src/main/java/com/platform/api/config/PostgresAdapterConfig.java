@@ -1,6 +1,6 @@
 package com.platform.api.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.api.adapter.out.postgres.AuditEntryJdbcRepository;
 import com.platform.api.adapter.out.postgres.ConfigDocumentJdbcRepository;
 import com.platform.api.adapter.out.postgres.ConfigDocumentJdbcWriter;

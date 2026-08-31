@@ -1,6 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
@@ -23,7 +24,7 @@ class WorkflowTypeSubmissionJdbcRepositoryTest {
 
     private static final NamedParameterJdbcTemplate jdbc =
             new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new JsonMapper();
 
     private final WorkflowTypeSubmissionJdbcRepository repository =
             new WorkflowTypeSubmissionJdbcRepository(jdbc, objectMapper);

@@ -1,8 +1,7 @@
 package com.platform.api.adapter.out.postgres;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.platform.api.domain.ports.IFindWorkItemPort;
 import com.platform.api.domain.ports.IListWorkItemsPort;
 import com.platform.domain.model.SourceType;
@@ -11,6 +10,7 @@ import com.platform.workflow.domain.ports.out.IWorkItemRepository;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.core.JacksonException;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -145,7 +145,7 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
     private String toJson(Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialise fields to JSONB", e);
         }
     }
@@ -153,7 +153,7 @@ public class WorkItemJdbcRepository implements IFindWorkItemPort, IListWorkItems
     private Map<String, Object> parseJson(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to deserialise fields from JSONB", e);
         }
     }
