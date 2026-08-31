@@ -23,15 +23,18 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -258,15 +261,20 @@ public class ApiStepDefinitions {
 
     private String buildJwt(String userId, String role, String tenantId) {
         byte[] keyBytes = Base64.getDecoder().decode(jwtSecret);
-        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
-        return Jwts.builder()
+        JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(userId)
                 .claim("role", role)
                 .claim("tenantId", tenantId)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3_600_000))
-                .signWith(key)
-                .compact();
+                .issueTime(new Date())
+                .expirationTime(new Date(System.currentTimeMillis() + 3_600_000))
+                .build();
+        SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+        try {
+            signedJwt.sign(new MACSigner(keyBytes));
+        } catch (JOSEException e) {
+            throw new IllegalStateException("Failed to sign test token", e);
+        }
+        return signedJwt.serialize();
     }
 
     private List<AuditEntry> buildAuditEntries(String tenantId, String workItemId, int count) {

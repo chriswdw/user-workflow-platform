@@ -2,7 +2,7 @@
 spring-boot          = "4.0.8"
 spring-dependency-mgmt = "1.1.6"
 cucumber             = "7.18.1"
-jjwt                 = "0.12.6"
+nimbus-jose-jwt      = "10.9.1"
 bucket4j             = "8.10.1"
 logstash-logback     = "9.0"
 junit5               = "6.0.3"
@@ -21,9 +21,7 @@ cucumber-junit-platform-engine  = { module = "io.cucumber:cucumber-junit-platfor
 cucumber-spring                 = { module = "io.cucumber:cucumber-spring",                 version.ref = "cucumber" }
 
 # JWT
-jjwt-api     = { module = "io.jsonwebtoken:jjwt-api",     version.ref = "jjwt" }
-jjwt-impl    = { module = "io.jsonwebtoken:jjwt-impl",    version.ref = "jjwt" }
-jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
 
 # Rate limiting
 bucket4j-core = { module = "com.bucket4j:bucket4j-core", version.ref = "bucket4j" }
