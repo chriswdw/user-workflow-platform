@@ -13,6 +13,7 @@ embedded-postgres    = "2.0.7"
 spring-kafka         = "3.2.4"
 liquibase            = "4.29.2"
 postgresql           = "42.7.4"
+rewrite-spring       = "6.37.1"
 
 [libraries]
 # Cucumber
@@ -63,6 +64,9 @@ spring-kafka-test = { module = "org.springframework.kafka:spring-kafka-test", ve
 postgresql-driver  = { module = "org.postgresql:postgresql",        version.ref = "postgresql" }
 liquibase-core     = { module = "org.liquibase:liquibase-core",     version.ref = "liquibase" }
 embedded-postgres  = { module = "io.zonky.test:embedded-postgres",  version.ref = "embedded-postgres" }
+
+# OpenRewrite
+rewrite-spring     = { module = "org.openrewrite.recipe:rewrite-spring", version.ref = "rewrite-spring" }
 
 [plugins]
 spring-boot               = { id = "org.springframework.boot",         version.ref = "spring-boot" }

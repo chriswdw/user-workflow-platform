@@ -9,7 +9,7 @@ rewrite {
 }
 
 dependencies {
-    rewrite("org.openrewrite.recipe:rewrite-spring:6.9.0")
+    rewrite(libs.rewrite.spring)
 }
 
 allprojects {
