@@ -10,8 +10,6 @@ junit-platform       = "6.0.3"
 jackson              = "3.1.5"
 assertj              = "3.27.7"
 embedded-postgres    = "2.0.7"
-spring-kafka         = "4.0.7"
-postgresql           = "42.7.4"
 rewrite-spring       = "6.37.1"
 
 [libraries]
@@ -54,11 +52,11 @@ spring-boot-starter-security     = { module = "org.springframework.boot:spring-b
 spring-boot-starter-test         = { module = "org.springframework.boot:spring-boot-starter-test",         version.ref = "spring-boot" }
 
 # Kafka
-spring-kafka      = { module = "org.springframework.kafka:spring-kafka",      version.ref = "spring-kafka" }
-spring-kafka-test = { module = "org.springframework.kafka:spring-kafka-test", version.ref = "spring-kafka" }
+spring-kafka      = { module = "org.springframework.kafka:spring-kafka" }
+spring-kafka-test = { module = "org.springframework.kafka:spring-kafka-test" }
 
 # Database
-postgresql-driver  = { module = "org.postgresql:postgresql",        version.ref = "postgresql" }
+postgresql-driver  = { module = "org.postgresql:postgresql" }
 liquibase-core     = { module = "org.liquibase:liquibase-core" }
 embedded-postgres  = { module = "io.zonky.test:embedded-postgres",  version.ref = "embedded-postgres" }
 
