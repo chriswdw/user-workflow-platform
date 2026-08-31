@@ -104,6 +104,18 @@ Feature: Workflow type submission API
     Then the response status is 200
     And the response is a non-empty JSON array
 
+  Scenario: Admin gets all drafts
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And I am authenticated as user "bob" with role "PLATFORM_ADMIN" for tenant "tenant-1"
+    When I GET /api/v1/workflow-type-submissions/all-drafts
+    Then the response status is 200
+    And the response is a non-empty JSON array
+
+  Scenario: Non-admin getting all drafts returns 403
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When I GET /api/v1/workflow-type-submissions/all-drafts
+    Then the response status is 403
+
   Scenario: Get my drafts
     Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
     When I GET /api/v1/workflow-type-submissions/my-drafts

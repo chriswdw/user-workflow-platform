@@ -122,6 +122,9 @@ public class WorkflowTypeSubmissionController {
     @GetMapping("/all-drafts")
     public ResponseEntity<List<WorkflowTypeSubmissionResponse>> getAllDrafts(
             @AuthenticationPrincipal ApiAuthentication auth) {
+        if (!"PLATFORM_ADMIN".equals(auth.role())) {
+            return ResponseEntity.status(403).build();
+        }
         return ResponseEntity.ok(getUseCase.getAllDraftsForTenant(auth.tenantId())
                 .stream().map(WorkflowTypeSubmissionResponse::from).toList());
     }
