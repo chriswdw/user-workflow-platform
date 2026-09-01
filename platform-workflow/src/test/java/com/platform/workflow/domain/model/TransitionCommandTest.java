@@ -1,26 +1,26 @@
 package com.platform.workflow.domain.model;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class TransitionCommandTest {
 
-    @Test
-    void nullAdditionalFieldsDefaultsToAnEmptyMap() {
-        TransitionCommand command = new TransitionCommand(
-                "wi-1", "tenant-1", "escalate", "user-1", "ANALYST", null);
+  @Test
+  void nullAdditionalFieldsDefaultsToAnEmptyMap() {
+    TransitionCommand command =
+        new TransitionCommand("wi-1", "tenant-1", "escalate", "user-1", "ANALYST", null);
 
-        assertThat(command.additionalFields()).isEmpty();
-    }
+    assertThat(command.additionalFields()).isEmpty();
+  }
 
-    @Test
-    void providedAdditionalFieldsAreCopiedAsIs() {
-        TransitionCommand command = new TransitionCommand(
-                "wi-1", "tenant-1", "escalate", "user-1", "ANALYST", Map.of("reason", "urgent"));
+  @Test
+  void providedAdditionalFieldsAreCopiedAsIs() {
+    TransitionCommand command =
+        new TransitionCommand(
+            "wi-1", "tenant-1", "escalate", "user-1", "ANALYST", Map.of("reason", "urgent"));
 
-        assertThat(command.additionalFields()).containsEntry("reason", "urgent");
-    }
+    assertThat(command.additionalFields()).containsEntry("reason", "urgent");
+  }
 }

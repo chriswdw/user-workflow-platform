@@ -12,6 +12,7 @@ openrewrite           = "7.39.0"
 owasp-dependencycheck = "13.0.0"
 rewrite-spring        = "6.37.1"
 sonarqube             = "7.4.0.8496"
+spotless              = "8.10.1"
 spring-boot           = "4.0.8"
 spring-dependency-mgmt = "1.1.6"
 
@@ -70,5 +71,6 @@ rewrite-spring     = { module = "org.openrewrite.recipe:rewrite-spring", version
 openrewrite               = { id = "org.openrewrite.rewrite",    version.ref = "openrewrite" }
 owasp-dependencycheck     = { id = "org.owasp.dependencycheck",  version.ref = "owasp-dependencycheck" }
 sonarqube                 = { id = "org.sonarqube",              version.ref = "sonarqube" }
+spotless                  = { id = "com.diffplug.spotless",     version.ref = "spotless" }
 spring-boot               = { id = "org.springframework.boot",         version.ref = "spring-boot" }
 spring-dependency-mgmt    = { id = "io.spring.dependency-management",  version.ref = "spring-dependency-mgmt" }

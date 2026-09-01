@@ -5,5 +5,5 @@ import com.platform.ingestion.domain.model.RawInboundRecord;
 
 public interface IIngestRecordUseCase {
 
-    IngestionResult ingest(RawInboundRecord inboundRecord);
+  IngestionResult ingest(RawInboundRecord inboundRecord);
 }

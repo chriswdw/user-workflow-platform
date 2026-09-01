@@ -1,6 +1,5 @@
 package com.platform.api.config;
 
-import tools.jackson.databind.ObjectMapper;
 import com.platform.api.adapter.out.postgres.AuditEntryJdbcRepository;
 import com.platform.api.adapter.out.postgres.IdempotencyKeyJdbcRepository;
 import com.platform.api.adapter.out.postgres.IngestionConfigJdbcRepository;
@@ -15,44 +14,52 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 @Configuration
 @ConditionalOnProperty(name = "spring.datasource.url")
 public class IngestionAdapterConfig {
 
-    @Bean
-    IngestionConfigJdbcRepository ingestionConfigJdbcRepository(
-            NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
-        return new IngestionConfigJdbcRepository(jdbc, objectMapper);
-    }
+  @Bean
+  IngestionConfigJdbcRepository ingestionConfigJdbcRepository(
+      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+    return new IngestionConfigJdbcRepository(jdbc, objectMapper);
+  }
 
-    @Bean
-    IdempotencyKeyJdbcRepository idempotencyKeyJdbcRepository(NamedParameterJdbcTemplate jdbc) {
-        return new IdempotencyKeyJdbcRepository(jdbc);
-    }
+  @Bean
+  IdempotencyKeyJdbcRepository idempotencyKeyJdbcRepository(NamedParameterJdbcTemplate jdbc) {
+    return new IdempotencyKeyJdbcRepository(jdbc);
+  }
 
-    @Bean
-    IngestionWorkItemJdbcRepository ingestionWorkItemJdbcRepository(
-            NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
-        return new IngestionWorkItemJdbcRepository(jdbc, objectMapper);
-    }
+  @Bean
+  IngestionWorkItemJdbcRepository ingestionWorkItemJdbcRepository(
+      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+    return new IngestionWorkItemJdbcRepository(jdbc, objectMapper);
+  }
 
-    @Bean
-    IGroupAssignmentPort groupAssignmentPort(
-            @Value("${platform.ingestion.default-group:group-ops}") String defaultGroup) {
-        return (tenantId, workflowType, fields) ->
-                new IGroupAssignmentPort.AssignmentResult(defaultGroup, true);
-    }
+  @Bean
+  IGroupAssignmentPort groupAssignmentPort(
+      @Value("${platform.ingestion.default-group:group-ops}") String defaultGroup) {
+    return (tenantId, workflowType, fields) ->
+        new IGroupAssignmentPort.AssignmentResult(defaultGroup, true);
+  }
 
-    @Bean
-    IIngestRecordUseCase ingestRecordUseCase(
-            IngestionConfigJdbcRepository configRepo,
-            IdempotencyKeyJdbcRepository idempotencyRepo,
-            IngestionWorkItemJdbcRepository workItemRepo,
-            AuditEntryJdbcRepository auditRepo,
-            IGroupAssignmentPort groupAssignmentPort,
-            IDomainEventPublisher eventPublisher,
-            MeterRegistry meterRegistry) {
-        return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupAssignmentPort, eventPublisher, meterRegistry);
-    }
+  @Bean
+  IIngestRecordUseCase ingestRecordUseCase(
+      IngestionConfigJdbcRepository configRepo,
+      IdempotencyKeyJdbcRepository idempotencyRepo,
+      IngestionWorkItemJdbcRepository workItemRepo,
+      AuditEntryJdbcRepository auditRepo,
+      IGroupAssignmentPort groupAssignmentPort,
+      IDomainEventPublisher eventPublisher,
+      MeterRegistry meterRegistry) {
+    return new IngestionService(
+        configRepo,
+        idempotencyRepo,
+        workItemRepo,
+        auditRepo,
+        groupAssignmentPort,
+        eventPublisher,
+        meterRegistry);
+  }
 }

@@ -14,26 +14,23 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${api.jwt.secret}")
-    private String jwtSecret;
+  @Value("${api.jwt.secret}")
+  private String jwtSecret;
 
-    @Value("${api.rate-limit.requests-per-minute:100}")
-    private int requestsPerMinute;
+  @Value("${api.rate-limit.requests-per-minute:100}")
+  private int requestsPerMinute;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) {
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(e -> e.authenticationEntryPoint(
-                    (req, res, ex) -> res.sendError(401, "Unauthorized")))
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/dev/**").permitAll()
-                    .anyRequest().authenticated())
-            .addFilterBefore(new JwtAuthenticationFilter(jwtSecret),
-                    UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(new RateLimitingFilter(requestsPerMinute),
-                    JwtAuthenticationFilter.class);
-        return http.build();
-    }
+  @Bean
+  public SecurityFilterChain filterChain(HttpSecurity http) {
+    http.csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(
+            e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401, "Unauthorized")))
+        .authorizeHttpRequests(
+            auth -> auth.requestMatchers("/api/dev/**").permitAll().anyRequest().authenticated())
+        .addFilterBefore(
+            new JwtAuthenticationFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(new RateLimitingFilter(requestsPerMinute), JwtAuthenticationFilter.class);
+    return http.build();
+  }
 }

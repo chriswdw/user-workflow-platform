@@ -3,6 +3,29 @@ plugins {
     alias(libs.plugins.sonarqube)
     alias(libs.plugins.openrewrite)
     alias(libs.plugins.owasp.dependencycheck)
+    alias(libs.plugins.spotless)
+}
+
+// Formats the Kotlin DSL build scripts themselves (root + every subproject's build.gradle.kts).
+// Java formatting is configured per subproject below, since the root project has no Java sources.
+spotless {
+    kotlinGradle {
+        target("**/*.gradle.kts")
+        targetExclude(".claude/worktrees/**")
+        ktlint()
+    }
+}
+
+// Auto-fix formatting locally; in CI, only spotlessCheck should run (fails on drift instead of
+// silently rewriting the checkout). Most CI systems (GitHub Actions, GitLab, etc.) set CI=true.
+val isCi = providers.environmentVariable("CI").isPresent
+
+// The root project already applies the java plugin (for its own compileJava no-op task), so
+// this runs as part of the normal build lifecycle.
+if (!isCi) {
+    tasks.named("compileJava") {
+        dependsOn(tasks.named("spotlessApply"))
+    }
 }
 
 rewrite {
@@ -27,10 +50,25 @@ allprojects {
 subprojects {
     apply(plugin = "java")
     apply(plugin = "jacoco")
+    apply(plugin = "com.diffplug.spotless")
 
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+
+    configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+        java {
+            googleJavaFormat()
+            target("src/*/java/**/*.java")
+        }
+    }
+
+    // Auto-fix formatting in-place before compiling, locally only — see isCi above.
+    if (!isCi) {
+        tasks.named("compileJava") {
+            dependsOn(tasks.named("spotlessApply"))
         }
     }
 
@@ -55,16 +93,18 @@ subprojects {
         // (com.platform.config.*, since that module's domain happens to be named "config"), which
         // silently excluded the whole module from coverage reporting.
         classDirectories.setFrom(
-            files(classDirectories.files.map {
-                fileTree(it) {
-                    exclude(
-                        "**/*Application*",
-                        "**/*AutoConfiguration*",
-                        "com/platform/*/config/**",
-                        "**/CucumberSuiteTest*"
-                    )
-                }
-            })
+            files(
+                classDirectories.files.map {
+                    fileTree(it) {
+                        exclude(
+                            "**/*Application*",
+                            "**/*AutoConfiguration*",
+                            "com/platform/*/config/**",
+                            "**/CucumberSuiteTest*",
+                        )
+                    }
+                },
+            ),
         )
     }
 
@@ -72,12 +112,13 @@ subprojects {
         dependsOn(tasks.named("jacocoTestReport"))
         violationRules {
             rule {
-                excludes = listOf(
-                    "*..*Application",
-                    "*..*AutoConfiguration",
-                    "com.platform.*.config.*",
-                    "*..CucumberSuiteTest"
-                )
+                excludes =
+                    listOf(
+                        "*..*Application",
+                        "*..*AutoConfiguration",
+                        "com.platform.*.config.*",
+                        "*..CucumberSuiteTest",
+                    )
                 limit {
                     counter = "LINE"
                     value = "COVEREDRATIO"
@@ -86,16 +127,18 @@ subprojects {
             }
         }
         classDirectories.setFrom(
-            files(classDirectories.files.map {
-                fileTree(it) {
-                    exclude(
-                        "**/*Application*",
-                        "**/*AutoConfiguration*",
-                        "com/platform/*/config/**",
-                        "**/CucumberSuiteTest*"
-                    )
-                }
-            })
+            files(
+                classDirectories.files.map {
+                    fileTree(it) {
+                        exclude(
+                            "**/*Application*",
+                            "**/*AutoConfiguration*",
+                            "com/platform/*/config/**",
+                            "**/CucumberSuiteTest*",
+                        )
+                    }
+                },
+            ),
         )
     }
 
@@ -112,8 +155,9 @@ subprojects {
     sonar {
         properties {
             property("sonar.sources", "src/main/java")
-            val testDirs = listOf("src/test/java", "src/testFixtures/java")
-                .filter { file(it).exists() }
+            val testDirs =
+                listOf("src/test/java", "src/testFixtures/java")
+                    .filter { file(it).exists() }
             property("sonar.tests", testDirs.joinToString(","))
 
             // Coverage import must be scoped per subproject too — a single root-level joined
@@ -126,17 +170,20 @@ subprojects {
 
 sonar {
     properties {
-        property("sonar.projectKey",  "user-workflow-platform")
+        property("sonar.projectKey", "user-workflow-platform")
         property("sonar.projectName", "User Workflow Platform")
-        property("sonar.host.url",    "http://localhost:9000")
+        property("sonar.host.url", "http://localhost:9000")
 
         // The root project itself has no Java sources — this scopes only to the frontend, which
         // isn't a Gradle subproject and so isn't covered by the per-subproject block above.
         property("sonar.sources", "platform-frontend/src")
-        property("sonar.tests",   "platform-frontend/step-definitions,platform-frontend/features")
+        property("sonar.tests", "platform-frontend/step-definitions,platform-frontend/features")
 
-        property("sonar.exclusions",  "**/build/**,**/node_modules/**,**/.gradle/**," +
-                                      "**/dist/**,**/package-lock.json,.claude/worktrees/**")
+        property(
+            "sonar.exclusions",
+            "**/build/**,**/node_modules/**,**/.gradle/**," +
+                "**/dist/**,**/package-lock.json,.claude/worktrees/**",
+        )
 
         // Frontend LCOV report (generated by c8)
         property("sonar.javascript.lcov.reportPaths", "platform-frontend/coverage/lcov.info")

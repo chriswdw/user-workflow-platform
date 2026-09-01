@@ -1,53 +1,56 @@
 package com.platform.api.adapter.out.postgres;
 
-import tools.jackson.databind.ObjectMapper;
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.ports.out.IConfigDocumentWriter;
+import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import tools.jackson.core.JacksonException;
-
-import java.util.List;
+import tools.jackson.databind.ObjectMapper;
 
 public class ConfigDocumentJdbcWriter implements IConfigDocumentWriter {
 
-    private final NamedParameterJdbcTemplate jdbc;
-    private final ObjectMapper objectMapper;
+  private final NamedParameterJdbcTemplate jdbc;
+  private final ObjectMapper objectMapper;
 
-    public ConfigDocumentJdbcWriter(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
-        this.jdbc = jdbc;
-        this.objectMapper = objectMapper;
+  public ConfigDocumentJdbcWriter(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+    this.jdbc = jdbc;
+    this.objectMapper = objectMapper;
+  }
+
+  @Override
+  public void saveAll(List<ConfigDocument> documents) {
+    if (documents.isEmpty()) {
+      return;
     }
-
-    @Override
-    public void saveAll(List<ConfigDocument> documents) {
-        if (documents.isEmpty()) {
-            return;
-        }
-        String sql = """
+    String sql =
+        """
                 INSERT INTO config_documents
                     (id, tenant_id, workflow_type, config_type, content, version, active)
                 VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), :version, true)
                 ON CONFLICT (id) DO NOTHING
                 """;
-        SqlParameterSource[] params = documents.stream()
-                .map(doc -> new MapSqlParameterSource()
+    SqlParameterSource[] params =
+        documents.stream()
+            .map(
+                doc ->
+                    new MapSqlParameterSource()
                         .addValue("id", doc.id())
                         .addValue("tenantId", doc.tenantId())
                         .addValue("workflowType", doc.workflowType())
                         .addValue("configType", doc.configType().name())
                         .addValue("content", toJson(doc.content()))
                         .addValue("version", doc.version()))
-                .toArray(SqlParameterSource[]::new);
-        jdbc.batchUpdate(sql, params);
-    }
+            .toArray(SqlParameterSource[]::new);
+    jdbc.batchUpdate(sql, params);
+  }
 
-    private String toJson(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JacksonException e) {
-            throw new IllegalStateException("Failed to serialise config document content to JSONB", e);
-        }
+  private String toJson(Object value) {
+    try {
+      return objectMapper.writeValueAsString(value);
+    } catch (JacksonException e) {
+      throw new IllegalStateException("Failed to serialise config document content to JSONB", e);
     }
+  }
 }
