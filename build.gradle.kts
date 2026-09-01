@@ -1,8 +1,8 @@
 plugins {
     java
-    id("org.sonarqube") version "7.4.0.8496"
-    id("org.openrewrite.rewrite") version "7.39.0"
-    id("org.owasp.dependencycheck") version "13.0.0"
+    alias(libs.plugins.sonarqube)
+    alias(libs.plugins.openrewrite)
+    alias(libs.plugins.owasp.dependencycheck)
 }
 
 rewrite {

@@ -1,16 +1,19 @@
 [versions]
-spring-boot          = "4.0.8"
+assertj               = "3.27.7"
+bucket4j              = "8.10.1"
+cucumber              = "7.18.1"
+embedded-postgres     = "2.0.7"
+jackson               = "3.1.5"
+junit-platform        = "6.0.3"
+junit5                = "6.0.3"
+logstash-logback      = "9.0"
+nimbus-jose-jwt       = "10.9.1"
+openrewrite           = "7.39.0"
+owasp-dependencycheck = "13.0.0"
+rewrite-spring        = "6.37.1"
+sonarqube             = "7.4.0.8496"
+spring-boot           = "4.0.8"
 spring-dependency-mgmt = "1.1.6"
-cucumber             = "7.18.1"
-nimbus-jose-jwt      = "10.9.1"
-bucket4j             = "8.10.1"
-logstash-logback     = "9.0"
-junit5               = "6.0.3"
-junit-platform       = "6.0.3"
-jackson              = "3.1.5"
-assertj              = "3.27.7"
-embedded-postgres    = "2.0.7"
-rewrite-spring       = "6.37.1"
 
 [libraries]
 # Cucumber
@@ -25,19 +28,18 @@ nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimb
 bucket4j-core = { module = "com.bucket4j:bucket4j-core", version.ref = "bucket4j" }
 
 # Observability
-spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator",  version.ref = "spring-boot" }
+logstash-logback-encoder       = { module = "net.logstash.logback:logstash-logback-encoder",          version.ref = "logstash-logback" }
 micrometer-core                = { module = "io.micrometer:micrometer-core",                           version = "1.13.5" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
 otel-exporter-otlp             = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
-logstash-logback-encoder       = { module = "net.logstash.logback:logstash-logback-encoder",          version.ref = "logstash-logback" }
+spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator",  version.ref = "spring-boot" }
 
 # JUnit 5
-junit-platform-suite     = { module = "org.junit.platform:junit-platform-suite",     version.ref = "junit-platform" }
 junit-platform-launcher  = { module = "org.junit.platform:junit-platform-launcher",  version.ref = "junit-platform" }
-junit5-api             = { module = "org.junit.jupiter:junit-jupiter-api",         version.ref = "junit5" }
-junit5-engine          = { module = "org.junit.jupiter:junit-jupiter-engine",      version.ref = "junit5" }
-junit5-params          = { module = "org.junit.jupiter:junit-jupiter-params",      version.ref = "junit5" }
+junit-platform-suite     = { module = "org.junit.platform:junit-platform-suite",     version.ref = "junit-platform" }
+junit5-api               = { module = "org.junit.jupiter:junit-jupiter-api",         version.ref = "junit5" }
+junit5-engine            = { module = "org.junit.jupiter:junit-jupiter-engine",      version.ref = "junit5" }
 
 # Assertions
 assertj-core           = { module = "org.assertj:assertj-core",                    version.ref = "assertj" }
@@ -46,25 +48,27 @@ assertj-core           = { module = "org.assertj:assertj-core",                 
 jackson-databind       = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
 
 # Spring Boot (used by infrastructure modules)
-spring-boot-starter              = { module = "org.springframework.boot:spring-boot-starter",              version.ref = "spring-boot" }
-spring-boot-starter-web          = { module = "org.springframework.boot:spring-boot-starter-web",          version.ref = "spring-boot" }
 spring-boot-starter-jdbc         = { module = "org.springframework.boot:spring-boot-starter-jdbc",         version.ref = "spring-boot" }
-spring-boot-starter-validation   = { module = "org.springframework.boot:spring-boot-starter-validation",   version.ref = "spring-boot" }
 spring-boot-starter-security     = { module = "org.springframework.boot:spring-boot-starter-security",     version.ref = "spring-boot" }
 spring-boot-starter-test         = { module = "org.springframework.boot:spring-boot-starter-test",         version.ref = "spring-boot" }
+spring-boot-starter-validation   = { module = "org.springframework.boot:spring-boot-starter-validation",   version.ref = "spring-boot" }
+spring-boot-starter-web          = { module = "org.springframework.boot:spring-boot-starter-web",          version.ref = "spring-boot" }
 
 # Kafka
 spring-kafka      = { module = "org.springframework.kafka:spring-kafka" }
 spring-kafka-test = { module = "org.springframework.kafka:spring-kafka-test" }
 
 # Database
-postgresql-driver  = { module = "org.postgresql:postgresql" }
-liquibase-core     = { module = "org.liquibase:liquibase-core" }
 embedded-postgres  = { module = "io.zonky.test:embedded-postgres",  version.ref = "embedded-postgres" }
+liquibase-core     = { module = "org.liquibase:liquibase-core" }
+postgresql-driver  = { module = "org.postgresql:postgresql" }
 
 # OpenRewrite
 rewrite-spring     = { module = "org.openrewrite.recipe:rewrite-spring", version.ref = "rewrite-spring" }
 
 [plugins]
+openrewrite               = { id = "org.openrewrite.rewrite",    version.ref = "openrewrite" }
+owasp-dependencycheck     = { id = "org.owasp.dependencycheck",  version.ref = "owasp-dependencycheck" }
+sonarqube                 = { id = "org.sonarqube",              version.ref = "sonarqube" }
 spring-boot               = { id = "org.springframework.boot",         version.ref = "spring-boot" }
 spring-dependency-mgmt    = { id = "io.spring.dependency-management",  version.ref = "spring-dependency-mgmt" }
