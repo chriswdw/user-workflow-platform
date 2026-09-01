@@ -13,7 +13,7 @@ owasp-dependencycheck = "13.0.0"
 rewrite-spring        = "6.37.1"
 sonarqube             = "7.4.0.8496"
 spotless              = "8.10.1"
-spring-boot           = "4.0.8"
+spring-boot           = "4.1.1"
 spring-dependency-mgmt = "1.1.6"
 
 [libraries]
