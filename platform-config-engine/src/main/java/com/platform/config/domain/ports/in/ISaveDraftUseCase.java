@@ -4,6 +4,10 @@ import com.platform.config.domain.model.DraftConfigs;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 
 public interface ISaveDraftUseCase {
-    WorkflowTypeSubmission saveDraft(String tenantId, String submissionId, String actorUserId,
-                                     DraftConfigs partialDraftConfigs, int currentStep);
+  WorkflowTypeSubmission saveDraft(
+      String tenantId,
+      String submissionId,
+      String actorUserId,
+      DraftConfigs partialDraftConfigs,
+      int currentStep);
 }
