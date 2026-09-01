@@ -1,80 +1,80 @@
 package com.platform.api.adapter.out.postgres;
 
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.ConfigType;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.core.exc.StreamWriteException;
-
-import java.util.List;
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 class ConfigDocumentJdbcWriterTest {
 
-    private static final NamedParameterJdbcTemplate jdbc =
-            new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
+  private static final NamedParameterJdbcTemplate jdbc =
+      new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
 
-    private final ConfigDocumentJdbcWriter writer =
-            new ConfigDocumentJdbcWriter(jdbc, new JsonMapper());
+  private final ConfigDocumentJdbcWriter writer =
+      new ConfigDocumentJdbcWriter(jdbc, new JsonMapper());
 
-    @BeforeEach
-    void truncate() {
-        jdbc.update("TRUNCATE config_documents", Map.of());
-    }
+  @BeforeEach
+  void truncate() {
+    jdbc.update("TRUNCATE config_documents", Map.of());
+  }
 
-    @Test
-    void saveAll_persistsDocumentsToDatabase() {
-        List<ConfigDocument> docs = List.of(
-                doc("doc-1", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_TYPE_DEFINITION),
-                doc("doc-2", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.BLOTTER_CONFIG)
-        );
+  @Test
+  void saveAll_persistsDocumentsToDatabase() {
+    List<ConfigDocument> docs =
+        List.of(
+            doc("doc-1", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_TYPE_DEFINITION),
+            doc("doc-2", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.BLOTTER_CONFIG));
 
-        writer.saveAll(docs);
+    writer.saveAll(docs);
 
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM config_documents WHERE tenant_id = :tenantId",
-                new MapSqlParameterSource("tenantId", "tenant-A"),
-                Integer.class);
-        assertThat(count).isEqualTo(2);
-    }
+    Integer count =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM config_documents WHERE tenant_id = :tenantId",
+            new MapSqlParameterSource("tenantId", "tenant-A"),
+            Integer.class);
+    assertThat(count).isEqualTo(2);
+  }
 
-    @Test
-    void saveAll_emptyList_isNoOp() {
-        writer.saveAll(List.of());
+  @Test
+  void saveAll_emptyList_isNoOp() {
+    writer.saveAll(List.of());
 
-        Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM config_documents",
-                Map.of(),
-                Integer.class);
-        assertThat(count).isZero();
-    }
+    Integer count =
+        jdbc.queryForObject("SELECT COUNT(*) FROM config_documents", Map.of(), Integer.class);
+    assertThat(count).isZero();
+  }
 
-    @Test
-    void saveAll_serializationFailure_throwsIllegalStateException() {
-        ObjectMapper failingMapper = new ObjectMapper() {
-            @Override
-            public String writeValueAsString(Object value) {
-                throw new StreamWriteException((tools.jackson.core.JsonGenerator) null, "simulated failure");
-            }
+  @Test
+  void saveAll_serializationFailure_throwsIllegalStateException() {
+    ObjectMapper failingMapper =
+        new ObjectMapper() {
+          @Override
+          public String writeValueAsString(Object value) {
+            throw new StreamWriteException(
+                (tools.jackson.core.JsonGenerator) null, "simulated failure");
+          }
         };
-        ConfigDocumentJdbcWriter failingWriter = new ConfigDocumentJdbcWriter(jdbc, failingMapper);
-        List<ConfigDocument> docs = List.of(
-                doc("doc-err", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.ROUTING_CONFIG));
+    ConfigDocumentJdbcWriter failingWriter = new ConfigDocumentJdbcWriter(jdbc, failingMapper);
+    List<ConfigDocument> docs =
+        List.of(doc("doc-err", "tenant-A", "SETTLEMENT_EXCEPTION", ConfigType.ROUTING_CONFIG));
 
-        assertThatThrownBy(() -> failingWriter.saveAll(docs))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Failed to serialise config document content to JSONB");
-    }
+    assertThatThrownBy(() -> failingWriter.saveAll(docs))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Failed to serialise config document content to JSONB");
+  }
 
-    private static ConfigDocument doc(String id, String tenantId, String workflowType, ConfigType type) {
-        return new ConfigDocument(id, tenantId, workflowType, type,
-                Map.of("key", "value"), "v1", true);
-    }
+  private static ConfigDocument doc(
+      String id, String tenantId, String workflowType, ConfigType type) {
+    return new ConfigDocument(id, tenantId, workflowType, type, Map.of("key", "value"), "v1", true);
+  }
 }

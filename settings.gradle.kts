@@ -15,5 +15,5 @@ include(
     "platform-ingestion",
     "platform-audit",
     "platform-api",
-    "platform-observability"
+    "platform-observability",
 )

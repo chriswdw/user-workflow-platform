@@ -168,7 +168,7 @@ Run `./gradlew :platform-<module>:cucumber`. New scenarios must FAIL. A green re
 3. Adapter integration gaps (JDBC repositories, Kafka consumers) that cannot be expressed as domain-level BDD scenarios should use `io.zonky.test:embedded-postgres` or `@EmbeddedKafka` integration tests, following the pattern in `platform-api/src/test/.../adapter/out/postgres/`.
 
 **Exempt from coverage requirements:**
-- Spring `@AutoConfiguration` and `@Configuration` wiring classes — these are integration-tested implicitly when the application context starts
+- Spring `@AutoConfiguration` and `@Configuration` wiring classes — but only if at least one test actually satisfies the class's activation conditions (e.g. its `@ConditionalOnProperty`) and loads it into a real Spring context, asserting the real beans won rather than a `@ConditionalOnMissingBean` fallback. A class that is merely reachable "if the app started," with no test that starts it that way, is not exempt — treat it as an uncovered gap. See `platform-api/src/test/java/com/platform/api/integration/PostgresAdapterConfigWiringTest.java` for the pattern: `@Import` the real config class(es), activate their conditions via `@TestPropertySource`/`@EmbeddedKafka`/embedded-postgres, and assert bean identity.
 - `main()` entry points
 - Generated code
 
