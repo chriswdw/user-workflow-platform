@@ -24,3 +24,7 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    groups:
+      ag-grid:
+        patterns:
+          - "ag-grid-*"
