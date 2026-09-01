@@ -30,7 +30,7 @@ bucket4j-core = { module = "com.bucket4j:bucket4j-core", version.ref = "bucket4j
 
 # Observability
 logstash-logback-encoder       = { module = "net.logstash.logback:logstash-logback-encoder",          version.ref = "logstash-logback" }
-micrometer-core                = { module = "io.micrometer:micrometer-core",                           version = "1.13.5" }
+micrometer-core                = { module = "io.micrometer:micrometer-core",                           version = "1.17.1" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus" }
 micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
 otel-exporter-otlp             = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
