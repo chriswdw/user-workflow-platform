@@ -1,6 +1,6 @@
 import { Before, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { within, type RenderResult } from '@testing-library/react';
+import { within, waitFor, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Blotter } from '../src/components/blotter/Blotter';
 import type { BlotterConfig } from '../src/types/BlotterConfig';
@@ -104,26 +104,30 @@ When('I render the blotter', () => {
 });
 
 When('I click the first blotter row', async () => {
-  const row = within(rendered.container).getAllByRole('row')[1]; // row 0 is the header
-  await userEvent.click(row);
+  const rows = await waitFor(() => {
+    const found = within(rendered.container).getAllByRole('row');
+    assert.ok(found.length > 1, 'blotter grid has not rendered any data rows yet');
+    return found;
+  });
+  await userEvent.click(rows[1]); // row 0 is the header
 });
 
-Then('the blotter header shows {string} and {string}', (headerA: string, headerB: string) => {
-  const headerCells = within(rendered.container).getAllByRole('columnheader')
-    .map(el => el.textContent?.trim());
+Then('the blotter header shows {string} and {string}', async (headerA: string, headerB: string) => {
+  const headerCells = await waitFor(() =>
+    within(rendered.container).getAllByRole('columnheader').map(el => el.textContent?.trim()));
   assert.ok(headerCells.includes(headerA), `expected header "${headerA}" in ${headerCells}`);
   assert.ok(headerCells.includes(headerB), `expected header "${headerB}" in ${headerCells}`);
 });
 
-Then('the blotter shows a cell with text {string}', (text: string) => {
-  const cells = within(rendered.container).getAllByRole('gridcell')
-    .map(el => el.textContent?.trim());
+Then('the blotter shows a cell with text {string}', async (text: string) => {
+  const cells = await waitFor(() =>
+    within(rendered.container).getAllByRole('gridcell').map(el => el.textContent?.trim()));
   assert.ok(cells.includes(text), `expected a cell with "${text}" in ${JSON.stringify(cells)}`);
 });
 
-Then('the blotter shows a masked cell instead of {string}', (unmaskedValue: string) => {
-  const cells = within(rendered.container).getAllByRole('gridcell')
-    .map(el => el.textContent?.trim());
+Then('the blotter shows a masked cell instead of {string}', async (unmaskedValue: string) => {
+  const cells = await waitFor(() =>
+    within(rendered.container).getAllByRole('gridcell').map(el => el.textContent?.trim()));
   assert.ok(!cells.includes(unmaskedValue), `expected "${unmaskedValue}" NOT to be visible in ${JSON.stringify(cells)}`);
   assert.ok(cells.some(c => c === '***'), `expected a masked "***" cell in ${JSON.stringify(cells)}`);
 });
