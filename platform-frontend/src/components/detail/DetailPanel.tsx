@@ -35,7 +35,7 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const { data: item, isLoading: itemLoading, isError: itemError } = useWorkItem(workItemId);
   const { data: config, isLoading: configLoading } = useDetailViewConfig(item?.workflowType ?? '');
   const { data: auditEntries = [] } = useAuditTrail(workItemId);
-  const { mutate: fireTransition, error: transitionError } = useTransition(workItemId);
+  const { mutate: fireTransition, error: transitionError, isPending: transitionPending } = useTransition(workItemId);
 
   const loading = itemLoading || configLoading;
 
@@ -114,6 +114,7 @@ export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
             userRole={userRole}
             onTransition={handleTransition}
             transitionError={transitionError?.message}
+            transitionPending={transitionPending}
           />
         )}
       </div>

@@ -11,9 +11,10 @@ interface DetailViewProps {
   readonly userRole: string;
   readonly onTransition: (transition: string, additionalFields?: Record<string, unknown>) => void;
   readonly transitionError?: string;
+  readonly transitionPending?: boolean;
 }
 
-export function DetailView({ config, item, userRole, onTransition, transitionError }: DetailViewProps) {
+export function DetailView({ config, item, userRole, onTransition, transitionError, transitionPending }: DetailViewProps) {
   const visibleActions = config.actions.filter(a => isActionVisible(a, item.status, userRole));
 
   return (
@@ -39,6 +40,7 @@ export function DetailView({ config, item, userRole, onTransition, transitionErr
               action={action}
               onTransition={onTransition}
               serverError={transitionError}
+              transitionPending={transitionPending}
             />
           ))}
         </div>
