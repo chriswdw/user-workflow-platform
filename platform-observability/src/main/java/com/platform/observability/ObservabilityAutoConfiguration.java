@@ -10,17 +10,18 @@ import org.springframework.core.Ordered;
 @ConditionalOnWebApplication
 public class ObservabilityAutoConfiguration {
 
-    @Bean
-    public FilterRegistrationBean<CorrelationIdFilter> correlationIdFilter() {
-        FilterRegistrationBean<CorrelationIdFilter> reg = new FilterRegistrationBean<>(new CorrelationIdFilter());
-        reg.setOrder(Ordered.HIGHEST_PRECEDENCE);
-        return reg;
-    }
+  @Bean
+  public FilterRegistrationBean<CorrelationIdFilter> correlationIdFilter() {
+    FilterRegistrationBean<CorrelationIdFilter> reg =
+        new FilterRegistrationBean<>(new CorrelationIdFilter());
+    reg.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    return reg;
+  }
 
-    @Bean
-    public FilterRegistrationBean<MdcFilter> mdcFilter() {
-        FilterRegistrationBean<MdcFilter> reg = new FilterRegistrationBean<>(new MdcFilter());
-        reg.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
-        return reg;
-    }
+  @Bean
+  public FilterRegistrationBean<MdcFilter> mdcFilter() {
+    FilterRegistrationBean<MdcFilter> reg = new FilterRegistrationBean<>(new MdcFilter());
+    reg.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
+    return reg;
+  }
 }

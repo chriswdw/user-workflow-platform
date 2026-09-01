@@ -2,25 +2,24 @@ package com.platform.config.doubles;
 
 import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.ports.out.IConfigDocumentWriter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class InMemoryConfigDocumentWriter implements IConfigDocumentWriter {
 
-    private final List<ConfigDocument> published = new ArrayList<>();
+  private final List<ConfigDocument> published = new ArrayList<>();
 
-    @Override
-    public void saveAll(List<ConfigDocument> documents) {
-        published.addAll(documents);
-    }
+  @Override
+  public void saveAll(List<ConfigDocument> documents) {
+    published.addAll(documents);
+  }
 
-    public List<ConfigDocument> getAll() {
-        return Collections.unmodifiableList(published);
-    }
+  public List<ConfigDocument> getAll() {
+    return Collections.unmodifiableList(published);
+  }
 
-    public void reset() {
-        published.clear();
-    }
+  public void reset() {
+    published.clear();
+  }
 }
