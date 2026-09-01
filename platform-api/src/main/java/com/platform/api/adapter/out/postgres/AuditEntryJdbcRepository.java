@@ -6,8 +6,7 @@ import com.platform.audit.domain.ports.out.IAuditEntryRepository;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEntry.ChangedField;
 import com.platform.domain.model.AuditEventType;
-import com.platform.ingestion.domain.ports.out.IIngestionAuditRepository;
-import com.platform.workflow.domain.ports.out.IWorkflowAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.core.JacksonException;
@@ -20,7 +19,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
-public class AuditEntryJdbcRepository implements IAuditEntryRepository, IWorkflowAuditRepository, IIngestionAuditRepository {
+public class AuditEntryJdbcRepository
+        implements IAuditEntryRepository,
+                   IAuditRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final ObjectMapper objectMapper;

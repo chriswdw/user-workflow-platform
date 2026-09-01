@@ -4,6 +4,7 @@ import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.WorkItem;
 import com.platform.ingestion.domain.exception.DuplicateIdempotencyKeyException;
+import com.platform.ingestion.domain.exception.IngestionConfigNotFoundException;
 import com.platform.ingestion.domain.model.FieldMapping;
 import com.platform.ingestion.domain.model.IngestionConfig;
 import com.platform.ingestion.domain.model.IngestionResult;
@@ -12,7 +13,10 @@ import com.platform.ingestion.domain.model.UnknownColumnPolicy;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.ports.out.IIdempotencyKeyRepository;
-import com.platform.ingestion.domain.ports.out.IIngestionAuditRepository;
+import com.platform.domain.model.DomainEvent;
+import com.platform.domain.ports.out.IAuditRepository;
+import com.platform.domain.ports.out.IDomainEventPublisher;
+import io.micrometer.core.instrument.MeterRegistry;
 import com.platform.ingestion.domain.ports.out.IIngestionConfigRepository;
 import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 
@@ -22,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -48,19 +53,25 @@ public class IngestionService implements IIngestRecordUseCase {
     private final IIngestionConfigRepository configRepository;
     private final IIdempotencyKeyRepository idempotencyRepository;
     private final IIngestionWorkItemRepository workItemRepository;
-    private final IIngestionAuditRepository auditRepository;
+    private final IAuditRepository auditRepository;
     private final IGroupAssignmentPort groupAssignmentPort;
+    private final IDomainEventPublisher eventPublisher;
+    private final MeterRegistry meterRegistry;
 
     public IngestionService(IIngestionConfigRepository configRepository,
                              IIdempotencyKeyRepository idempotencyRepository,
                              IIngestionWorkItemRepository workItemRepository,
-                             IIngestionAuditRepository auditRepository,
-                             IGroupAssignmentPort groupAssignmentPort) {
+                             IAuditRepository auditRepository,
+                             IGroupAssignmentPort groupAssignmentPort,
+                             IDomainEventPublisher eventPublisher,
+                             MeterRegistry meterRegistry) {
         this.configRepository = configRepository;
         this.idempotencyRepository = idempotencyRepository;
         this.workItemRepository = workItemRepository;
         this.auditRepository = auditRepository;
         this.groupAssignmentPort = groupAssignmentPort;
+        this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -68,10 +79,8 @@ public class IngestionService implements IIngestRecordUseCase {
         IngestionConfig config = configRepository
                 .findByTenantAndWorkflowTypeAndSourceType(
                         inboundRecord.tenantId(), inboundRecord.workflowType(), inboundRecord.sourceType())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No ingestion config for tenantId=" + inboundRecord.tenantId()
-                        + ", workflowType=" + inboundRecord.workflowType()
-                        + ", sourceType=" + inboundRecord.sourceType()));
+                .orElseThrow(() -> new IngestionConfigNotFoundException(
+                        inboundRecord.tenantId(), inboundRecord.workflowType(), inboundRecord.sourceType()));
 
         // Map fields and validate
         Set<String> declaredSourceFields = config.fieldMappings().stream()
@@ -84,6 +93,7 @@ public class IngestionService implements IIngestRecordUseCase {
             String value = inboundRecord.rawFields().get(mapping.sourceField());
             if (value == null) {
                 if (mapping.required()) {
+                    recordIngested(inboundRecord.sourceType().name(), "rejected");
                     return new IngestionResult.Rejected(
                             "Required field missing: " + mapping.sourceField());
                 }
@@ -92,13 +102,14 @@ public class IngestionService implements IIngestRecordUseCase {
             }
         }
 
-        // Handle unknown columns
-        for (String sourceField : inboundRecord.rawFields().keySet()) {
-            if (!declaredSourceFields.contains(sourceField)) {
-                if (config.unknownColumnPolicy() == UnknownColumnPolicy.REJECT) {
-                    return new IngestionResult.Rejected("Unknown column: " + sourceField);
-                }
-                // IGNORE and WARN: skip silently (WARN is an observability concern, not domain)
+        // Handle unknown columns — IGNORE and WARN are no-ops in the domain (WARN is observability-only)
+        if (config.unknownColumnPolicy() == UnknownColumnPolicy.REJECT) {
+            Optional<String> firstUnknown = inboundRecord.rawFields().keySet().stream()
+                    .filter(f -> !declaredSourceFields.contains(f))
+                    .findFirst();
+            if (firstUnknown.isPresent()) {
+                recordIngested(inboundRecord.sourceType().name(), "rejected");
+                return new IngestionResult.Rejected("Unknown column: " + firstUnknown.get());
             }
         }
 
@@ -111,6 +122,7 @@ public class IngestionService implements IIngestRecordUseCase {
                     inboundRecord.tenantId(), inboundRecord.makerUserId(),
                     AuditEventType.DUPLICATE_INGESTION_DISCARDED, idempotencyKey,
                     null, null));
+            recordIngested(inboundRecord.sourceType().name(), "duplicate");
             return new IngestionResult.Duplicate(idempotencyKey);
         }
 
@@ -152,12 +164,15 @@ public class IngestionService implements IIngestRecordUseCase {
                     inboundRecord.tenantId(), inboundRecord.makerUserId(),
                     AuditEventType.DUPLICATE_INGESTION_DISCARDED, e.idempotencyKey(),
                     null, null));
+            recordIngested(inboundRecord.sourceType().name(), "duplicate");
             return new IngestionResult.Duplicate(e.idempotencyKey());
         }
         auditRepository.save(auditEntry(
                 saved.tenantId(), saved.makerUserId(),
                 AuditEventType.INGESTION, idempotencyKey,
                 saved.id(), saved.correlationId()));
+        eventPublisher.publish(workItemCreatedEvent(saved));
+        recordIngested(inboundRecord.sourceType().name(), "created");
 
         return new IngestionResult.Created(saved);
     }
@@ -203,6 +218,26 @@ public class IngestionService implements IIngestRecordUseCase {
             map.computeIfAbsent(head, k -> new HashMap<>());
             setNestedValue((Map<String, Object>) map.get(head), tail, value);
         }
+    }
+
+    private void recordIngested(String source, String result) {
+        meterRegistry.counter("workitems.ingested", "source", source, "result", result).increment();
+    }
+
+    private static DomainEvent workItemCreatedEvent(WorkItem workItem) {
+        return new DomainEvent(
+                UUID.randomUUID().toString(),
+                workItem.tenantId(),
+                workItem.id(),
+                workItem.correlationId(),
+                "WORK_ITEM_CREATED",
+                workItem.createdAt(),
+                Map.of(
+                        "workflowType", workItem.workflowType(),
+                        "source", workItem.source().name(),
+                        "assignedGroup", workItem.assignedGroup()
+                )
+        );
     }
 
     private static AuditEntry auditEntry(String tenantId, String actorUserId,

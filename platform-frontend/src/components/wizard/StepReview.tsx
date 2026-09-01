@@ -1,11 +1,11 @@
 import { useWizardStore } from '../../store/wizardStore';
 
-interface Props {
-  submitError: string | null;
-  onGoToStep: (step: number) => void;
+interface StepReviewProps {
+  readonly submitError: string | null;
+  readonly onGoToStep: (step: number) => void;
 }
 
-export function StepReview({ submitError, onGoToStep }: Props) {
+export function StepReview({ submitError, onGoToStep }: StepReviewProps) {
   const { workflowType, displayName, description, sourceType, sourceConnectionId, fieldMappings, idempotencyKeyField, blotterColumns, detailSections } =
     useWizardStore();
 

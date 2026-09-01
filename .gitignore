@@ -28,3 +28,4 @@ Thumbs.db
 application-local.yml
 application-local.properties
 platform-frontend/coverage/
+.claude/worktrees/

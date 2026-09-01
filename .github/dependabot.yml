@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # Backend — Gradle Kotlin DSL, versions centralized in gradle/libs.versions.toml
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+          - "org.springframework.kafka:*"
+
+  # Frontend — npm/Vite in platform-frontend/
+  - package-ecosystem: "npm"
+    directory: "/platform-frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"

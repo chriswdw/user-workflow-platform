@@ -4,7 +4,6 @@ import com.platform.audit.domain.model.AuditQuery;
 import com.platform.audit.domain.ports.in.IQueryAuditTrailUseCase;
 import com.platform.domain.model.AuditEntry;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

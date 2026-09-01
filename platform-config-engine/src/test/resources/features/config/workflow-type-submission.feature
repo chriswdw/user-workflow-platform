@@ -1,7 +1,7 @@
 Feature: Workflow type submission lifecycle
 
   Scenario: Business analyst creates a draft submission
-    Given no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    Given no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then the submission status is "DRAFT"
     And the submission workflow type is "TRADE_BREAK"
@@ -105,18 +105,18 @@ Feature: Workflow type submission lifecycle
 
   Scenario: Maker-checker disabled — submission auto-approves on create
     Given maker-checker is disabled
-    And no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    And no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then the submission status is "APPROVED"
 
   Scenario: Maker-checker disabled — configs are immediately active after create
     Given maker-checker is disabled
-    And no submission exists for tenant "tenant-1" and workflow type "TRADE_BREAK"
+    And no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
     Then 6 config documents have been published
 
   Scenario: Submission with invalid workflowType pattern is rejected at creation
-    Given no submission exists for tenant "tenant-1" and workflow type "invalid-type"
+    Given no submission exists for tenant "tenant-1"
     When user "alice" creates a submission for workflow type "invalid-type" with display name "Invalid"
     Then an IllegalArgumentException is thrown
 
@@ -125,3 +125,70 @@ Feature: Workflow type submission lifecycle
     And a DRAFT submission exists for tenant "tenant-1" workflow type "SETTLEMENT_FIX" submitted by "alice"
     When the pending submissions for tenant "tenant-1" are retrieved
     Then the pending submissions list contains 1 submission
+
+  # ── Audit log ─────────────────────────────────────────────────────────────
+
+  Scenario: Creating a submission produces a SUBMISSION_CREATED audit entry
+    Given no submission exists for tenant "tenant-1"
+    When user "alice" creates a submission for workflow type "TRADE_BREAK" with display name "Trade Break"
+    Then an audit entry of type "SUBMISSION_CREATED" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "null" and new state "DRAFT"
+
+  Scenario: Submitting for approval produces a SUBMISSION_SUBMITTED_FOR_REVIEW audit entry
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And the submission has complete draft configs
+    When user "alice" submits the submission for approval
+    Then an audit entry of type "SUBMISSION_SUBMITTED_FOR_REVIEW" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "DRAFT" and new state "PENDING_APPROVAL"
+
+  Scenario: Approving a submission produces a SUBMISSION_APPROVED audit entry
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" approves the submission
+    Then an audit entry of type "SUBMISSION_APPROVED" is recorded for the submission
+    And the audit entry records actor "bob"
+    And the audit entry records previous state "PENDING_APPROVAL" and new state "APPROVED"
+
+  Scenario: Rejecting a submission produces a SUBMISSION_REJECTED audit entry
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" rejects the submission with reason "Field mappings are incorrect"
+    Then an audit entry of type "SUBMISSION_REJECTED" is recorded for the submission
+    And the audit entry records actor "bob"
+    And the audit entry records previous state "PENDING_APPROVAL" and new state "REJECTED"
+
+  Scenario: Revising a rejected submission produces a SUBMISSION_REVISED audit entry
+    Given a REJECTED submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" revises the submission with updated draft configs
+    Then an audit entry of type "SUBMISSION_REVISED" is recorded for the submission
+    And the audit entry records actor "alice"
+    And the audit entry records previous state "REJECTED" and new state "DRAFT"
+
+  # ── Discard ───────────────────────────────────────────────────────────────
+
+  Scenario: Owner can discard their own draft submission
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then the submission is deleted
+    And a SUBMISSION_DISCARDED audit entry is recorded
+
+  Scenario: Admin can discard any draft submission
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" discards the submission as admin
+    Then the submission is deleted
+    And a SUBMISSION_DISCARDED audit entry is recorded
+
+  Scenario: Owner can discard their own rejected submission
+    Given a REJECTED submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then the submission is deleted
+
+  Scenario: Non-owner cannot discard another user's draft
+    Given a DRAFT submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "bob" discards the submission as owner
+    Then an IllegalStateException is thrown
+
+  Scenario: Pending approval submission cannot be discarded
+    Given a PENDING_APPROVAL submission exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When user "alice" discards the submission as owner
+    Then an IllegalStateException is thrown

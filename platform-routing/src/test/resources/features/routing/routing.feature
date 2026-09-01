@@ -180,3 +180,47 @@ Feature: Work item routing
     When a work item is routed with fields:
       | trade.notionalAmount.amount | 100000.00 |
     Then the work item is assigned to "group-settlement"
+
+  Scenario: GT operator matches when numeric field is strictly above the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" GT "1000000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 2000000.00 |
+    Then the work item is assigned to "group-settlement"
+
+  Scenario: GT operator does not match when numeric field is below the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" GT "1000000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 500000.00 |
+    Then the work item is assigned to "group-default"
+
+  Scenario: LT operator does not match when numeric field is above the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" LT "100000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 150000.00 |
+    Then the work item is assigned to "group-default"
+
+  Scenario: LTE operator does not match when numeric field is above the threshold
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" LTE "100000.00" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.notionalAmount.amount | 150000.00 |
+    Then the work item is assigned to "group-default"
+
+  Scenario: NOT_IN operator does not match when field value is present in the exclusion list
+    Given the config has a rule with priority 10 routing to "group-settlement" matching:
+      """
+      { "type": "LEAF", "field": "trade.flag", "operator": "NOT_IN", "value": ["CANCELLED", "REJECTED"] }
+      """
+    When a work item is routed with fields:
+      | trade.flag | CANCELLED |
+    Then the work item is assigned to "group-default"
+
+  Scenario: A rule referencing a field entirely absent from the work item falls through to defaultGroup
+    Given the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement"
+    When a work item is routed with fields:
+      | trade.ref | TRD-001 |
+    Then the work item is assigned to "group-default"
+
+  Scenario: A numeric operator applied to a non-numeric field value fails with a clear error
+    Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" GT "1000000.00" routing to "group-settlement"
+    When a work item is routed with a non-numeric value for "trade.notionalAmount.amount" of "not-a-number"
+    Then routing fails because the field value is not numeric

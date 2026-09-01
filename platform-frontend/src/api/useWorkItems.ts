@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { WorkItemSchema, type WorkItem } from '../types/WorkItem';
 import { useAuthStore } from '../store/authStore';
-import client from './client';
+import { client } from './client';
 
 export function useWorkItems(workflowType: string) {
   const tenantId = useAuthStore(s => s.tenantId);

@@ -1,13 +1,13 @@
 package com.platform.workflow.doubles;
 
 import com.platform.domain.model.AuditEntry;
-import com.platform.workflow.domain.ports.out.IWorkflowAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class InMemoryWorkflowAuditRepository implements IWorkflowAuditRepository {
+public class InMemoryWorkflowAuditRepository implements IAuditRepository {
 
     private final List<AuditEntry> entries = new ArrayList<>();
 

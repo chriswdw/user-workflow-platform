@@ -84,6 +84,16 @@ class IngestionConfigJdbcRepositoryTest {
                 "tenant-B", "SETTLEMENT_EXCEPTION", SourceType.KAFKA)).isEmpty();
     }
 
+    // NOTE: parseContent()'s JacksonException catch block (IngestionConfigJdbcRepository.java
+    // lines 74-75) is not covered here. The query's WHERE clause requires
+    // content->>'sourceType' = :sourceType to match, which is only non-null when content is a
+    // JSON *object* exposing that key — and any JSON object deserialises successfully into
+    // Map<String,Object> (Jackson's generic-Map target is permissive about nested shapes). A
+    // non-object payload (array/scalar) that would actually fail deserialisation can never reach
+    // parseContent() through this query, since it can't satisfy the WHERE filter first. This
+    // catch block is defensive dead code under the current query shape, not a reachable gap —
+    // left uncovered deliberately rather than adding a test that doesn't exercise a real path.
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static void insertIngestionConfig(String tenantId, String workflowType,

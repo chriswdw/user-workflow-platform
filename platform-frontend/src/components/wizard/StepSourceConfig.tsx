@@ -8,9 +8,13 @@ const SOURCE_TYPES: Array<{ value: SourceType; label: string }> = [
   { value: 'MANUAL_UPLOAD', label: 'Manual Upload' },
 ];
 
-const CONNECTION_TYPES: SourceType[] = ['KAFKA', 'DB_POLL', 'FILE_SHARE'];
+const CONNECTION_TYPES: Set<SourceType> = new Set(['KAFKA', 'DB_POLL', 'FILE_SHARE']);
 
-function ConnectionDropdown({ sourceType }: { sourceType: SourceType }) {
+interface ConnectionDropdownProps {
+  readonly sourceType: SourceType;
+}
+
+function ConnectionDropdown({ sourceType }: ConnectionDropdownProps) {
   const { sourceConnectionId, setSourceConnectionId } = useWizardStore();
   const { data: connections = [], isLoading } = useSourceConnections(sourceType);
 
@@ -67,7 +71,7 @@ export function StepSourceConfig() {
         </div>
       </div>
 
-      {sourceType && CONNECTION_TYPES.includes(sourceType) && (
+      {sourceType && CONNECTION_TYPES.has(sourceType) && (
         <ConnectionDropdown sourceType={sourceType} />
       )}
     </div>

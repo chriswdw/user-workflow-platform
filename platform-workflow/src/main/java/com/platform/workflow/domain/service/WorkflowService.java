@@ -2,23 +2,30 @@ package com.platform.workflow.domain.service;
 
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
+import com.platform.domain.model.DomainEvent;
 import com.platform.domain.model.WorkItem;
 import com.platform.domain.shared.FieldPathResolver;
 import com.platform.workflow.domain.exception.ForbiddenTransitionException;
 import com.platform.workflow.domain.exception.InvalidTransitionException;
 import com.platform.workflow.domain.exception.ValidationFailedException;
+import com.platform.workflow.domain.exception.WorkItemNotFoundException;
+import com.platform.workflow.domain.exception.WorkflowConfigNotFoundException;
 import com.platform.workflow.domain.model.TransitionAction;
 import com.platform.workflow.domain.model.TransitionCommand;
 import com.platform.workflow.domain.model.ValidationRule;
 import com.platform.workflow.domain.model.WorkflowConfig;
 import com.platform.workflow.domain.model.WorkflowTransition;
 import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
-import com.platform.workflow.domain.ports.out.IWorkflowAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
+import com.platform.domain.ports.out.IDomainEventPublisher;
 import com.platform.workflow.domain.ports.out.IWorkflowConfigRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import com.platform.workflow.domain.ports.out.IWorkItemRepository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -37,27 +44,32 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
 
     private final IWorkItemRepository workItemRepository;
     private final IWorkflowConfigRepository workflowConfigRepository;
-    private final IWorkflowAuditRepository auditRepository;
+    private final IAuditRepository auditRepository;
+    private final IDomainEventPublisher eventPublisher;
+    private final MeterRegistry meterRegistry;
 
     public WorkflowService(IWorkItemRepository workItemRepository,
                            IWorkflowConfigRepository workflowConfigRepository,
-                           IWorkflowAuditRepository auditRepository) {
+                           IAuditRepository auditRepository,
+                           IDomainEventPublisher eventPublisher,
+                           MeterRegistry meterRegistry) {
         this.workItemRepository = workItemRepository;
         this.workflowConfigRepository = workflowConfigRepository;
         this.auditRepository = auditRepository;
+        this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public WorkItem transition(TransitionCommand command) {
+        Timer.Sample sample = Timer.start(meterRegistry);
         WorkItem workItem = workItemRepository.findById(command.tenantId(), command.workItemId())
-                .orElseThrow(() -> new IllegalStateException(
-                        "WorkItem not found: " + command.workItemId()));
+                .orElseThrow(() -> new WorkItemNotFoundException(command.workItemId()));
 
         WorkflowConfig config = workflowConfigRepository
                 .findActiveByTenantAndWorkflowType(workItem.tenantId(), workItem.workflowType())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No active workflow config for workflowType=" + workItem.workflowType()
-                        + ", tenantId=" + workItem.tenantId()));
+                .orElseThrow(() -> new WorkflowConfigNotFoundException(
+                        workItem.workflowType(), workItem.tenantId()));
 
         WorkflowTransition transition = config.findTransition(command.transitionName())
                 .orElseThrow(() -> new InvalidTransitionException(
@@ -120,7 +132,12 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
 
         auditRepository.save(stateTransitionAuditEntry(command, updated, previousState, transition.toState()));
 
-        return workItemRepository.save(updated);
+        WorkItem saved = workItemRepository.save(updated);
+        eventPublisher.publish(stateTransitionEvent(command, saved, previousState, transition.toState()));
+        sample.stop(meterRegistry.timer("workflow.transition.duration",
+                "workflowType", saved.workflowType(),
+                "transition", command.transitionName()));
+        return saved;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -136,6 +153,27 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
                     .orElse(false);
             default -> throw new IllegalArgumentException("Unsupported validation operator: " + rule.operator());
         };
+    }
+
+    private static DomainEvent stateTransitionEvent(TransitionCommand command,
+                                                      WorkItem workItem,
+                                                      String previousState,
+                                                      String newState) {
+        return new DomainEvent(
+                UUID.randomUUID().toString(),
+                workItem.tenantId(),
+                workItem.id(),
+                workItem.correlationId(),
+                "STATE_TRANSITION",
+                Instant.now(),
+                Map.of(
+                        "workflowType", workItem.workflowType(),
+                        "transition", command.transitionName(),
+                        "previousState", previousState,
+                        "newState", newState,
+                        "actorUserId", command.actorUserId()
+                )
+        );
     }
 
     private static AuditEntry stateTransitionAuditEntry(TransitionCommand command,

@@ -46,13 +46,13 @@ public class KafkaIngestionConfig {
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest"
         ));
-        var dlqTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<String, String>(Map.of(
+        var dlqTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers,
                 ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
         )));
         var recoverer = new DeadLetterPublishingRecoverer(dlqTemplate,
-                (record, ex) -> new TopicPartition(dlqTopic, record.partition()));
+                (consumerRecord, ex) -> new TopicPartition(dlqTopic, consumerRecord.partition()));
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 0L)));

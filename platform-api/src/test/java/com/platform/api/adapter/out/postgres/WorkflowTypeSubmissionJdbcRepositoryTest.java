@@ -111,6 +111,16 @@ class WorkflowTypeSubmissionJdbcRepositoryTest {
     }
 
     @Test
+    void deleteById_removesRecord() {
+        repository.save(submission("sub-del", "tenant-A", "TRADE_BREAK",
+                SubmissionStatus.DRAFT, "Draft", "user-1", 1));
+
+        repository.deleteById("tenant-A", "sub-del");
+
+        assertThat(repository.findById("tenant-A", "sub-del")).isEmpty();
+    }
+
+    @Test
     void existsByTenantAndWorkflowType_trueForDraftPendingApproved_falseForRejected() {
         repository.save(submission("s-rej", "tenant-A", "TYPE_REJ",
                 SubmissionStatus.REJECTED, "Rejected", "user-1", 1));
@@ -120,6 +130,23 @@ class WorkflowTypeSubmissionJdbcRepositoryTest {
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_REJ")).isFalse();
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_DRAFT")).isTrue();
         assertThat(repository.existsByTenantAndWorkflowType("tenant-A", "TYPE_MISSING")).isFalse();
+    }
+
+    @Test
+    void findById_throwsIllegalStateWhenDraftConfigsDoesNotMatchExpectedShape() {
+        // draft_configs binds to the strongly-typed DraftConfigs record; a field with the wrong
+        // JSON type (a string where an object is expected) fails Jackson's POJO binding —
+        // simulates data corruption or a schema mismatch upstream of this adapter.
+        repository.save(submission("sub-corrupt", "tenant-A", "SETTLEMENT_EXCEPTION",
+                SubmissionStatus.DRAFT, "Draft", "user-1", 1));
+        jdbc.update("UPDATE workflow_type_submissions SET draft_configs = CAST(:dc AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("dc", "{\"workflowTypeDefinition\": \"not-an-object\"}")
+                        .addValue("id", "sub-corrupt"));
+
+        assertThatThrownBy(() -> repository.findById("tenant-A", "sub-corrupt"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise draft_configs from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

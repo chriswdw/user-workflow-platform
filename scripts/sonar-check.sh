@@ -13,6 +13,26 @@ echo "Running SonarQube analysis..."
   -Dsonar.token="$SONAR_TOKEN" \
   -Dsonar.projectKey="$PROJECT_KEY"
 
+# The gradle task returns as soon as the report is *uploaded* — SonarQube then processes it
+# asynchronously via a background Compute Engine task. Querying the Issues API immediately
+# afterwards can read the *previous* analysis's results instead of this one, so poll the CE
+# task (its id is written to report-task.txt by the scanner) until it finishes.
+REPORT_TASK_FILE="build/sonar/report-task.txt"
+if [ -f "$REPORT_TASK_FILE" ]; then
+  CE_TASK_URL=$(grep '^ceTaskUrl=' "$REPORT_TASK_FILE" | cut -d= -f2-)
+  echo "Waiting for SonarQube to finish processing the analysis..."
+  for _ in $(seq 1 60); do
+    CE_STATUS=$(curl -s -H "Authorization: Bearer $SONAR_TOKEN" "$CE_TASK_URL" \
+      | python3 -c "import json,sys; print(json.load(sys.stdin)['task']['status'])")
+    [ "$CE_STATUS" = "SUCCESS" ] || [ "$CE_STATUS" = "FAILED" ] || [ "$CE_STATUS" = "CANCELED" ] && break
+    sleep 2
+  done
+  if [ "$CE_STATUS" != "SUCCESS" ]; then
+    echo "✗ SonarQube background processing did not complete successfully (status: $CE_STATUS)"
+    exit 1
+  fi
+fi
+
 echo ""
 echo "Checking for high-severity issues..."
 

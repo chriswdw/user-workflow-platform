@@ -1,6 +1,5 @@
 package com.platform.workflow.steps;
 
-import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.domain.model.WorkItem;
 import com.platform.domain.shared.FieldPathResolver;
@@ -21,8 +20,8 @@ import com.platform.workflow.domain.service.WorkflowService;
 import com.platform.workflow.doubles.InMemoryWorkflowAuditRepository;
 import com.platform.workflow.doubles.InMemoryWorkflowConfigRepository;
 import com.platform.workflow.doubles.InMemoryWorkItemRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.datatable.DataTable;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -35,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Cucumber step definitions for the workflow feature.
@@ -49,7 +47,7 @@ public class WorkflowStepDefinitions {
     private final InMemoryWorkflowConfigRepository configRepo = new InMemoryWorkflowConfigRepository();
     private final InMemoryWorkflowAuditRepository auditRepo = new InMemoryWorkflowAuditRepository();
     private final ITransitionWorkItemUseCase workflowService =
-            new WorkflowService(workItemRepo, configRepo, auditRepo);
+            new WorkflowService(workItemRepo, configRepo, auditRepo, event -> {}, new SimpleMeterRegistry());
 
     // Scenario state
     private String tenantId;
@@ -139,6 +137,12 @@ public class WorkflowStepDefinitions {
         addTransitionWithValidation(name, from, to, role, new ValidationRule(field, "NEQ", value));
     }
 
+    @Given("the workflow config has a transition {string} from {string} to {string} for role {string} requiring field {string} with unsupported operator {string} and value {string}")
+    public void addTransitionWithUnsupportedOperatorValidation(
+            String name, String from, String to, String role, String field, String operator, String value) {
+        addTransitionWithValidation(name, from, to, role, new ValidationRule(field, operator, value));
+    }
+
     private void addTransitionWithValidation(String name, String from, String to, String role, ValidationRule rule) {
         pendingTransitions.add(new WorkflowTransition(
                 name, from, to,
@@ -179,7 +183,8 @@ public class WorkflowStepDefinitions {
         try {
             workflowService.transition(
                     new TransitionCommand(workItemId, tenantId, transitionName, userId, role, Map.of()));
-        } catch (ForbiddenTransitionException | InvalidTransitionException | ValidationFailedException e) {
+        } catch (ForbiddenTransitionException | InvalidTransitionException
+                 | ValidationFailedException | IllegalArgumentException e) {
             thrownException = e;
         }
     }
@@ -221,6 +226,13 @@ public class WorkflowStepDefinitions {
     @Then("a ValidationFailedException is thrown")
     public void aValidationFailedExceptionIsThrown() {
         assertThat(thrownException).isInstanceOf(ValidationFailedException.class);
+    }
+
+    @Then("an IllegalArgumentException is thrown for the unsupported operator")
+    public void anIllegalArgumentExceptionIsThrownForTheUnsupportedOperator() {
+        assertThat(thrownException)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported validation operator");
     }
 
     @Then("a FIELD_UPDATE audit entry is written")

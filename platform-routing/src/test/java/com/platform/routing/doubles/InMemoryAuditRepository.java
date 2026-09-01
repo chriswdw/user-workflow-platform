@@ -1,7 +1,7 @@
 package com.platform.routing.doubles;
 
 import com.platform.domain.model.AuditEntry;
-import com.platform.routing.domain.ports.out.IAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,18 +1,20 @@
 import { useForm } from 'react-hook-form';
 import type { ActionInputField } from '../../types/DetailViewConfig';
 
-interface Props {
-  label: string;
-  inputFields: ActionInputField[];
-  onSubmit: (values: Record<string, unknown>) => void;
-  onCancel: () => void;
-  serverError?: string;
+interface ActionFormModalProps {
+  readonly label: string;
+  readonly inputFields: ActionInputField[];
+  readonly onSubmit: (values: Record<string, unknown>) => void;
+  readonly onCancel: () => void;
+  readonly serverError?: string;
 }
 
-function FieldInput({ f, register }: {
-  f: ActionInputField;
-  register: ReturnType<typeof useForm<Record<string, string>>>['register'];
-}) {
+interface FieldInputProps {
+  readonly f: ActionInputField;
+  readonly register: ReturnType<typeof useForm<Record<string, string>>>['register'];
+}
+
+function FieldInput({ f, register }: FieldInputProps) {
   const validation = { required: f.required ? `${f.label} is required` : false };
 
   if (f.inputType === 'TEXTAREA') {
@@ -43,7 +45,7 @@ function FieldInput({ f, register }: {
   );
 }
 
-export function ActionFormModal({ label, inputFields, onSubmit, onCancel, serverError }: Props) {
+export function ActionFormModal({ label, inputFields, onSubmit, onCancel, serverError }: ActionFormModalProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, string>>();
 
   return (

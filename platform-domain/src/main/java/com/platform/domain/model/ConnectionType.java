@@ -2,6 +2,6 @@ package com.platform.domain.model;
 
 public enum ConnectionType {
     KAFKA,
-    DB,
+    DB_POLL,
     FILE_SHARE
 }

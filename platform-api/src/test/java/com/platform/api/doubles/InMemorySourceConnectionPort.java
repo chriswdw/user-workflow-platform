@@ -4,14 +4,12 @@ import com.platform.config.domain.ports.in.IListSourceConnectionsUseCase;
 import com.platform.config.domain.ports.in.IManageSourceConnectionsUseCase;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
-import com.platform.domain.model.SourceConnectionAccess;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -63,7 +61,7 @@ public class InMemorySourceConnectionPort
                 connection.name() != null ? connection.name() : existing.map(SourceConnection::name).orElse(null),
                 connection.displayName() != null ? connection.displayName() : existing.map(SourceConnection::displayName).orElse(null),
                 connection.connectionType() != null ? connection.connectionType() : existing.map(SourceConnection::connectionType).orElse(null),
-                connection.config() != null ? connection.config() : existing.map(SourceConnection::config).orElse(Map.of()),
+                connection.config() != null ? connection.config() : existing.map(SourceConnection::config).orElse(null),
                 connection.credentialsRef() != null ? connection.credentialsRef() : existing.map(SourceConnection::credentialsRef).orElse(null),
                 existing.map(SourceConnection::createdBy).orElse(null),
                 existing.map(SourceConnection::createdAt).orElse(now),

@@ -37,7 +37,7 @@ class ConfigServiceIntegrationTest {
 
     private final ConfigDocumentJdbcRepository repository =
             new ConfigDocumentJdbcRepository(jdbc, objectMapper);
-    private final ConfigService service = new ConfigService(repository);
+    private final ConfigService service = new ConfigService(repository, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
 
     @BeforeEach
     void truncate() {

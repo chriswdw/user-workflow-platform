@@ -7,6 +7,7 @@ import com.platform.domain.model.AuditEntry.ChangedField;
 import com.platform.domain.model.AuditEventType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.Instant;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AuditEntryJdbcRepositoryTest {
 
@@ -94,6 +96,22 @@ class AuditEntryJdbcRepositoryTest {
                 null, "UNDER_REVIEW", List.of()));
 
         assertThat(repository.findByTenantAndWorkItemId("tenant-1", "wi-B")).isEmpty();
+    }
+
+    @Test
+    void findByTenantAndWorkItemId_throwsIllegalStateWhenChangedFieldsIsNotAJsonArray() {
+        // changed_fields is expected to deserialise into List<Map<String,Object>> — a JSON object
+        // instead of an array fails that, simulating data corruption upstream of this adapter.
+        repository.save(entry("e-corrupt", "tenant-1", "wi-1", AuditEventType.STATE_TRANSITION,
+                "UNDER_REVIEW", "CLOSED", List.of()));
+        jdbc.update("UPDATE audit_entries SET changed_fields = CAST(:cf AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("cf", "{\"not\": \"an array\"}")
+                        .addValue("id", "e-corrupt"));
+
+        assertThatThrownBy(() -> repository.findByTenantAndWorkItemId("tenant-1", "wi-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise changedFields from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import axios from 'axios';
 import { useWizardStore } from '../../store/wizardStore';
 import { isStepComplete } from '../../utils/wizardValidation';
 import { useCreateSubmission } from '../../api/useCreateSubmission';
@@ -23,15 +24,31 @@ const STEPS = [
 
 const TOTAL_STEPS = STEPS.length;
 
-interface Props {
-  onClose: () => void;
+type WizardStepStatus = 'done' | 'active' | 'pending';
+
+function resolveStepStatus(stepNum: number, currentStep: number): WizardStepStatus {
+  if (stepNum < currentStep) return 'done';
+  if (stepNum === currentStep) return 'active';
+  return 'pending';
 }
 
-export function WizardShell({ onClose }: Props) {
+interface WizardShellProps {
+  readonly onClose: () => void;
+}
+
+export function WizardShell({ onClose }: WizardShellProps) {
   const store = useWizardStore();
-  const { currentStep, setStep, submissionId, revisingSubmissionId, buildSubmissionPayload } = store;
+  const { currentStep, setStep, submissionId, revisingSubmissionId, buildSubmissionPayload, buildDraftConfigsPayload } = store;
 
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const createSubmission = useCreateSubmission();
   const saveDraft = useSaveDraft(submissionId ?? '');
@@ -56,15 +73,25 @@ export function WizardShell({ onClose }: Props) {
           useWizardStore.setState({ submissionId: saved.id });
           setStep(2);
         },
+        onError: err => {
+          const is409 = axios.isAxiosError(err) && err.response?.status === 409;
+          setSubmitError(
+            is409
+              ? `A submission for "${store.workflowType}" already exists. Open My Submissions to continue it.`
+              : (err.message ?? 'Failed to create submission.')
+          );
+        },
       });
       return;
     }
 
     if (currentStep >= 2 && currentStep <= 6 && submissionId) {
-      const payload = buildSubmissionPayload();
       saveDraft.mutate(
-        { draftConfigs: payload as unknown as Record<string, unknown>, currentStep },
-        { onSuccess: () => setStep(currentStep + 1) }
+        { draftConfigs: buildDraftConfigsPayload(), currentStep },
+        {
+          onSuccess: () => setStep(currentStep + 1),
+          onError: err => setSubmitError(err.message ?? 'Failed to save draft.'),
+        }
       );
       return;
     }
@@ -118,14 +145,31 @@ export function WizardShell({ onClose }: Props) {
         <nav className="wizard-progress" aria-label="Wizard steps">
           {STEPS.map((label, i) => {
             const stepNum = i + 1;
-            const status =
-              stepNum < currentStep ? 'done' :
-              stepNum === currentStep ? 'active' : 'pending';
+            const status = resolveStepStatus(stepNum, currentStep);
             return (
-              <div key={stepNum} className={`wizard-progress-step wizard-progress-step--${status}`}>
-                <span className="wizard-progress-number">{stepNum}</span>
-                <span className="wizard-progress-label">{label}</span>
-              </div>
+              <Fragment key={stepNum}>
+                {status === 'done' ? (
+                  <button
+                    type="button"
+                    className="wizard-progress-step wizard-progress-step--done wizard-progress-step--clickable"
+                    onClick={() => setStep(stepNum)}
+                    aria-label={`Go to step ${stepNum}: ${label}`}
+                  >
+                    <span className="wizard-progress-circle" aria-hidden="true">✓</span>
+                    <span className="wizard-progress-label">{label}</span>
+                  </button>
+                ) : (
+                  <div className={`wizard-progress-step wizard-progress-step--${status}`}>
+                    <span className="wizard-progress-circle" aria-hidden="true">
+                      {stepNum}
+                    </span>
+                    <span className="wizard-progress-label">{label}</span>
+                  </div>
+                )}
+                {i < STEPS.length - 1 && (
+                  <div className={`wizard-progress-connector wizard-progress-connector--${status === 'done' ? 'done' : 'pending'}`} />
+                )}
+              </Fragment>
             );
           })}
         </nav>
@@ -136,27 +180,43 @@ export function WizardShell({ onClose }: Props) {
 
         <div className="wizard-footer">
           {isSaving && <span className="saving-indicator">Saving…</span>}
+          {submitError && !isSaving && <span className="wizard-footer-error">{submitError}</span>}
+
+          {currentStep >= 2 && currentStep <= 6 && submissionId && !isSaving && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                saveDraft.mutate(
+                  { draftConfigs: buildDraftConfigsPayload(), currentStep },
+                  { onError: err => setSubmitError(err.message ?? 'Failed to save draft.') }
+                );
+              }}
+            >
+              Save Draft
+            </button>
+          )}
 
           <div className="wizard-footer-nav">
             {currentStep > 1 && (
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="btn btn-secondary btn--prev"
                 onClick={() => setStep(currentStep - 1)}
                 disabled={isSaving}
               >
-                ← Prev
+                Previous
               </button>
             )}
 
             {currentStep < TOTAL_STEPS && (
               <button
                 type="button"
-                className="btn btn-primary"
+                className="btn btn-primary btn--next"
                 onClick={() => void handleNext()}
                 disabled={!canAdvance}
               >
-                Next →
+                Next
               </button>
             )}
 

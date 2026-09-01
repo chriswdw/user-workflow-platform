@@ -1,0 +1,16 @@
+{
+  "review_id": "platform_frontend_20260507",
+  "target": "platform-frontend/src/",
+  "focus_areas": ["visual", "usability", "code", "performance"],
+  "context": "Financial services blotter with workflow type submission wizard — desktop only",
+  "platform": "desktop",
+  "status": "complete",
+  "started_at": "2026-05-07T00:00:00Z",
+  "issues_found": 20,
+  "severity_counts": {
+    "critical": 3,
+    "major": 8,
+    "minor": 5,
+    "suggestion": 4
+  }
+}

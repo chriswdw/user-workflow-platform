@@ -1,23 +1,29 @@
 package com.platform.api.doubles;
 
-import com.platform.config.domain.model.ConfigDocument;
 import com.platform.config.domain.model.DraftConfigs;
-import com.platform.config.domain.model.SubmissionStatus;
 import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.config.domain.ports.in.ICreateWorkflowTypeSubmissionUseCase;
+import com.platform.config.domain.ports.in.IDiscardSubmissionUseCase;
 import com.platform.config.domain.ports.in.IGetSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviewSubmissionUseCase;
 import com.platform.config.domain.ports.in.IReviseSubmissionUseCase;
 import com.platform.config.domain.ports.in.ISaveDraftUseCase;
 import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
-import com.platform.config.domain.ports.out.IConfigDocumentWriter;
-import com.platform.config.domain.ports.out.IWorkflowTypeSubmissionRepository;
-import com.platform.config.domain.service.WorkflowTypeSubmissionService;
+import com.platform.config.domain.service.SubmissionCreationService;
+import com.platform.config.domain.service.SubmissionDraftService;
+import com.platform.config.domain.service.SubmissionLifecycleService;
+import com.platform.config.domain.service.SubmissionQueryService;
+import com.platform.config.domain.service.SubmissionReviewService;
+import com.platform.config.doubles.InMemoryConfigDocumentWriter;
+import com.platform.config.doubles.InMemorySubmissionAuditRepository;
+import com.platform.config.doubles.InMemoryWorkflowTypeSubmissionRepository;
 
-import java.util.ArrayList;
+import org.springframework.dao.OptimisticLockingFailureException;
+
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
 public class InMemorySubmissionPort
         implements ICreateWorkflowTypeSubmissionUseCase,
@@ -25,111 +31,120 @@ public class InMemorySubmissionPort
                    ISubmitForApprovalUseCase,
                    IReviewSubmissionUseCase,
                    IReviseSubmissionUseCase,
-                   IGetSubmissionUseCase {
+                   IGetSubmissionUseCase,
+                   IDiscardSubmissionUseCase {
 
-    private final List<WorkflowTypeSubmission> store = new ArrayList<>();
+    private final InMemoryWorkflowTypeSubmissionRepository repo =
+            new InMemoryWorkflowTypeSubmissionRepository();
+    private final InMemorySubmissionAuditRepository auditRepo =
+            new InMemorySubmissionAuditRepository();
+    private final InMemoryConfigDocumentWriter writer =
+            new InMemoryConfigDocumentWriter();
+    private final Set<String> conflictIds = new HashSet<>();
 
-    private final IWorkflowTypeSubmissionRepository repo = new IWorkflowTypeSubmissionRepository() {
-        @Override
-        public WorkflowTypeSubmission save(WorkflowTypeSubmission s) {
-            store.removeIf(e -> e.id().equals(s.id()));
-            store.add(s);
-            return s;
-        }
-        @Override
-        public Optional<WorkflowTypeSubmission> findById(String tenantId, String id) {
-            return store.stream()
-                    .filter(s -> s.tenantId().equals(tenantId) && s.id().equals(id))
-                    .findFirst();
-        }
-        @Override
-        public List<WorkflowTypeSubmission> findByTenantAndStatus(String tenantId, SubmissionStatus status) {
-            return store.stream()
-                    .filter(s -> s.tenantId().equals(tenantId) && s.status() == status)
-                    .toList();
-        }
-        @Override
-        public List<WorkflowTypeSubmission> findByTenantAndStatusAndUser(String tenantId, SubmissionStatus status, String userId) {
-            return store.stream()
-                    .filter(s -> s.tenantId().equals(tenantId) && s.status() == status && s.submittedBy().equals(userId))
-                    .toList();
-        }
-        @Override
-        public boolean existsByTenantAndWorkflowType(String tenantId, String workflowType) {
-            return store.stream().anyMatch(s ->
-                    s.tenantId().equals(tenantId)
-                    && s.workflowType().equals(workflowType)
-                    && s.status() != SubmissionStatus.REJECTED);
-        }
-    };
+    private SubmissionCreationService creationService() {
+        return new SubmissionCreationService(repo, writer, auditRepo, true);
+    }
 
-    private final IConfigDocumentWriter noopWriter = new IConfigDocumentWriter() {
-        @Override
-        public void saveAll(List<ConfigDocument> documents) { /* no-op */ }
-    };
+    private SubmissionDraftService draftService() {
+        return new SubmissionDraftService(repo, auditRepo);
+    }
 
-    private WorkflowTypeSubmissionService service() {
-        return new WorkflowTypeSubmissionService(repo, noopWriter, true);
+    private SubmissionLifecycleService lifecycleService() {
+        return new SubmissionLifecycleService(repo, auditRepo);
+    }
+
+    private SubmissionReviewService reviewService() {
+        return new SubmissionReviewService(repo, writer, auditRepo);
+    }
+
+    private SubmissionQueryService queryService() {
+        return new SubmissionQueryService(repo);
     }
 
     public void seed(WorkflowTypeSubmission submission) {
-        store.removeIf(s -> s.id().equals(submission.id()));
-        store.add(submission);
+        repo.save(submission);
+    }
+
+    public WorkflowTypeSubmission findByIdOrNull(String tenantId, String submissionId) {
+        return repo.findById(tenantId, submissionId).orElse(null);
+    }
+
+    public void forceVersionConflict(String submissionId) {
+        conflictIds.add(submissionId);
     }
 
     public void reset() {
-        store.clear();
+        repo.reset();
+        auditRepo.reset();
+        writer.reset();
+        conflictIds.clear();
     }
 
     @Override
     public WorkflowTypeSubmission create(CreateSubmissionCommand command) {
-        return service().create(command);
+        return creationService().create(command);
     }
 
     @Override
     public WorkflowTypeSubmission saveDraft(String tenantId, String submissionId,
                                              String actorUserId, DraftConfigs partialDraftConfigs, int currentStep) {
-        return service().saveDraft(tenantId, submissionId, actorUserId, partialDraftConfigs, currentStep);
+        return draftService().saveDraft(tenantId, submissionId, actorUserId, partialDraftConfigs, currentStep);
     }
 
     @Override
     public WorkflowTypeSubmission submit(String tenantId, String submissionId, String actorUserId) {
-        return service().submit(tenantId, submissionId, actorUserId);
+        if (conflictIds.remove(submissionId)) {
+            throw new OptimisticLockingFailureException(
+                    "Simulated concurrent modification for submission " + submissionId);
+        }
+        return lifecycleService().submit(tenantId, submissionId, actorUserId);
     }
 
     @Override
     public WorkflowTypeSubmission approve(String tenantId, String submissionId, String reviewerUserId) {
-        return service().approve(tenantId, submissionId, reviewerUserId);
+        return reviewService().approve(tenantId, submissionId, reviewerUserId);
     }
 
     @Override
-    public WorkflowTypeSubmission reject(String tenantId, String submissionId, String reviewerUserId, String reason) {
-        return service().reject(tenantId, submissionId, reviewerUserId, reason);
+    public WorkflowTypeSubmission reject(String tenantId, String submissionId,
+                                          String reviewerUserId, String reason) {
+        return reviewService().reject(tenantId, submissionId, reviewerUserId, reason);
     }
 
     @Override
     public WorkflowTypeSubmission revise(String tenantId, String submissionId,
                                           String actorUserId, DraftConfigs updatedDraftConfigs) {
-        return service().revise(tenantId, submissionId, actorUserId, updatedDraftConfigs);
+        return lifecycleService().revise(tenantId, submissionId, actorUserId, updatedDraftConfigs);
     }
 
     @Override
     public WorkflowTypeSubmission getById(String tenantId, String submissionId) {
-        return service().getById(tenantId, submissionId);
+        return queryService().getById(tenantId, submissionId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getPendingForTenant(String tenantId) {
-        return service().getPendingForTenant(tenantId);
+        return queryService().getPendingForTenant(tenantId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getDraftsForUser(String tenantId, String actorUserId) {
-        return service().getDraftsForUser(tenantId, actorUserId);
+        return queryService().getDraftsForUser(tenantId, actorUserId);
     }
 
     @Override
     public List<WorkflowTypeSubmission> getRejectedForUser(String tenantId, String actorUserId) {
-        return service().getRejectedForUser(tenantId, actorUserId);
+        return queryService().getRejectedForUser(tenantId, actorUserId);
+    }
+
+    @Override
+    public List<WorkflowTypeSubmission> getAllDraftsForTenant(String tenantId) {
+        return queryService().getAllDraftsForTenant(tenantId);
+    }
+
+    @Override
+    public void discard(String tenantId, String submissionId, String actorUserId, boolean isAdmin) {
+        draftService().discard(tenantId, submissionId, actorUserId, isAdmin);
     }
 }

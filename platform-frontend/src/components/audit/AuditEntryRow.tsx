@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { AuditEntry } from '../../types/AuditEntry';
 
-interface Props {
-  entry: AuditEntry;
+interface AuditEntryRowProps {
+  readonly entry: AuditEntry;
 }
 
 const eventTypeColor: Record<string, string> = {
@@ -12,7 +12,20 @@ const eventTypeColor: Record<string, string> = {
   INGESTION: '#e8f0fe',
 };
 
-export function AuditEntryRow({ entry }: Props) {
+function formatFieldValue(value: unknown): string {
+  if (value == null) return '—';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function expandToggleIndicator(hasChangedFields: boolean, expanded: boolean): string {
+  if (!hasChangedFields) return '';
+  return expanded ? '▲' : '▶';
+}
+
+export function AuditEntryRow({ entry }: AuditEntryRowProps) {
   const [expanded, setExpanded] = useState(false);
   const rowStyle = { backgroundColor: eventTypeColor[entry.eventType] ?? undefined };
 
@@ -29,7 +42,7 @@ export function AuditEntryRow({ entry }: Props) {
         <td>{entry.previousState ?? '—'}</td>
         <td>{entry.newState ?? '—'}</td>
         <td>{entry.transitionName ?? '—'}</td>
-        <td>{entry.changedFields.length > 0 ? (expanded ? '▲' : '▶') : ''}</td>
+        <td>{expandToggleIndicator(entry.changedFields.length > 0, expanded)}</td>
       </tr>
       {expanded && entry.changedFields.length > 0 && (
         <tr style={rowStyle}>
@@ -46,8 +59,8 @@ export function AuditEntryRow({ entry }: Props) {
                 {entry.changedFields.map(cf => (
                   <tr key={cf.fieldPath}>
                     <td>{cf.fieldPath}</td>
-                    <td>{cf.previousValue != null ? String(cf.previousValue) : '—'}</td>
-                    <td>{cf.newValue != null ? String(cf.newValue) : '—'}</td>
+                    <td>{formatFieldValue(cf.previousValue)}</td>
+                    <td>{formatFieldValue(cf.newValue)}</td>
                   </tr>
                 ))}
               </tbody>

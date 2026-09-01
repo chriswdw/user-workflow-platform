@@ -9,11 +9,51 @@
     "id":             { "type": "string", "format": "uuid" },
     "name":           { "type": "string", "description": "Machine-readable unique name" },
     "displayName":    { "type": "string" },
-    "connectionType": { "type": "string", "enum": ["KAFKA", "DB", "FILE_SHARE"] },
-    "config":         { "type": "object", "description": "Connection-type-specific configuration (no credentials)" },
+    "connectionType": { "type": "string", "enum": ["KAFKA", "DB_POLL", "FILE_SHARE"] },
+    "config":         { "$ref": "#/definitions/connectionConfig" },
     "credentialsRef": { "type": ["string", "null"], "description": "Vault or secrets-manager reference" },
     "createdBy":      { "type": "string" },
     "createdAt":      { "type": "string", "format": "date-time" },
     "updatedAt":      { "type": "string", "format": "date-time" }
+  },
+  "definitions": {
+    "connectionConfig": {
+      "oneOf": [
+        { "$ref": "#/definitions/kafkaConfig" },
+        { "$ref": "#/definitions/dbPollConfig" },
+        { "$ref": "#/definitions/fileShareConfig" }
+      ]
+    },
+    "kafkaConfig": {
+      "type": "object",
+      "required": ["type", "bootstrapServers", "topicName"],
+      "properties": {
+        "type":             { "type": "string", "enum": ["KAFKA"] },
+        "bootstrapServers": { "type": "string", "description": "Comma-separated host:port pairs" },
+        "topicName":        { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "dbPollConfig": {
+      "type": "object",
+      "required": ["type", "jdbcUrl", "query", "pollIntervalSeconds"],
+      "properties": {
+        "type":                { "type": "string", "enum": ["DB_POLL"] },
+        "jdbcUrl":             { "type": "string", "description": "JDBC connection URL — no inline credentials" },
+        "query":               { "type": "string" },
+        "pollIntervalSeconds": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "fileShareConfig": {
+      "type": "object",
+      "required": ["type", "path", "filePattern"],
+      "properties": {
+        "type":        { "type": "string", "enum": ["FILE_SHARE"] },
+        "path":        { "type": "string" },
+        "filePattern": { "type": "string", "description": "Glob pattern, e.g. *.csv" }
+      },
+      "additionalProperties": false
+    }
   }
 }

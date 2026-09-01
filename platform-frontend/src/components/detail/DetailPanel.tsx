@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useWorkItem } from '../../api/useWorkItem';
 import { useAuditTrail } from '../../api/useAuditTrail';
 import { useDetailViewConfig } from '../../api/useDetailViewConfig';
@@ -7,26 +8,42 @@ import { useAuthStore } from '../../store/authStore';
 import { DetailView } from './DetailView';
 import { AuditTrail } from '../audit/AuditTrail';
 
-interface Props {
-  workItemId: string;
-  onClose: () => void;
+interface DetailPanelProps {
+  readonly workItemId: string;
+  readonly onClose: () => void;
 }
 
 type Tab = 'details' | 'audit';
 
-export function DetailPanel({ workItemId, onClose }: Props) {
+const DETAIL_SKELETON_BLOCKS = Array.from({ length: 6 }, (_, i) => ({
+  id: `detail-skeleton-${i}`,
+  width: i % 2 === 0 ? '70%' : '50%',
+}));
+
+export function DetailPanel({ workItemId, onClose }: DetailPanelProps) {
   const [tab, setTab] = useState<Tab>('details');
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
   const userRole = useAuthStore(s => s.role) ?? '';
 
   const { data: item, isLoading: itemLoading, isError: itemError } = useWorkItem(workItemId);
   const { data: config, isLoading: configLoading } = useDetailViewConfig(item?.workflowType ?? '');
   const { data: auditEntries = [] } = useAuditTrail(workItemId);
-  const { mutate: fireTransition, error: transitionError } = useTransition(workItemId);
+  const { mutate: fireTransition, error: transitionError, isPending: transitionPending } = useTransition(workItemId);
 
   const loading = itemLoading || configLoading;
 
   const handleTransition = (transition: string, additionalFields?: Record<string, unknown>) => {
-    fireTransition({ transition, additionalFields });
+    fireTransition(
+      { transition, additionalFields },
+      { onSuccess: () => toast.success(`Transition "${transition}" applied.`) }
+    );
   };
 
   return (
@@ -35,8 +52,8 @@ export function DetailPanel({ workItemId, onClose }: Props) {
         {item && (
           <>
             <span className="detail-panel-id">{item.id}</span>
-            <span className={`badge badge--${item.status.toLowerCase().replace(/_/g, '-')}`}>
-              {item.status.replace(/_/g, ' ')}
+            <span className={`badge badge--${item.status.toLowerCase().replaceAll('_', '-')}`}>
+              {item.status.replaceAll('_', ' ')}
             </span>
             {item.priorityLevel && (
               <span className={`badge badge--priority-${item.priorityLevel.toLowerCase()}`}>
@@ -45,33 +62,71 @@ export function DetailPanel({ workItemId, onClose }: Props) {
             )}
           </>
         )}
-        <button className="detail-panel-close" onClick={onClose} aria-label="Close">×</button>
+        <button type="button" className="detail-panel-close" onClick={onClose} aria-label="Close">✕</button>
       </header>
 
-      <nav className="detail-panel-tabs">
-        <button className={tab === 'details' ? 'tab tab--active' : 'tab'} onClick={() => setTab('details')}>
+      <div className="detail-panel-tabs" role="tablist" aria-label="Work item details">
+        <button
+          type="button"
+          role="tab"
+          id="tab-details"
+          aria-selected={tab === 'details'}
+          aria-controls="panel-details"
+          className={tab === 'details' ? 'tab tab--active' : 'tab'}
+          onClick={() => setTab('details')}
+        >
           Details
         </button>
-        <button className={tab === 'audit' ? 'tab tab--active' : 'tab'} onClick={() => setTab('audit')}>
+        <button
+          type="button"
+          role="tab"
+          id="tab-audit"
+          aria-selected={tab === 'audit'}
+          aria-controls="panel-audit"
+          className={tab === 'audit' ? 'tab tab--active' : 'tab'}
+          onClick={() => setTab('audit')}
+        >
           Audit Trail
         </button>
-      </nav>
+      </div>
 
-      <div className="detail-panel-body">
-        {loading && <p style={{ padding: 24, color: 'var(--color-text-muted)' }}>Loading…</p>}
-        {itemError && <p style={{ padding: 24, color: 'var(--color-danger)' }}>Failed to load item.</p>}
-
-        {!loading && item && config && tab === 'details' && (
+      <div
+        role="tabpanel"
+        id="panel-details"
+        aria-labelledby="tab-details"
+        className="detail-panel-body"
+        hidden={tab !== 'details'}
+      >
+        {loading && (
+          <div role="status" aria-live="polite" aria-label="Loading item details" className="skeleton-container">
+            {DETAIL_SKELETON_BLOCKS.map(block => (
+              <div key={block.id} className="skeleton skeleton-block" style={{ width: block.width }} />
+            ))}
+          </div>
+        )}
+        {itemError && (
+          <div role="alert" className="status-text status-text--error" style={{ padding: '24px' }}>Failed to load item.</div>
+        )}
+        {!loading && item && config && (
           <DetailView
             config={config}
             item={item}
             userRole={userRole}
             onTransition={handleTransition}
             transitionError={transitionError?.message}
+            transitionPending={transitionPending}
           />
         )}
+      </div>
 
-        {tab === 'audit' && <AuditTrail entries={auditEntries} />}
+      <div
+        role="tabpanel"
+        id="panel-audit"
+        aria-labelledby="tab-audit"
+        className="detail-panel-body"
+        hidden={tab !== 'audit'}
+      >
+        <AuditTrail entries={auditEntries} />
       </div>
     </div>
   );

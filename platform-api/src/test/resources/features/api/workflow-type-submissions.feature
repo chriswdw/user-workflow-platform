@@ -104,6 +104,18 @@ Feature: Workflow type submission API
     Then the response status is 200
     And the response is a non-empty JSON array
 
+  Scenario: Admin gets all drafts
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And I am authenticated as user "bob" with role "PLATFORM_ADMIN" for tenant "tenant-1"
+    When I GET /api/v1/workflow-type-submissions/all-drafts
+    Then the response status is 200
+    And the response is a non-empty JSON array
+
+  Scenario: Non-admin getting all drafts returns 403
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When I GET /api/v1/workflow-type-submissions/all-drafts
+    Then the response status is 403
+
   Scenario: Get my drafts
     Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
     When I GET /api/v1/workflow-type-submissions/my-drafts
@@ -120,3 +132,34 @@ Feature: Workflow type submission API
     Given I am not authenticated
     When I POST /api/v1/workflow-type-submissions with body {"workflowType":"TRADE_BREAK","displayName":"x","description":"y"}
     Then the response status is 401
+
+  Scenario: Admin deletes a draft submission via API
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And I am authenticated as user "bob" with role "PLATFORM_ADMIN" for tenant "tenant-1"
+    When I DELETE /api/v1/workflow-type-submissions/sub-1
+    Then the response status is 204
+    And submission "sub-1" no longer exists for tenant "tenant-1"
+
+  Scenario: Owner deletes their own draft submission via API
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When I DELETE /api/v1/workflow-type-submissions/sub-1
+    Then the response status is 204
+
+  Scenario: Non-owner non-admin cannot delete a draft
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "charlie"
+    When I DELETE /api/v1/workflow-type-submissions/sub-1
+    Then the response status is 422
+
+  Scenario: Deleted submission returns 404 on subsequent GET
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    When I DELETE /api/v1/workflow-type-submissions/sub-1
+    Then the response status is 204
+    When I GET /api/v1/workflow-type-submissions/sub-1
+    Then the response status is 404
+
+
+  Scenario: Concurrent modification returns 409
+    Given a draft submission "sub-1" exists for tenant "tenant-1" workflow type "TRADE_BREAK" submitted by "alice"
+    And the submission "sub-1" is modified by another session
+    When I POST /api/v1/workflow-type-submissions/sub-1/submit with body {}
+    Then the response status is 409

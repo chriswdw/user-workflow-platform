@@ -1,5 +1,6 @@
 dependencies {
     implementation(project(":platform-domain"))
+    implementation(libs.micrometer.core)
 
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.junit.platform.engine)

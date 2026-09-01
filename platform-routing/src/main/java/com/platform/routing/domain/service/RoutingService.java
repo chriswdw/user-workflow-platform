@@ -6,9 +6,12 @@ import com.platform.routing.domain.model.RoutingConfig;
 import com.platform.routing.domain.model.RoutingResult;
 import com.platform.routing.domain.model.RoutingRule;
 import com.platform.routing.domain.model.WorkItemToRoute;
+import com.platform.routing.domain.exception.RoutingConfigNotFoundException;
 import com.platform.routing.domain.ports.in.IRouteWorkItemUseCase;
-import com.platform.routing.domain.ports.out.IAuditRepository;
+import com.platform.domain.ports.out.IAuditRepository;
 import com.platform.routing.domain.ports.out.IRoutingConfigRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 
 import java.time.Instant;
 import java.util.Comparator;
@@ -31,30 +34,37 @@ public class RoutingService implements IRouteWorkItemUseCase {
 
     private final IRoutingConfigRepository routingConfigRepository;
     private final IAuditRepository auditRepository;
+    private final MeterRegistry meterRegistry;
 
     public RoutingService(IRoutingConfigRepository routingConfigRepository,
-                          IAuditRepository auditRepository) {
+                          IAuditRepository auditRepository,
+                          MeterRegistry meterRegistry) {
         this.routingConfigRepository = routingConfigRepository;
         this.auditRepository = auditRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
     public RoutingResult route(WorkItemToRoute workItem) {
+        Timer.Sample sample = Timer.start(meterRegistry);
         RoutingConfig config = routingConfigRepository
                 .findActiveByTenantAndWorkflowType(workItem.tenantId(), workItem.workflowType())
-                .orElseThrow(() -> new IllegalStateException(
-                        "No active routing config for workflowType=" + workItem.workflowType()
-                        + ", tenantId=" + workItem.tenantId()));
+                .orElseThrow(() -> new RoutingConfigNotFoundException(
+                        workItem.workflowType(), workItem.tenantId()));
 
         for (RoutingRule rule : activeRulesInPriorityOrder(config)) {
             if (ConditionEvaluator.evaluate(rule.conditions(), workItem.fields())) {
                 auditRepository.save(auditEntry(workItem, AuditEventType.ASSIGNMENT, rule.targetGroupId()));
+                sample.stop(meterRegistry.timer("routing.evaluation.duration",
+                        "workflowType", workItem.workflowType()));
                 return new RoutingResult(rule.targetGroupId(), false, rule.id());
             }
         }
 
         // No rule matched — fall back to defaultGroup
         auditRepository.save(auditEntry(workItem, AuditEventType.ROUTING_FALLBACK, config.defaultGroupId()));
+        sample.stop(meterRegistry.timer("routing.evaluation.duration",
+                "workflowType", workItem.workflowType()));
         return new RoutingResult(config.defaultGroupId(), true, null);
     }
 

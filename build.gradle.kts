@@ -2,6 +2,7 @@ plugins {
     java
     id("org.sonarqube") version "7.4.0.8496"
     id("org.openrewrite.rewrite") version "7.39.0"
+    id("org.owasp.dependencycheck") version "13.0.0"
 }
 
 rewrite {
@@ -47,18 +48,79 @@ subprojects {
             xml.required = true
             html.required = true
         }
-        // Exclude generated classes, Spring Boot config, and Cucumber runners from coverage
+        // Exclude generated classes, Spring Boot config/auto-config, and Cucumber runners from coverage.
+        // NOTE: the config/** exclusion is scoped to com/platform/<module>/config/** (the Spring
+        // @Configuration wiring subpackage every module has, per CLAUDE.md) rather than a bare
+        // "**/config/**" — a bare pattern also matches platform-config-engine's entire base package
+        // (com.platform.config.*, since that module's domain happens to be named "config"), which
+        // silently excluded the whole module from coverage reporting.
         classDirectories.setFrom(
             files(classDirectories.files.map {
                 fileTree(it) {
                     exclude(
                         "**/*Application*",
-                        "**/config/**",
+                        "**/*AutoConfiguration*",
+                        "com/platform/*/config/**",
                         "**/CucumberSuiteTest*"
                     )
                 }
             })
         )
+    }
+
+    tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+        dependsOn(tasks.named("jacocoTestReport"))
+        violationRules {
+            rule {
+                excludes = listOf(
+                    "*..*Application",
+                    "*..*AutoConfiguration",
+                    "com.platform.*.config.*",
+                    "*..CucumberSuiteTest"
+                )
+                limit {
+                    counter = "LINE"
+                    value = "COVEREDRATIO"
+                    minimum = "0.80".toBigDecimal()
+                }
+            }
+        }
+        classDirectories.setFrom(
+            files(classDirectories.files.map {
+                fileTree(it) {
+                    exclude(
+                        "**/*Application*",
+                        "**/*AutoConfiguration*",
+                        "com/platform/*/config/**",
+                        "**/CucumberSuiteTest*"
+                    )
+                }
+            })
+        )
+    }
+
+    tasks.named("check") {
+        dependsOn(tasks.named("jacocoTestCoverageVerification"))
+    }
+
+    // Declaring sonar.sources/sonar.tests once, flattened, at the ROOT sonar{} block causes the
+    // Gradle plugin (7.4.0.8496, on Gradle 9.7.1) to register each subproject's files under a
+    // scope that collides with its own auto-detected per-module registration — surfacing either
+    // as "File not found in project sources" (JaCoCo coverage import can't resolve the file) or
+    // "File ... can't be indexed twice" (main vs test set overlap), depending on what's set where.
+    // The documented fix is to scope these per subproject, with paths relative to that subproject.
+    sonar {
+        properties {
+            property("sonar.sources", "src/main/java")
+            val testDirs = listOf("src/test/java", "src/testFixtures/java")
+                .filter { file(it).exists() }
+            property("sonar.tests", testDirs.joinToString(","))
+
+            // Coverage import must be scoped per subproject too — a single root-level joined
+            // list of all subprojects' report paths fails to resolve against each module's own
+            // relatively-scoped sonar.sources above ("File not found in project sources").
+            property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+        }
     }
 }
 
@@ -68,23 +130,27 @@ sonar {
         property("sonar.projectName", "User Workflow Platform")
         property("sonar.host.url",    "http://localhost:9000")
 
-        // Java source sets are auto-discovered per subproject by the plugin.
-        // Explicitly add the TypeScript frontend sources on top.
-        property("sonar.sources",     "platform-frontend/src")
-        property("sonar.tests",       "platform-frontend/step-definitions,platform-frontend/features")
+        // The root project itself has no Java sources — this scopes only to the frontend, which
+        // isn't a Gradle subproject and so isn't covered by the per-subproject block above.
+        property("sonar.sources", "platform-frontend/src")
+        property("sonar.tests",   "platform-frontend/step-definitions,platform-frontend/features")
 
         property("sonar.exclusions",  "**/build/**,**/node_modules/**,**/.gradle/**," +
-                                      "**/dist/**,**/package-lock.json")
-
-        // JaCoCo XML reports — one per subproject
-        val jacocoReports = subprojects.map {
-            "${it.projectDir}/build/reports/jacoco/test/jacocoTestReport.xml"
-        }.joinToString(",")
-        property("sonar.coverage.jacoco.xmlReportPaths", jacocoReports)
+                                      "**/dist/**,**/package-lock.json,.claude/worktrees/**")
 
         // Frontend LCOV report (generated by c8)
         property("sonar.javascript.lcov.reportPaths", "platform-frontend/coverage/lcov.info")
     }
+}
+
+// OWASP Dependency-Check: scans JVM dependencies (all subprojects) against the NVD CVE database.
+// Applied only at root — use `./gradlew dependencyCheckAggregate` to scan the whole multi-module build.
+// CVSS 7.0+ (HIGH/CRITICAL) fails the build, matching the Sonar HIGH/CRITICAL gate in CLAUDE.md.
+dependencyCheck {
+    failBuildOnCVSS = 7.0f
+    formats = listOf("HTML", "JSON")
+    suppressionFile = "config/dependency-check-suppressions.xml"
+    nvd.apiKey = System.getenv("NVD_API_KEY")
 }
 
 // Custom task: validate all JSON schemas (stub — implement in platform-config-engine)

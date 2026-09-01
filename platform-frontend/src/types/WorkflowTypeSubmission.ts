@@ -9,7 +9,7 @@ export const WorkflowTypeSubmissionSchema = z.object({
   statusCode: z.string(),
   statusDisplayName: z.string(),
   submittedBy: z.string(),
-  submittedAt: z.string(),
+  submittedAt: z.string().nullable(),
   reviewedBy: z.string().nullable(),
   reviewedAt: z.string().nullable(),
   rejectionReason: z.string().nullable(),

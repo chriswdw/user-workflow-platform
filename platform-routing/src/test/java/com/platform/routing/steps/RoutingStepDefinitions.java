@@ -3,7 +3,6 @@ package com.platform.routing.steps;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
 import com.platform.routing.domain.model.ConditionNode;
 import com.platform.routing.domain.model.GroupCondition;
@@ -18,6 +17,7 @@ import com.platform.routing.domain.ports.in.IRouteWorkItemUseCase;
 import com.platform.routing.domain.service.RoutingService;
 import com.platform.routing.doubles.InMemoryAuditRepository;
 import com.platform.routing.doubles.InMemoryRoutingConfigRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -42,7 +42,7 @@ public class RoutingStepDefinitions {
     // In-memory doubles — fresh per scenario
     private final InMemoryRoutingConfigRepository routingConfigRepo = new InMemoryRoutingConfigRepository();
     private final InMemoryAuditRepository auditRepo = new InMemoryAuditRepository();
-    private final IRouteWorkItemUseCase routingService = new RoutingService(routingConfigRepo, auditRepo);
+    private final IRouteWorkItemUseCase routingService = new RoutingService(routingConfigRepo, auditRepo, new SimpleMeterRegistry());
     private final ObjectMapper objectMapper = new JsonMapper();
 
     // Scenario state
@@ -52,6 +52,7 @@ public class RoutingStepDefinitions {
     private final List<RoutingRule> pendingRules = new ArrayList<>();
     private int ruleCounter = 0;
     private RoutingResult result;
+    private Exception routingFailure;
 
     // ── Given ───────────────────────────────────────────────────────────────
 
@@ -101,6 +102,11 @@ public class RoutingStepDefinitions {
     @Given("the config has a rule with priority {int} matching {string} LTE {string} routing to {string}")
     public void addSimpleLteRule(int priority, String field, String value, String targetGroupId) {
         addLeafRule(priority, field, Operator.LTE, value, targetGroupId);
+    }
+
+    @Given("the config has a rule with priority {int} matching {string} GT {string} routing to {string}")
+    public void addSimpleGtRule(int priority, String field, String value, String targetGroupId) {
+        addLeafRule(priority, field, Operator.GT, value, targetGroupId);
     }
 
     private void addLeafRule(int priority, String field, Operator operator, String value, String targetGroupId) {
@@ -169,7 +175,45 @@ public class RoutingStepDefinitions {
         ));
     }
 
+    @When("a work item is routed with a non-numeric value for {string} of {string}")
+    public void aWorkItemIsRoutedWithANonNumericValue(String field, String value) {
+        List<RoutingRule> sortedRules = pendingRules.stream()
+                .sorted(Comparator.comparingInt(RoutingRule::priority))
+                .toList();
+
+        routingConfigRepo.save(new RoutingConfig(
+                "config-1",
+                tenantId,
+                workflowType,
+                defaultGroupId,
+                false,
+                sortedRules
+        ));
+
+        Map<String, Object> fields = buildNestedMap(Map.of(field, value));
+
+        try {
+            result = routingService.route(new WorkItemToRoute(
+                    "work-item-001",
+                    tenantId,
+                    workflowType,
+                    "system",
+                    fields
+            ));
+        } catch (IllegalArgumentException e) {
+            routingFailure = e;
+        }
+    }
+
     // ── Then ────────────────────────────────────────────────────────────────
+
+    @Then("routing fails because the field value is not numeric")
+    public void routingFailsBecauseTheFieldValueIsNotNumeric() {
+        assertThat(routingFailure)
+                .as("expected a numeric-comparison failure")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Numeric operator applied to non-numeric values");
+    }
 
     @Then("the work item is assigned to {string}")
     public void theWorkItemIsAssignedTo(String expectedGroupId) {

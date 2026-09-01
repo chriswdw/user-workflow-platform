@@ -9,11 +9,11 @@ import com.platform.ingestion.domain.model.IngestionConfig;
 import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
 import com.platform.ingestion.domain.model.UnknownColumnPolicy;
-import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.doubles.InMemoryIdempotencyKeyRepository;
 import com.platform.ingestion.doubles.InMemoryIngestionAuditRepository;
 import com.platform.ingestion.doubles.InMemoryIngestionConfigRepository;
 import com.platform.ingestion.doubles.StubGroupAssignmentPort;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -52,13 +52,13 @@ class IngestionServiceConcurrentDuplicateTest {
                 workItem -> { throw new DuplicateIdempotencyKeyException(workItem.idempotencyKey()); };
 
         var service = new IngestionService(configRepo, idempotencyRepo,
-                throwingWorkItemRepo, auditRepo, groupPort);
+                throwingWorkItemRepo, auditRepo, groupPort, event -> {}, new SimpleMeterRegistry());
 
-        RawInboundRecord record = new RawInboundRecord(
+        RawInboundRecord inboundRecord = new RawInboundRecord(
                 TENANT, WORKFLOW_TYPE, SourceType.KAFKA,
                 "src-1", Map.of("tradeRef", "TRD-CONCURRENT"), "system");
 
-        IngestionResult result = service.ingest(record);
+        IngestionResult result = service.ingest(inboundRecord);
 
         assertThat(result).isInstanceOf(IngestionResult.Duplicate.class);
         assertThat(((IngestionResult.Duplicate) result).idempotencyKey()).isEqualTo("TRD-CONCURRENT");

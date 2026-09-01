@@ -1,13 +1,10 @@
 package com.platform.audit.steps;
 
 import com.platform.audit.domain.model.AuditQuery;
-import com.platform.audit.domain.ports.in.IAppendAuditEntryUseCase;
-import com.platform.audit.domain.ports.in.IQueryAuditTrailUseCase;
 import com.platform.audit.domain.service.AuditService;
 import com.platform.audit.doubles.InMemoryAuditEntryRepository;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;

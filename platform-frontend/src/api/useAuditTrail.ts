@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { AuditEntrySchema, type AuditEntry } from '../types/AuditEntry';
 import { z } from 'zod';
-import client from './client';
+import { client } from './client';
 
 export function useAuditTrail(workItemId: string) {
   const tenantId = useAuthStore(s => s.tenantId);

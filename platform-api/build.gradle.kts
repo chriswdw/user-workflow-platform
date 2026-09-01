@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.spring.boot.starter.actuator)
 
     implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.liquibase.core)
@@ -24,6 +25,7 @@ dependencies {
     implementation(libs.nimbus.jose.jwt)
     implementation(libs.bucket4j.core)
 
+    testImplementation(testFixtures(project(":platform-config-engine")))
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.spring)

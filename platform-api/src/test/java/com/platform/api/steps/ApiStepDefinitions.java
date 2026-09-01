@@ -14,12 +14,12 @@ import com.platform.config.domain.model.WorkflowTypeSubmission;
 import com.platform.config.domain.ports.in.CreateSubmissionCommand;
 import com.platform.domain.model.AuditEntry;
 import com.platform.domain.model.AuditEventType;
+import com.platform.domain.model.ConnectionConfig;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
 import io.cucumber.java.Before;
-import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -161,15 +162,26 @@ public class ApiStepDefinitions {
         submissionStore.reject(tenantId, id, "bob", "Test rejection");
     }
 
+    @Given("the submission {string} is modified by another session")
+    public void submissionModifiedByAnotherSession(String id) {
+        submissionStore.forceVersionConflict(id);
+    }
+
     // ── Given — source connections ────────────────────────────────────────────
 
     @Given("a source connection {string} of type {string} exists")
     public void sourceConnectionExists(String id, String type) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        ConnectionType connectionType = ConnectionType.valueOf(type);
+        ConnectionConfig config = switch (connectionType) {
+            case KAFKA      -> new ConnectionConfig.KafkaConfig("localhost:9092", "test-topic");
+            case DB_POLL    -> new ConnectionConfig.DbPollConfig(
+                                   "jdbc:postgresql://localhost:5432/db", "SELECT 1", 60);
+            case FILE_SHARE -> new ConnectionConfig.FileShareConfig("/data", "*.csv");
+        };
         sourceConnectionStore.putConnection(new SourceConnection(
                 id, id, id + " Display",
-                ConnectionType.valueOf(type),
-                Map.of(), null, "admin", now, now));
+                connectionType, config, null, "admin", now, now));
     }
 
     @Given("tenant {string} has access to source connection {string}")
@@ -255,6 +267,11 @@ public class ApiStepDefinitions {
     @Then("the response contains statusCode {string}")
     public void responseContainsStatusCode(String statusCode) throws Exception {
         lastResult.andExpect(jsonPath("$.statusCode").value(statusCode));
+    }
+
+    @Then("submission {string} no longer exists for tenant {string}")
+    public void submissionNoLongerExists(String submissionId, String tenantId) {
+        assertThat(submissionStore.findByIdOrNull(tenantId, submissionId)).isNull();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

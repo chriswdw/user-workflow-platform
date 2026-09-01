@@ -1,5 +1,11 @@
+plugins {
+    `java-test-fixtures`
+}
+
 dependencies {
     implementation(project(":platform-domain"))
+    implementation(libs.micrometer.core)
+    testFixturesImplementation(project(":platform-domain"))
 
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.junit.platform.engine)

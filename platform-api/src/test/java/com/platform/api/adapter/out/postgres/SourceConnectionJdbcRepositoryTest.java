@@ -2,11 +2,13 @@ package com.platform.api.adapter.out.postgres;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import com.platform.domain.model.ConnectionConfig;
 import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
 import com.platform.domain.model.SourceConnectionAccess;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.time.OffsetDateTime;
@@ -16,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SourceConnectionJdbcRepositoryTest {
 
@@ -32,9 +35,8 @@ class SourceConnectionJdbcRepositoryTest {
     }
 
     @Test
-    void save_newConnection_roundtripsAllFields() {
-        SourceConnection conn = connection("conn-1", "kafka-primary", "Primary Kafka",
-                ConnectionType.KAFKA, "ref-123");
+    void save_kafkaConnection_roundtripsAllFields() {
+        SourceConnection conn = kafkaConnection("conn-1", "kafka-primary", "Primary Kafka", "ref-123");
 
         repository.save(conn);
         Optional<SourceConnection> found = repository.findById("conn-1");
@@ -45,14 +47,49 @@ class SourceConnectionJdbcRepositoryTest {
         assertThat(result.name()).isEqualTo("kafka-primary");
         assertThat(result.displayName()).isEqualTo("Primary Kafka");
         assertThat(result.connectionType()).isEqualTo(ConnectionType.KAFKA);
-        assertThat(result.config()).containsKey("bootstrap.servers");
+        assertThat(result.config()).isInstanceOf(ConnectionConfig.KafkaConfig.class);
+        ConnectionConfig.KafkaConfig config = (ConnectionConfig.KafkaConfig) result.config();
+        assertThat(config.bootstrapServers()).isEqualTo("localhost:9092");
+        assertThat(config.topicName()).isEqualTo("test-topic");
         assertThat(result.credentialsRef()).isEqualTo("ref-123");
     }
 
     @Test
+    void save_dbPollConnection_roundtripsAllFields() {
+        SourceConnection conn = dbPollConnection("conn-7", "db-poll", "DB Poll", null);
+
+        repository.save(conn);
+        Optional<SourceConnection> found = repository.findById("conn-7");
+
+        assertThat(found).isPresent();
+        SourceConnection result = found.get();
+        assertThat(result.connectionType()).isEqualTo(ConnectionType.DB_POLL);
+        assertThat(result.config()).isInstanceOf(ConnectionConfig.DbPollConfig.class);
+        ConnectionConfig.DbPollConfig config = (ConnectionConfig.DbPollConfig) result.config();
+        assertThat(config.jdbcUrl()).isEqualTo("jdbc:postgresql://localhost:5432/mydb");
+        assertThat(config.query()).isEqualTo("SELECT * FROM items WHERE processed = false");
+        assertThat(config.pollIntervalSeconds()).isEqualTo(30);
+    }
+
+    @Test
+    void save_fileShareConnection_roundtripsAllFields() {
+        SourceConnection conn = fileShareConnection("conn-8", "file-share", "File Share", null);
+
+        repository.save(conn);
+        Optional<SourceConnection> found = repository.findById("conn-8");
+
+        assertThat(found).isPresent();
+        SourceConnection result = found.get();
+        assertThat(result.connectionType()).isEqualTo(ConnectionType.FILE_SHARE);
+        assertThat(result.config()).isInstanceOf(ConnectionConfig.FileShareConfig.class);
+        ConnectionConfig.FileShareConfig config = (ConnectionConfig.FileShareConfig) result.config();
+        assertThat(config.path()).isEqualTo("/data/feeds");
+        assertThat(config.filePattern()).isEqualTo("*.csv");
+    }
+
+    @Test
     void grantAccess_hasAccess_returnsTrue() {
-        repository.save(connection("conn-2", "db-primary", "Primary DB",
-                ConnectionType.DB, null));
+        repository.save(dbPollConnection("conn-2", "db-primary", "Primary DB", null));
 
         repository.grantAccess(access("acc-1", "conn-2", "tenant-A"));
 
@@ -62,8 +99,7 @@ class SourceConnectionJdbcRepositoryTest {
 
     @Test
     void revokeAccess_hasAccess_returnsFalse() {
-        repository.save(connection("conn-3", "file-primary", "Primary File Share",
-                ConnectionType.FILE_SHARE, null));
+        repository.save(fileShareConnection("conn-3", "file-primary", "Primary File Share", null));
         repository.grantAccess(access("acc-2", "conn-3", "tenant-A"));
         assertThat(repository.hasAccess("conn-3", "tenant-A")).isTrue();
 
@@ -74,8 +110,8 @@ class SourceConnectionJdbcRepositoryTest {
 
     @Test
     void findAccessibleByTenantAndType_returnsOnlyGrantedAndMatchingType() {
-        repository.save(connection("conn-4", "kafka-a", "Kafka A", ConnectionType.KAFKA, null));
-        repository.save(connection("conn-5", "db-a", "DB A", ConnectionType.DB, null));
+        repository.save(kafkaConnection("conn-4", "kafka-a", "Kafka A", null));
+        repository.save(dbPollConnection("conn-5", "db-a", "DB A", null));
         repository.grantAccess(access("acc-3", "conn-4", "tenant-A"));
         repository.grantAccess(access("acc-4", "conn-5", "tenant-A"));
 
@@ -87,7 +123,7 @@ class SourceConnectionJdbcRepositoryTest {
 
     @Test
     void findAccessibleByTenantAndType_excludesConnectionsNotGrantedToTenant() {
-        repository.save(connection("conn-6", "kafka-b", "Kafka B", ConnectionType.KAFKA, null));
+        repository.save(kafkaConnection("conn-6", "kafka-b", "Kafka B", null));
         repository.grantAccess(access("acc-5", "conn-6", "tenant-B"));
 
         List<SourceConnection> result = repository.findAccessibleByTenantAndType("tenant-A", ConnectionType.KAFKA);
@@ -95,14 +131,47 @@ class SourceConnectionJdbcRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void findById_throwsIllegalStateWhenConfigIsNotAJsonObject() {
+        // config is valid JSONB but not a JSON object, so Jackson's Map<String,Object>
+        // deserialisation fails — simulates data corruption upstream of this adapter.
+        repository.save(kafkaConnection("conn-corrupt", "kafka-corrupt", "Kafka Corrupt", null));
+        jdbc.update("UPDATE source_connections SET config = CAST(:config AS jsonb) WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("config", "[\"not\", \"an\", \"object\"]")
+                        .addValue("id", "conn-corrupt"));
+
+        assertThatThrownBy(() -> repository.findById("conn-corrupt"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise config from JSONB");
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static SourceConnection connection(String id, String name, String displayName,
-                                               ConnectionType type, String credentialsRef) {
+    private static SourceConnection kafkaConnection(String id, String name, String displayName,
+                                                    String credentialsRef) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        return new SourceConnection(
-                id, name, displayName, type,
-                Map.of("bootstrap.servers", "localhost:9092"),
+        return new SourceConnection(id, name, displayName, ConnectionType.KAFKA,
+                new ConnectionConfig.KafkaConfig("localhost:9092", "test-topic"),
+                credentialsRef, "admin", now, now);
+    }
+
+    private static SourceConnection dbPollConnection(String id, String name, String displayName,
+                                                     String credentialsRef) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        return new SourceConnection(id, name, displayName, ConnectionType.DB_POLL,
+                new ConnectionConfig.DbPollConfig(
+                        "jdbc:postgresql://localhost:5432/mydb",
+                        "SELECT * FROM items WHERE processed = false",
+                        30),
+                credentialsRef, "admin", now, now);
+    }
+
+    private static SourceConnection fileShareConnection(String id, String name, String displayName,
+                                                        String credentialsRef) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        return new SourceConnection(id, name, displayName, ConnectionType.FILE_SHARE,
+                new ConnectionConfig.FileShareConfig("/data/feeds", "*.csv"),
                 credentialsRef, "admin", now, now);
     }
 

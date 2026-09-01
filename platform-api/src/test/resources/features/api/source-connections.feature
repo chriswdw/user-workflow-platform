@@ -1,10 +1,26 @@
 Feature: Source connection API
 
-  Scenario: Admin creates a source connection
+  Scenario: Admin creates a Kafka source connection
     Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
-    When I POST /api/v1/admin/source-connections with body {"name":"kafka-prod","displayName":"Kafka Prod","connectionType":"KAFKA","config":{},"credentialsRef":"vault/kafka-prod"}
+    When I POST /api/v1/admin/source-connections with body {"name":"kafka-prod","displayName":"Kafka Prod","connectionType":"KAFKA","config":{"bootstrapServers":"broker:9092","topicName":"trades"},"credentialsRef":"vault/kafka-prod"}
     Then the response status is 201
     And the response contains a "id" field
+
+  Scenario: Admin creates a DB_POLL source connection
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    When I POST /api/v1/admin/source-connections with body {"name":"db-poll-prod","displayName":"DB Poll Prod","connectionType":"DB_POLL","config":{"jdbcUrl":"jdbc:postgresql://host:5432/db","query":"SELECT * FROM items","pollIntervalSeconds":30}}
+    Then the response status is 201
+    And the response contains a "id" field
+
+  Scenario: Creating a Kafka connection with missing bootstrapServers returns 400
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    When I POST /api/v1/admin/source-connections with body {"name":"bad","displayName":"Bad","connectionType":"KAFKA","config":{"topicName":"trades"}}
+    Then the response status is 400
+
+  Scenario: Creating a DB_POLL connection with inline credentials in jdbcUrl returns 400
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    When I POST /api/v1/admin/source-connections with body {"name":"bad","displayName":"Bad","connectionType":"DB_POLL","config":{"jdbcUrl":"jdbc:postgresql://user:secret@host:5432/db","query":"SELECT 1","pollIntervalSeconds":60}}
+    Then the response status is 400
 
   Scenario: Admin lists all source connections
     Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
@@ -36,7 +52,7 @@ Feature: Source connection API
 
   Scenario: Non-admin accessing admin endpoint returns 403
     Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
-    When I POST /api/v1/admin/source-connections with body {"name":"x","displayName":"X","connectionType":"KAFKA","config":{},"credentialsRef":"ref"}
+    When I POST /api/v1/admin/source-connections with body {"name":"x","displayName":"X","connectionType":"KAFKA","config":{"bootstrapServers":"broker:9092","topicName":"t"},"credentialsRef":"ref"}
     Then the response status is 403
 
   Scenario: Admin updates a source connection

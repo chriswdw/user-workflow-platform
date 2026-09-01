@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkflowConfigJdbcRepositoryTest {
 
@@ -325,11 +326,12 @@ class WorkflowConfigJdbcRepositoryTest {
     }
 
     @Test
-    void parsesConfig_withNullStatesAndTransitions() {
+    void parsesConfig_withNullTransitions_defaultsToEmptyList() {
         String json = """
                 {
                   "id": "wf-empty", "tenantId": "tenant-1", "workflowType": "EMPTY_TYPE",
-                  "initialState": "OPEN", "active": true
+                  "initialState": "OPEN", "active": true,
+                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}]
                 }
                 """;
         insertConfig("wf-empty", "tenant-1", "EMPTY_TYPE", json, true);
@@ -337,8 +339,61 @@ class WorkflowConfigJdbcRepositoryTest {
         WorkflowConfig config =
                 repository.findActiveByTenantAndWorkflowType("tenant-1", "EMPTY_TYPE").orElseThrow();
 
-        assertThat(config.states()).isEmpty();
+        assertThat(config.states()).hasSize(1);
         assertThat(config.transitions()).isEmpty();
+    }
+
+    // NOTE: parseStates()'s `raw == null` branch (WorkflowConfigJdbcRepository.java line ~66) is
+    // not covered by a dedicated test. WorkflowConfig's own compact constructor requires
+    // initialState to be one of states' names — so any content with a null/absent "states" key
+    // fails WorkflowConfig construction with IllegalArgumentException before the empty-list
+    // result of parseStates() could ever be observed. The branch is defensive dead code under
+    // the current invariant, not a reachable gap.
+
+    @Test
+    void parsesTransitions_withNullActions_defaultsToEmptyList() {
+        String json = """
+                {
+                  "id": "wf-noact", "tenantId": "tenant-1", "workflowType": "NOACT_TYPE",
+                  "initialState": "OPEN", "active": true,
+                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]}],
+                  "transitions": [
+                    {
+                      "name": "close",
+                      "fromState": "OPEN", "toState": "OPEN",
+                      "trigger": "USER_ACTION",
+                      "allowedRoles": ["ANALYST"],
+                      "requiresMakerChecker": false
+                    }
+                  ]
+                }
+                """;
+        insertConfig("wf-noact", "tenant-1", "NOACT_TYPE", json, true);
+
+        WorkflowConfig config =
+                repository.findActiveByTenantAndWorkflowType("tenant-1", "NOACT_TYPE").orElseThrow();
+
+        assertThat(config.transitions().get(0).actions()).isEmpty();
+        assertThat(config.transitions().get(0).validationRules()).isEmpty();
+    }
+
+    @Test
+    void findActiveByTenantAndWorkflowType_throwsIllegalStateWhenContentIsNotAJsonObject() {
+        // content is valid JSONB but not a JSON object, so Jackson's Map<String,Object>
+        // deserialisation fails — simulates data corruption upstream of this adapter.
+        jdbc.update("""
+                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+                VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
+                """,
+                new MapSqlParameterSource()
+                        .addValue("id", "wf-corrupt")
+                        .addValue("tenantId", "tenant-1")
+                        .addValue("workflowType", "CORRUPT_TYPE")
+                        .addValue("content", "[\"not\", \"an\", \"object\"]"));
+
+        assertThatThrownBy(() -> repository.findActiveByTenantAndWorkflowType("tenant-1", "CORRUPT_TYPE"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to deserialise workflow config from JSONB");
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

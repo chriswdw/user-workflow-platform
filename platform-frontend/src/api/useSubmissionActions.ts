@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { WorkflowTypeSubmissionSchema, type WorkflowTypeSubmission } from '../types/WorkflowTypeSubmission';
-import client from './client';
+import { client } from './client';
 
 interface SaveDraftVariables {
-  draftConfigs: Record<string, unknown>;
-  currentStep: number;
+  readonly draftConfigs: Record<string, unknown>;
+  readonly currentStep: number;
 }
 
 interface RejectVariables {
-  rejectionReason: string;
+  readonly rejectionReason: string;
 }
 
 function invalidateSubmission(queryClient: ReturnType<typeof useQueryClient>, submissionId: string) {
@@ -21,7 +21,7 @@ export function useSaveDraft(submissionId: string) {
 
   return useMutation<WorkflowTypeSubmission, Error, SaveDraftVariables>({
     mutationFn: async variables => {
-      const { data } = await client.patch(`/workflow-type-submissions/${submissionId}/draft`, variables);
+      const { data } = await client.patch(`/workflow-type-submissions/${submissionId}`, variables);
       return WorkflowTypeSubmissionSchema.parse(data);
     },
     onSuccess: () => invalidateSubmission(queryClient, submissionId),
@@ -71,6 +71,17 @@ export function useReviseSubmission(submissionId: string) {
     mutationFn: async () => {
       const { data } = await client.post(`/workflow-type-submissions/${submissionId}/revise`);
       return WorkflowTypeSubmissionSchema.parse(data);
+    },
+    onSuccess: () => invalidateSubmission(queryClient, submissionId),
+  });
+}
+
+export function useDiscardSubmission(submissionId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, void>({
+    mutationFn: async () => {
+      await client.delete(`/workflow-type-submissions/${submissionId}`);
     },
     onSuccess: () => invalidateSubmission(queryClient, submissionId),
   });

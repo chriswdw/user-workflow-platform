@@ -1,11 +1,11 @@
 import type { AuditEntry } from '../../types/AuditEntry';
 import { AuditEntryRow } from './AuditEntryRow';
 
-interface Props {
-  entries: AuditEntry[];
+interface AuditTrailProps {
+  readonly entries: readonly AuditEntry[];
 }
 
-export function AuditTrail({ entries }: Props) {
+export function AuditTrail({ entries }: AuditTrailProps) {
   if (entries.length === 0) {
     return <p className="audit-empty">No audit entries.</p>;
   }

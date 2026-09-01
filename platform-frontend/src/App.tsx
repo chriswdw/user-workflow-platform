@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useWizardStore } from './store/wizardStore';
 import { LoginPage } from './components/LoginPage';
@@ -9,14 +10,16 @@ import { WizardShell } from './components/wizard/WizardShell';
 import { ApprovalQueue } from './components/wizard/ApprovalQueue';
 import { MySubmissionsView } from './components/wizard/MySubmissionsView';
 import { SourceConnectionsAdminView } from './components/admin/SourceConnectionsAdminView';
+import { AllDraftsAdminView } from './components/admin/AllDraftsAdminView';
 import { useWorkItems } from './api/useWorkItems';
-import { usePendingSubmissions } from './api/useWorkflowTypeSubmissions';
-import { useMyDraftSubmissions, useMyRejectedSubmissions } from './api/useWorkflowTypeSubmissions';
+import { useMyDraftSubmissions, useMyRejectedSubmissions, usePendingSubmissions } from './api/useWorkflowTypeSubmissions';
 import { BLOTTER_CONFIGS, WORKFLOW_TYPES } from './config/blotterConfigs';
 
-type AppView = 'blotter' | 'wizard' | 'approval-queue' | 'my-submissions' | 'admin-connections';
+type AppView = 'blotter' | 'wizard' | 'approval-queue' | 'my-submissions' | 'admin-connections' | 'admin-drafts';
 
 const queryClient = new QueryClient();
+
+const SKELETON_ROW_IDS = Array.from({ length: 8 }, (_, i) => `skeleton-row-${i}`);
 
 function MainApp() {
   const { role, userId, clearAuth } = useAuthStore();
@@ -53,7 +56,7 @@ function MainApp() {
 
           <button
             type="button"
-            className="app-header-nav-btn"
+            className={`app-header-nav-btn${view === 'wizard' ? ' app-header-nav-btn--active' : ''}`}
             onClick={openWizard}
           >
             Create Workflow Type
@@ -88,19 +91,29 @@ function MainApp() {
               Source Connections
             </button>
           )}
+
+          {role === 'PLATFORM_ADMIN' && (
+            <button
+              type="button"
+              className={`app-header-nav-btn${view === 'admin-drafts' ? ' app-header-nav-btn--active' : ''}`}
+              onClick={() => setView('admin-drafts')}
+            >
+              All Drafts
+            </button>
+          )}
         </nav>
 
-        {view === 'blotter' && (
-          <select
-            className="app-header-select"
-            value={workflowType}
-            onChange={e => setWorkflowType(e.target.value)}
-          >
-            {WORKFLOW_TYPES.map(t => (
-              <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-        )}
+        <select
+          className="app-header-select"
+          value={workflowType}
+          onChange={e => setWorkflowType(e.target.value)}
+          disabled={view !== 'blotter'}
+          aria-label="Workflow type"
+        >
+          {WORKFLOW_TYPES.map(t => (
+            <option key={t} value={t}>{t.replaceAll('_', ' ')}</option>
+          ))}
+        </select>
 
         <span className="app-header-user">{userId} · {role}</span>
         <button className="app-header-logout" onClick={clearAuth}>Logout</button>
@@ -109,9 +122,22 @@ function MainApp() {
       <main className="app-main">
         {view === 'blotter' && (
           <>
-            {isLoading && <p style={{ color: 'var(--color-text-muted)' }}>Loading…</p>}
-            {isError && <p style={{ color: 'var(--color-danger)' }}>Failed to load work items.</p>}
-            {!isLoading && !isError && config && (
+            {isLoading && (
+              <div role="status" aria-live="polite" aria-label="Loading work items" className="skeleton-container">
+                {SKELETON_ROW_IDS.map(id => (
+                  <div key={id} className="skeleton skeleton-row" />
+                ))}
+              </div>
+            )}
+            {isError && (
+              <div role="alert" className="status-text status-text--error">Failed to load work items.</div>
+            )}
+            {!isLoading && !isError && config && items.length === 0 && (
+              <div className="blotter-empty">
+                <p>No work items for <strong>{workflowType.replaceAll('_', ' ')}</strong>.</p>
+              </div>
+            )}
+            {!isLoading && !isError && config && items.length > 0 && (
               <div className="blotter-container">
                 <Blotter
                   config={config}
@@ -131,6 +157,8 @@ function MainApp() {
         )}
 
         {view === 'admin-connections' && <SourceConnectionsAdminView />}
+
+        {view === 'admin-drafts' && <AllDraftsAdminView onOpenWizard={() => setView('wizard')} />}
       </main>
 
       {view === 'wizard' && <WizardShell onClose={() => setView('blotter')} />}
@@ -141,6 +169,8 @@ function MainApp() {
           onClose={() => setSelectedItemId(null)}
         />
       )}
+
+      <Toaster position="bottom-right" toastOptions={{ duration: 3000 }} />
     </div>
   );
 }
