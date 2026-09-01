@@ -56,6 +56,25 @@ class AuditEntryJdbcRepositoryTest {
     }
 
     @Test
+    void save_persistsChangedFieldWithNullPreviousAndNewValue() {
+        // A field being set for the first time has no previous value; a field being cleared has
+        // no new value — both are legitimate FIELD_UPDATE shapes, not corruption.
+        AuditEntry entry = entry("e-nulls", "tenant-1", "wi-1", AuditEventType.FIELD_UPDATE,
+                "UNDER_REVIEW", "UNDER_REVIEW",
+                List.of(new ChangedField("trade.settlementRef", null, "SR-9"),
+                        new ChangedField("trade.note", "old note", null)));
+
+        repository.save(entry);
+
+        List<ChangedField> saved = repository.findByTenantAndWorkItemId("tenant-1", "wi-1")
+                .get(0).changedFields();
+        assertThat(saved.get(0).previousValue()).isNull();
+        assertThat(saved.get(0).newValue()).isEqualTo("SR-9");
+        assertThat(saved.get(1).previousValue()).isEqualTo("old note");
+        assertThat(saved.get(1).newValue()).isNull();
+    }
+
+    @Test
     void save_isIdempotentOnDuplicateId() {
         AuditEntry entry = entry("e-dup", "tenant-1", "wi-1", AuditEventType.INGESTION,
                 null, "UNDER_REVIEW", List.of());

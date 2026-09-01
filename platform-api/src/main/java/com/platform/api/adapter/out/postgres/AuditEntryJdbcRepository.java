@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -103,11 +104,18 @@ public class AuditEntryJdbcRepository
 
     private String toJsonChangedFields(List<ChangedField> fields) {
         try {
+            // Map.of() rejects null values, but previousValue/newValue are legitimately null
+            // (a field being set for the first time, or cleared) — a null must round-trip as
+            // JSON null, not "", or the audit log can no longer distinguish "no value" from
+            // "value was an empty string".
             List<Map<String, Object>> raw = fields.stream()
-                    .map(f -> Map.<String, Object>of(
-                            "fieldPath", f.fieldPath() != null ? f.fieldPath() : "",
-                            "previousValue", f.previousValue() != null ? f.previousValue() : "",
-                            "newValue", f.newValue() != null ? f.newValue() : ""))
+                    .map(f -> {
+                        Map<String, Object> field = new LinkedHashMap<>();
+                        field.put("fieldPath", f.fieldPath());
+                        field.put("previousValue", f.previousValue());
+                        field.put("newValue", f.newValue());
+                        return field;
+                    })
                     .toList();
             return objectMapper.writeValueAsString(raw);
         } catch (JacksonException e) {

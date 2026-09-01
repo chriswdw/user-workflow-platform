@@ -2,6 +2,7 @@ package com.platform.api.adapter.in.kafka;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import com.platform.api.config.KafkaIngestionConfig;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
 import com.platform.ingestion.domain.model.FieldMapping;
@@ -19,7 +20,6 @@ import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 import com.platform.ingestion.domain.service.IngestionService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -35,14 +37,12 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -58,13 +58,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies Kafka ingestion end-to-end using the real WorkItemKafkaConsumer
- * wired against in-memory port doubles. Kafka infrastructure uses @EmbeddedKafka.
+ * wired against in-memory port doubles. Kafka infrastructure uses the real
+ * {@link KafkaIngestionConfig} production wiring, activated via @EmbeddedKafka.
  */
 @SpringJUnitConfig(classes = KafkaIngestionIntegrationTest.TestConfig.class)
 @EmbeddedKafka(
         partitions = 1,
         topics = {KafkaIngestionIntegrationTest.INGEST_TOPIC, KafkaIngestionIntegrationTest.DLQ_TOPIC}
 )
+@TestPropertySource(properties = {
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.datasource.url=unused"
+})
 class KafkaIngestionIntegrationTest {
 
     static final String INGEST_TOPIC = "work-items.ingest";
@@ -100,6 +105,20 @@ class KafkaIngestionIntegrationTest {
         assertThat(created.workItem().tenantId()).isEqualTo(TENANT);
         assertThat(created.workItem().idempotencyKey()).isEqualTo("TRD-001");
         assertThat(workItemStore.all()).hasSize(1);
+    }
+
+    // ── Correlation-id header is honoured for trace propagation ───────────────
+
+    @Test
+    void messageWithCorrelationIdHeader_isProcessedSuccessfully() throws Exception {
+        var record = new org.apache.kafka.clients.producer.ProducerRecord<String, String>(
+                INGEST_TOPIC, null, ingestMessage("TRD-CORR", "ACME Corp"));
+        record.headers().add("X-Correlation-ID", "corr-abc-123".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        kafkaTemplate.send(record).get(5, TimeUnit.SECONDS);
+
+        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
     }
 
     // ── Idempotency: duplicate discarded, only one work item saved ────────────
@@ -172,6 +191,7 @@ class KafkaIngestionIntegrationTest {
 
     @Configuration
     @EnableKafka
+    @Import(KafkaIngestionConfig.class)
     static class TestConfig {
 
         @Bean
@@ -188,31 +208,11 @@ class KafkaIngestionIntegrationTest {
         }
 
         @Bean
-        ConsumerFactory<String, String> ingestionConsumerFactory(EmbeddedKafkaBroker broker) {
-            Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-ingestion-group", false);
-            props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-            props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-            return new DefaultKafkaConsumerFactory<>(props);
-        }
-
-        @Bean
         ConsumerFactory<String, String> dlqConsumerFactory(EmbeddedKafkaBroker broker) {
             Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-dlq-group", false);
             props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
             return new DefaultKafkaConsumerFactory<>(props);
-        }
-
-        @Bean
-        ConcurrentKafkaListenerContainerFactory<String, String> ingestionKafkaListenerContainerFactory(
-                ConsumerFactory<String, String> ingestionConsumerFactory,
-                KafkaTemplate<String, String> kafkaTemplate) {
-            var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
-            factory.setConsumerFactory(ingestionConsumerFactory);
-            var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
-                    (consumerRecord, ex) -> new TopicPartition(DLQ_TOPIC, consumerRecord.partition()));
-            factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 0L)));
-            return factory;
         }
 
         @Bean
@@ -277,6 +277,7 @@ class KafkaIngestionIntegrationTest {
         }
 
         @Bean
+        @Primary
         ResultCaptor resultCaptor(IIngestRecordUseCase ingestUseCase) {
             return new ResultCaptor(ingestUseCase);
         }
@@ -291,11 +292,6 @@ class KafkaIngestionIntegrationTest {
             return new IngestionService(configRepository, idempotencyRepository,
                     workItemRepository, auditRepository, groupAssignmentPort, event -> {},
                     new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
-        }
-
-        @Bean
-        WorkItemKafkaConsumer workItemKafkaConsumer(ResultCaptor resultCaptor, ObjectMapper objectMapper) {
-            return new WorkItemKafkaConsumer(resultCaptor, objectMapper);
         }
 
         @Bean

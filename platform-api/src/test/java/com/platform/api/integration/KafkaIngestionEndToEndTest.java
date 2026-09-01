@@ -2,37 +2,33 @@ package com.platform.api.integration;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
-import com.platform.api.adapter.in.kafka.WorkItemKafkaConsumer;
+import com.platform.api.config.IngestionAdapterConfig;
+import com.platform.api.config.KafkaIngestionConfig;
 import com.platform.api.adapter.out.postgres.AuditEntryJdbcRepository;
 import com.platform.api.adapter.out.postgres.EmbeddedPostgresProvider;
-import com.platform.api.adapter.out.postgres.IdempotencyKeyJdbcRepository;
-import com.platform.api.adapter.out.postgres.IngestionConfigJdbcRepository;
-import com.platform.api.adapter.out.postgres.IngestionWorkItemJdbcRepository;
+import com.platform.domain.ports.out.IDomainEventPublisher;
 import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
-import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
-import com.platform.ingestion.domain.service.IngestionService;
-import org.apache.kafka.common.TopicPartition;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.annotation.EnableKafka;
-import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,13 +41,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * End-to-end test: real Kafka broker + real PostgreSQL (embedded), no mocks.
- * Verifies that a message sent to the ingest topic produces a work_items row.
+ * Verifies that a message sent to the ingest topic produces a work_items row,
+ * using the real {@link IngestionAdapterConfig} and {@link KafkaIngestionConfig}
+ * production wiring.
  */
 @SpringJUnitConfig(classes = KafkaIngestionEndToEndTest.TestConfig.class)
 @EmbeddedKafka(
         partitions = 1,
         topics = {KafkaIngestionEndToEndTest.INGEST_TOPIC, KafkaIngestionEndToEndTest.DLQ_TOPIC}
 )
+@TestPropertySource(properties = {
+        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+        "spring.datasource.url=jdbc:postgresql://embedded/test",
+        "platform.ingestion.default-group=group-ops"
+})
 class KafkaIngestionEndToEndTest {
 
     static final String INGEST_TOPIC = "work-items.ingest";
@@ -168,6 +171,7 @@ class KafkaIngestionEndToEndTest {
 
     @Configuration
     @EnableKafka
+    @Import({IngestionAdapterConfig.class, KafkaIngestionConfig.class})
     static class TestConfig {
 
         @Bean
@@ -179,70 +183,26 @@ class KafkaIngestionEndToEndTest {
         ObjectMapper objectMapper() { return new JsonMapper(); }
 
         @Bean
-        IngestionConfigJdbcRepository ingestionConfigRepo(NamedParameterJdbcTemplate jdbc, ObjectMapper om) {
-            return new IngestionConfigJdbcRepository(jdbc, om);
-        }
+        MeterRegistry meterRegistry() { return new SimpleMeterRegistry(); }
 
         @Bean
-        IdempotencyKeyJdbcRepository idempotencyKeyRepo(NamedParameterJdbcTemplate jdbc) {
-            return new IdempotencyKeyJdbcRepository(jdbc);
-        }
-
-        @Bean
-        IngestionWorkItemJdbcRepository ingestionWorkItemRepo(NamedParameterJdbcTemplate jdbc, ObjectMapper om) {
-            return new IngestionWorkItemJdbcRepository(jdbc, om);
-        }
-
-        @Bean
-        AuditEntryJdbcRepository auditEntryRepo(NamedParameterJdbcTemplate jdbc, ObjectMapper om) {
+        AuditEntryJdbcRepository auditEntryJdbcRepository(NamedParameterJdbcTemplate jdbc, ObjectMapper om) {
             return new AuditEntryJdbcRepository(jdbc, om);
         }
 
         @Bean
-        IGroupAssignmentPort groupAssignmentPort() {
-            return (tenantId, workflowType, fields) ->
-                    new IGroupAssignmentPort.AssignmentResult("group-ops", false);
-        }
+        IDomainEventPublisher domainEventPublisher() { return event -> {}; }
 
         @Bean
-        IIngestRecordUseCase ingestionService(
-                IngestionConfigJdbcRepository configRepo,
-                IdempotencyKeyJdbcRepository idempotencyRepo,
-                IngestionWorkItemJdbcRepository workItemRepo,
-                AuditEntryJdbcRepository auditRepo,
-                IGroupAssignmentPort groupPort) {
-            return new IngestionService(configRepo, idempotencyRepo, workItemRepo, auditRepo, groupPort, event -> {}, new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
-        }
-
-        @Bean
+        @Primary
         ResultCaptor resultCaptor(IIngestRecordUseCase ingestUseCase) {
             return new ResultCaptor(ingestUseCase);
-        }
-
-        @Bean
-        WorkItemKafkaConsumer workItemKafkaConsumer(ResultCaptor captor, ObjectMapper om) {
-            return new WorkItemKafkaConsumer(captor, om);
         }
 
         @Bean
         KafkaTemplate<String, String> kafkaTemplate(EmbeddedKafkaBroker broker) {
             return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(
                     KafkaTestUtils.producerProps(broker)));
-        }
-
-        @Bean
-        ConcurrentKafkaListenerContainerFactory<String, String> ingestionKafkaListenerContainerFactory(
-                EmbeddedKafkaBroker broker, KafkaTemplate<String, String> kafkaTemplate) {
-            var consumerFactory = new DefaultKafkaConsumerFactory<>(
-                    KafkaTestUtils.consumerProps(broker, "e2e-group", false),
-                    new org.apache.kafka.common.serialization.StringDeserializer(),
-                    new org.apache.kafka.common.serialization.StringDeserializer());
-            var recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
-                    (consumerRecord, ex) -> new TopicPartition(DLQ_TOPIC, consumerRecord.partition()));
-            var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
-            factory.setConsumerFactory(consumerFactory);
-            factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer, new FixedBackOff(0L, 0L)));
-            return factory;
         }
     }
 
