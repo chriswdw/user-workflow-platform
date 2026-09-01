@@ -383,6 +383,11 @@ Then('the action form shows the server error {string}', (message: string) => {
   assert.ok(error.className.includes('form-error') || error.closest('.modal-box'), `expected "${message}" to be shown as the form's server error`);
 });
 
+Then('the confirmation dialog shows the server error {string}', (message: string) => {
+  const error = within(rendered.container).getByText(message);
+  assert.ok(error.className.includes('form-error'), `expected "${message}" to be shown as the confirmation dialog's server error`);
+});
+
 Then('the maker-checker banner shows {string}', (transition: string) => {
   const banner = within(rendered.container).getByRole('status');
   assert.ok(banner.textContent?.includes(transition), `expected the maker-checker banner to mention "${transition}"`);
