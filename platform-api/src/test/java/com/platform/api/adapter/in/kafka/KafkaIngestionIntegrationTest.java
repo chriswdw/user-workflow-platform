@@ -1,10 +1,11 @@
 package com.platform.api.adapter.in.kafka;
 
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.platform.api.config.KafkaIngestionConfig;
 import com.platform.domain.model.SourceType;
 import com.platform.domain.model.WorkItem;
+import com.platform.domain.ports.out.IAuditRepository;
 import com.platform.ingestion.domain.model.FieldMapping;
 import com.platform.ingestion.domain.model.IdempotencyKeyStrategy;
 import com.platform.ingestion.domain.model.IngestionConfig;
@@ -14,10 +15,18 @@ import com.platform.ingestion.domain.model.UnknownColumnPolicy;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.ports.out.IIdempotencyKeyRepository;
-import com.platform.domain.ports.out.IAuditRepository;
 import com.platform.ingestion.domain.ports.out.IIngestionConfigRepository;
 import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 import com.platform.ingestion.domain.service.IngestionService;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -43,116 +52,112 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Verifies Kafka ingestion end-to-end using the real WorkItemKafkaConsumer
- * wired against in-memory port doubles. Kafka infrastructure uses the real
- * {@link KafkaIngestionConfig} production wiring, activated via @EmbeddedKafka.
+ * Verifies Kafka ingestion end-to-end using the real WorkItemKafkaConsumer wired against in-memory
+ * port doubles. Kafka infrastructure uses the real {@link KafkaIngestionConfig} production wiring,
+ * activated via @EmbeddedKafka.
  */
 @SpringJUnitConfig(classes = KafkaIngestionIntegrationTest.TestConfig.class)
 @EmbeddedKafka(
-        partitions = 1,
-        topics = {KafkaIngestionIntegrationTest.INGEST_TOPIC, KafkaIngestionIntegrationTest.DLQ_TOPIC}
-)
-@TestPropertySource(properties = {
-        "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
-        "spring.datasource.url=unused"
-})
+    partitions = 1,
+    topics = {KafkaIngestionIntegrationTest.INGEST_TOPIC, KafkaIngestionIntegrationTest.DLQ_TOPIC})
+@TestPropertySource(
+    properties = {
+      "spring.kafka.bootstrap-servers=${spring.embedded.kafka.brokers}",
+      "spring.datasource.url=unused"
+    })
 class KafkaIngestionIntegrationTest {
 
-    static final String INGEST_TOPIC = "work-items.ingest";
-    static final String DLQ_TOPIC = "work-items.ingest.dlq";
+  static final String INGEST_TOPIC = "work-items.ingest";
+  static final String DLQ_TOPIC = "work-items.ingest.dlq";
 
-    private static final String TENANT = "tenant-kafka";
-    private static final String WORKFLOW_TYPE = "SETTLEMENT_EXCEPTION";
+  private static final String TENANT = "tenant-kafka";
+  private static final String WORKFLOW_TYPE = "SETTLEMENT_EXCEPTION";
 
-    @Autowired private KafkaTemplate<String, String> kafkaTemplate;
-    @Autowired private ResultCaptor resultCaptor;
-    @Autowired private TestDlqListener dlqListener;
-    @Autowired private TestWorkItemStore workItemStore;
-    @Autowired private TestIdempotencyStore idempotencyStore;
+  @Autowired private KafkaTemplate<String, String> kafkaTemplate;
+  @Autowired private ResultCaptor resultCaptor;
+  @Autowired private TestDlqListener dlqListener;
+  @Autowired private TestWorkItemStore workItemStore;
+  @Autowired private TestIdempotencyStore idempotencyStore;
 
-    @BeforeEach
-    void resetCaptors() {
-        resultCaptor.reset(1);
-        dlqListener.reset(1);
-        workItemStore.clear();
-        idempotencyStore.clear();
-    }
+  @BeforeEach
+  void resetCaptors() {
+    resultCaptor.reset(1);
+    dlqListener.reset(1);
+    workItemStore.clear();
+    idempotencyStore.clear();
+  }
 
-    // ── Valid message → WorkItem created ─────────────────────────────────────
+  // ── Valid message → WorkItem created ─────────────────────────────────────
 
-    @Test
-    void validMessage_resultsInCreatedWorkItem() throws Exception {
-        kafkaTemplate.send(INGEST_TOPIC, ingestMessage("TRD-001", "ACME Corp")).get(5, TimeUnit.SECONDS);
+  @Test
+  void validMessage_resultsInCreatedWorkItem() throws Exception {
+    kafkaTemplate
+        .send(INGEST_TOPIC, ingestMessage("TRD-001", "ACME Corp"))
+        .get(5, TimeUnit.SECONDS);
 
-        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
+    assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
 
-        IngestionResult.Created created = (IngestionResult.Created) resultCaptor.results().get(0);
-        assertThat(created.workItem().tenantId()).isEqualTo(TENANT);
-        assertThat(created.workItem().idempotencyKey()).isEqualTo("TRD-001");
-        assertThat(workItemStore.all()).hasSize(1);
-    }
+    IngestionResult.Created created = (IngestionResult.Created) resultCaptor.results().get(0);
+    assertThat(created.workItem().tenantId()).isEqualTo(TENANT);
+    assertThat(created.workItem().idempotencyKey()).isEqualTo("TRD-001");
+    assertThat(workItemStore.all()).hasSize(1);
+  }
 
-    // ── Correlation-id header is honoured for trace propagation ───────────────
+  // ── Correlation-id header is honoured for trace propagation ───────────────
 
-    @Test
-    void messageWithCorrelationIdHeader_isProcessedSuccessfully() throws Exception {
-        var record = new org.apache.kafka.clients.producer.ProducerRecord<String, String>(
-                INGEST_TOPIC, null, ingestMessage("TRD-CORR", "ACME Corp"));
-        record.headers().add("X-Correlation-ID", "corr-abc-123".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  @Test
+  void messageWithCorrelationIdHeader_isProcessedSuccessfully() throws Exception {
+    var record =
+        new org.apache.kafka.clients.producer.ProducerRecord<String, String>(
+            INGEST_TOPIC, null, ingestMessage("TRD-CORR", "ACME Corp"));
+    record
+        .headers()
+        .add("X-Correlation-ID", "corr-abc-123".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-        kafkaTemplate.send(record).get(5, TimeUnit.SECONDS);
+    kafkaTemplate.send(record).get(5, TimeUnit.SECONDS);
 
-        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
-    }
+    assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
+  }
 
-    // ── Idempotency: duplicate discarded, only one work item saved ────────────
+  // ── Idempotency: duplicate discarded, only one work item saved ────────────
 
-    @Test
-    void duplicateMessage_returnsDuplicate_andDoesNotCreateSecondWorkItem() throws Exception {
-        resultCaptor.reset(2);
-        String message = ingestMessage("TRD-DUP", "ACME Corp");
+  @Test
+  void duplicateMessage_returnsDuplicate_andDoesNotCreateSecondWorkItem() throws Exception {
+    resultCaptor.reset(2);
+    String message = ingestMessage("TRD-DUP", "ACME Corp");
 
-        kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
-        kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
+    kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
+    kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
 
-        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
-        assertThat(resultCaptor.results().get(1)).isInstanceOf(IngestionResult.Duplicate.class);
-        assertThat(workItemStore.all()).hasSize(1);
-    }
+    assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
+    assertThat(resultCaptor.results().get(1)).isInstanceOf(IngestionResult.Duplicate.class);
+    assertThat(workItemStore.all()).hasSize(1);
+  }
 
-    // ── Malformed JSON → DLQ, no work item created ───────────────────────────
+  // ── Malformed JSON → DLQ, no work item created ───────────────────────────
 
-    @Test
-    void malformedJson_isRoutedToDlq() throws Exception {
-        kafkaTemplate.send(INGEST_TOPIC, "{not valid json at all}").get(5, TimeUnit.SECONDS);
+  @Test
+  void malformedJson_isRoutedToDlq() throws Exception {
+    kafkaTemplate.send(INGEST_TOPIC, "{not valid json at all}").get(5, TimeUnit.SECONDS);
 
-        assertThat(dlqListener.latch().await(15, TimeUnit.SECONDS)).isTrue();
-        assertThat(dlqListener.payloads().get(0)).contains("not valid json");
-        assertThat(workItemStore.all()).isEmpty();
-    }
+    assertThat(dlqListener.latch().await(15, TimeUnit.SECONDS)).isTrue();
+    assertThat(dlqListener.payloads().get(0)).contains("not valid json");
+    assertThat(workItemStore.all()).isEmpty();
+  }
 
-    // ── Missing required field → domain rejects → consumer throws → DLQ ─────
+  // ── Missing required field → domain rejects → consumer throws → DLQ ─────
 
-    @Test
-    void missingRequiredField_isRoutedToDlq() throws Exception {
-        String message = """
+  @Test
+  void missingRequiredField_isRoutedToDlq() throws Exception {
+    String message =
+        """
                 {
                   "tenantId": "%s",
                   "workflowType": "%s",
@@ -160,20 +165,21 @@ class KafkaIngestionIntegrationTest {
                   "rawFields": {},
                   "makerUserId": "system"
                 }
-                """.formatted(TENANT, WORKFLOW_TYPE);
+                """
+            .formatted(TENANT, WORKFLOW_TYPE);
 
-        kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
+    kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
 
-        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Rejected.class);
-        assertThat(dlqListener.latch().await(10, TimeUnit.SECONDS)).isTrue();
-        assertThat(workItemStore.all()).isEmpty();
-    }
+    assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Rejected.class);
+    assertThat(dlqListener.latch().await(10, TimeUnit.SECONDS)).isTrue();
+    assertThat(workItemStore.all()).isEmpty();
+  }
 
-    // ── ─────────────────────────────────────────────────────────────────────
+  // ── ─────────────────────────────────────────────────────────────────────
 
-    private static String ingestMessage(String tradeRef, String counterparty) {
-        return """
+  private static String ingestMessage(String tradeRef, String counterparty) {
+    return """
                 {
                   "tenantId": "%s",
                   "workflowType": "%s",
@@ -184,181 +190,239 @@ class KafkaIngestionIntegrationTest {
                   },
                   "makerUserId": "system"
                 }
-                """.formatted(TENANT, WORKFLOW_TYPE, tradeRef, counterparty);
+                """
+        .formatted(TENANT, WORKFLOW_TYPE, tradeRef, counterparty);
+  }
+
+  // ── Spring context ────────────────────────────────────────────────────────
+
+  @Configuration
+  @EnableKafka
+  @Import(KafkaIngestionConfig.class)
+  static class TestConfig {
+
+    @Bean
+    ProducerFactory<String, String> producerFactory(EmbeddedKafkaBroker broker) {
+      Map<String, Object> props = KafkaTestUtils.producerProps(broker);
+      props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+      return new DefaultKafkaProducerFactory<>(props);
     }
 
-    // ── Spring context ────────────────────────────────────────────────────────
-
-    @Configuration
-    @EnableKafka
-    @Import(KafkaIngestionConfig.class)
-    static class TestConfig {
-
-        @Bean
-        ProducerFactory<String, String> producerFactory(EmbeddedKafkaBroker broker) {
-            Map<String, Object> props = KafkaTestUtils.producerProps(broker);
-            props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-            props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-            return new DefaultKafkaProducerFactory<>(props);
-        }
-
-        @Bean
-        KafkaTemplate<String, String> kafkaTemplate(ProducerFactory<String, String> pf) {
-            return new KafkaTemplate<>(pf);
-        }
-
-        @Bean
-        ConsumerFactory<String, String> dlqConsumerFactory(EmbeddedKafkaBroker broker) {
-            Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-dlq-group", false);
-            props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-            props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-            return new DefaultKafkaConsumerFactory<>(props);
-        }
-
-        @Bean
-        ConcurrentKafkaListenerContainerFactory<String, String> dlqListenerContainerFactory(
-                ConsumerFactory<String, String> dlqConsumerFactory) {
-            var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
-            factory.setConsumerFactory(dlqConsumerFactory);
-            return factory;
-        }
-
-        // ── In-memory domain doubles ──────────────────────────────────────────
-
-        @Bean
-        TestWorkItemStore workItemStore() { return new TestWorkItemStore(); }
-
-        @Bean
-        TestIdempotencyStore idempotencyStore() { return new TestIdempotencyStore(); }
-
-        @Bean
-        IIngestionConfigRepository ingestionConfigRepository() {
-            IngestionConfig config = new IngestionConfig(
-                    "tenant-kafka", "SETTLEMENT_EXCEPTION", SourceType.KAFKA,
-                    List.of(
-                            new FieldMapping("tradeRef",     "tradeRef",     true),
-                            new FieldMapping("counterparty", "counterparty", false)
-                    ),
-                    UnknownColumnPolicy.IGNORE,
-                    IdempotencyKeyStrategy.EXPLICIT_FIELD,
-                    List.of(),
-                    "tradeRef",
-                    "OPEN"
-            );
-            return (tenantId, workflowType, sourceType) -> Optional.of(config);
-        }
-
-        @Bean
-        IIdempotencyKeyRepository idempotencyKeyRepository(TestIdempotencyStore store) {
-            return new IIdempotencyKeyRepository() {
-                @Override
-                public boolean exists(String tenantId, String workflowType, String key) {
-                    return store.contains(tenantId + ":" + workflowType + ":" + key);
-                }
-                @Override
-                public void save(String tenantId, String workflowType, String key) {
-                    store.add(tenantId + ":" + workflowType + ":" + key);
-                }
-            };
-        }
-
-        @Bean
-        IIngestionWorkItemRepository ingestionWorkItemRepository(TestWorkItemStore store) {
-            return workItem -> { store.add(workItem); return workItem; };
-        }
-
-        @Bean
-        IAuditRepository ingestionAuditRepository() { return entry -> {}; }
-
-        @Bean
-        IGroupAssignmentPort groupAssignmentPort() {
-            return (tenantId, workflowType, fields) ->
-                    new IGroupAssignmentPort.AssignmentResult("default-group", false);
-        }
-
-        @Bean
-        @Primary
-        ResultCaptor resultCaptor(IIngestRecordUseCase ingestUseCase) {
-            return new ResultCaptor(ingestUseCase);
-        }
-
-        @Bean
-        IIngestRecordUseCase ingestRecordUseCase(
-                IIngestionConfigRepository configRepository,
-                IIdempotencyKeyRepository idempotencyRepository,
-                IIngestionWorkItemRepository workItemRepository,
-                IAuditRepository auditRepository,
-                IGroupAssignmentPort groupAssignmentPort) {
-            return new IngestionService(configRepository, idempotencyRepository,
-                    workItemRepository, auditRepository, groupAssignmentPort, event -> {},
-                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
-        }
-
-        @Bean
-        ObjectMapper objectMapper() { return new JsonMapper(); }
-
-        @Bean
-        TestDlqListener testDlqListener() { return new TestDlqListener(); }
+    @Bean
+    KafkaTemplate<String, String> kafkaTemplate(ProducerFactory<String, String> pf) {
+      return new KafkaTemplate<>(pf);
     }
 
-    // ── Wraps IIngestRecordUseCase to capture results for test assertions ─────
+    @Bean
+    ConsumerFactory<String, String> dlqConsumerFactory(EmbeddedKafkaBroker broker) {
+      Map<String, Object> props = KafkaTestUtils.consumerProps(broker, "test-dlq-group", false);
+      props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+      props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+      return new DefaultKafkaConsumerFactory<>(props);
+    }
 
-    static class ResultCaptor implements IIngestRecordUseCase {
+    @Bean
+    ConcurrentKafkaListenerContainerFactory<String, String> dlqListenerContainerFactory(
+        ConsumerFactory<String, String> dlqConsumerFactory) {
+      var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
+      factory.setConsumerFactory(dlqConsumerFactory);
+      return factory;
+    }
 
-        private final IIngestRecordUseCase delegate;
-        private final List<IngestionResult> results = new CopyOnWriteArrayList<>();
-        private volatile CountDownLatch latch = new CountDownLatch(1);
+    // ── In-memory domain doubles ──────────────────────────────────────────
 
-        ResultCaptor(IIngestRecordUseCase delegate) { this.delegate = delegate; }
+    @Bean
+    TestWorkItemStore workItemStore() {
+      return new TestWorkItemStore();
+    }
+
+    @Bean
+    TestIdempotencyStore idempotencyStore() {
+      return new TestIdempotencyStore();
+    }
+
+    @Bean
+    IIngestionConfigRepository ingestionConfigRepository() {
+      IngestionConfig config =
+          new IngestionConfig(
+              "tenant-kafka",
+              "SETTLEMENT_EXCEPTION",
+              SourceType.KAFKA,
+              List.of(
+                  new FieldMapping("tradeRef", "tradeRef", true),
+                  new FieldMapping("counterparty", "counterparty", false)),
+              UnknownColumnPolicy.IGNORE,
+              IdempotencyKeyStrategy.EXPLICIT_FIELD,
+              List.of(),
+              "tradeRef",
+              "OPEN");
+      return (tenantId, workflowType, sourceType) -> Optional.of(config);
+    }
+
+    @Bean
+    IIdempotencyKeyRepository idempotencyKeyRepository(TestIdempotencyStore store) {
+      return new IIdempotencyKeyRepository() {
+        @Override
+        public boolean exists(String tenantId, String workflowType, String key) {
+          return store.contains(tenantId + ":" + workflowType + ":" + key);
+        }
 
         @Override
-        public IngestionResult ingest(RawInboundRecord inboundRecord) {
-            IngestionResult result = delegate.ingest(inboundRecord);
-            results.add(result);
-            latch.countDown();
-            return result;
+        public void save(String tenantId, String workflowType, String key) {
+          store.add(tenantId + ":" + workflowType + ":" + key);
         }
-
-        void reset(int n) { results.clear(); latch = new CountDownLatch(n); }
-        List<IngestionResult> results() { return Collections.unmodifiableList(results); }
-        CountDownLatch latch() { return latch; }
+      };
     }
 
-    // ── DLQ listener ─────────────────────────────────────────────────────────
-
-    static class TestDlqListener {
-
-        private final List<String> payloads = new CopyOnWriteArrayList<>();
-        private volatile CountDownLatch latch = new CountDownLatch(1);
-
-        @KafkaListener(
-                topics = DLQ_TOPIC,
-                groupId = "test-dlq-group",
-                containerFactory = "dlqListenerContainerFactory"
-        )
-        void handle(@Payload String payload) {
-            payloads.add(payload);
-            latch.countDown();
-        }
-
-        void reset(int n) { payloads.clear(); latch = new CountDownLatch(n); }
-        List<String> payloads() { return Collections.unmodifiableList(payloads); }
-        CountDownLatch latch() { return latch; }
+    @Bean
+    IIngestionWorkItemRepository ingestionWorkItemRepository(TestWorkItemStore store) {
+      return workItem -> {
+        store.add(workItem);
+        return workItem;
+      };
     }
 
-    // ── Thread-safe in-memory stores ──────────────────────────────────────────
-
-    static class TestWorkItemStore {
-        private final List<WorkItem> items = new CopyOnWriteArrayList<>();
-        void add(WorkItem w)    { items.add(w); }
-        void clear()            { items.clear(); }
-        List<WorkItem> all()    { return Collections.unmodifiableList(items); }
+    @Bean
+    IAuditRepository ingestionAuditRepository() {
+      return entry -> {};
     }
 
-    static class TestIdempotencyStore {
-        private final Set<String> keys = Collections.synchronizedSet(new HashSet<>());
-        void add(String key)        { keys.add(key); }
-        boolean contains(String k)  { return keys.contains(k); }
-        void clear()                { keys.clear(); }
+    @Bean
+    IGroupAssignmentPort groupAssignmentPort() {
+      return (tenantId, workflowType, fields) ->
+          new IGroupAssignmentPort.AssignmentResult("default-group", false);
     }
+
+    @Bean
+    @Primary
+    ResultCaptor resultCaptor(IIngestRecordUseCase ingestUseCase) {
+      return new ResultCaptor(ingestUseCase);
+    }
+
+    @Bean
+    IIngestRecordUseCase ingestRecordUseCase(
+        IIngestionConfigRepository configRepository,
+        IIdempotencyKeyRepository idempotencyRepository,
+        IIngestionWorkItemRepository workItemRepository,
+        IAuditRepository auditRepository,
+        IGroupAssignmentPort groupAssignmentPort) {
+      return new IngestionService(
+          configRepository,
+          idempotencyRepository,
+          workItemRepository,
+          auditRepository,
+          groupAssignmentPort,
+          event -> {},
+          new io.micrometer.core.instrument.simple.SimpleMeterRegistry());
+    }
+
+    @Bean
+    ObjectMapper objectMapper() {
+      return new JsonMapper();
+    }
+
+    @Bean
+    TestDlqListener testDlqListener() {
+      return new TestDlqListener();
+    }
+  }
+
+  // ── Wraps IIngestRecordUseCase to capture results for test assertions ─────
+
+  static class ResultCaptor implements IIngestRecordUseCase {
+
+    private final IIngestRecordUseCase delegate;
+    private final List<IngestionResult> results = new CopyOnWriteArrayList<>();
+    private volatile CountDownLatch latch = new CountDownLatch(1);
+
+    ResultCaptor(IIngestRecordUseCase delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public IngestionResult ingest(RawInboundRecord inboundRecord) {
+      IngestionResult result = delegate.ingest(inboundRecord);
+      results.add(result);
+      latch.countDown();
+      return result;
+    }
+
+    void reset(int n) {
+      results.clear();
+      latch = new CountDownLatch(n);
+    }
+
+    List<IngestionResult> results() {
+      return Collections.unmodifiableList(results);
+    }
+
+    CountDownLatch latch() {
+      return latch;
+    }
+  }
+
+  // ── DLQ listener ─────────────────────────────────────────────────────────
+
+  static class TestDlqListener {
+
+    private final List<String> payloads = new CopyOnWriteArrayList<>();
+    private volatile CountDownLatch latch = new CountDownLatch(1);
+
+    @KafkaListener(
+        topics = DLQ_TOPIC,
+        groupId = "test-dlq-group",
+        containerFactory = "dlqListenerContainerFactory")
+    void handle(@Payload String payload) {
+      payloads.add(payload);
+      latch.countDown();
+    }
+
+    void reset(int n) {
+      payloads.clear();
+      latch = new CountDownLatch(n);
+    }
+
+    List<String> payloads() {
+      return Collections.unmodifiableList(payloads);
+    }
+
+    CountDownLatch latch() {
+      return latch;
+    }
+  }
+
+  // ── Thread-safe in-memory stores ──────────────────────────────────────────
+
+  static class TestWorkItemStore {
+    private final List<WorkItem> items = new CopyOnWriteArrayList<>();
+
+    void add(WorkItem w) {
+      items.add(w);
+    }
+
+    void clear() {
+      items.clear();
+    }
+
+    List<WorkItem> all() {
+      return Collections.unmodifiableList(items);
+    }
+  }
+
+  static class TestIdempotencyStore {
+    private final Set<String> keys = Collections.synchronizedSet(new HashSet<>());
+
+    void add(String key) {
+      keys.add(key);
+    }
+
+    boolean contains(String k) {
+      return keys.contains(k);
+    }
+
+    void clear() {
+      keys.clear();
+    }
+  }
 }
