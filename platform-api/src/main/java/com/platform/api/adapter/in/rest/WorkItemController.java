@@ -7,6 +7,7 @@ import com.platform.domain.model.WorkItem;
 import com.platform.workflow.domain.model.TransitionCommand;
 import com.platform.workflow.domain.ports.in.ITransitionWorkItemUseCase;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,47 +18,53 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/work-items")
 public class WorkItemController {
 
-    private final IFindWorkItemPort findWorkItemPort;
-    private final IListWorkItemsPort listWorkItemsPort;
-    private final ITransitionWorkItemUseCase transitionUseCase;
+  private final IFindWorkItemPort findWorkItemPort;
+  private final IListWorkItemsPort listWorkItemsPort;
+  private final ITransitionWorkItemUseCase transitionUseCase;
 
-    public WorkItemController(IFindWorkItemPort findWorkItemPort,
-                               IListWorkItemsPort listWorkItemsPort,
-                               ITransitionWorkItemUseCase transitionUseCase) {
-        this.findWorkItemPort = findWorkItemPort;
-        this.listWorkItemsPort = listWorkItemsPort;
-        this.transitionUseCase = transitionUseCase;
-    }
+  public WorkItemController(
+      IFindWorkItemPort findWorkItemPort,
+      IListWorkItemsPort listWorkItemsPort,
+      ITransitionWorkItemUseCase transitionUseCase) {
+    this.findWorkItemPort = findWorkItemPort;
+    this.listWorkItemsPort = listWorkItemsPort;
+    this.transitionUseCase = transitionUseCase;
+  }
 
-    @GetMapping
-    public ResponseEntity<List<WorkItem>> listWorkItems(
-            @RequestParam String workflowType,
-            @AuthenticationPrincipal ApiAuthentication auth) {
-        return ResponseEntity.ok(
-                listWorkItemsPort.findByTenantAndWorkflowType(auth.tenantId(), workflowType));
-    }
+  @GetMapping
+  public ResponseEntity<List<WorkItem>> listWorkItems(
+      @RequestParam String workflowType, @AuthenticationPrincipal ApiAuthentication auth) {
+    return ResponseEntity.ok(
+        listWorkItemsPort.findByTenantAndWorkflowType(auth.tenantId(), workflowType));
+  }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<WorkItem> getWorkItem(@PathVariable String id,
-                                                 @AuthenticationPrincipal ApiAuthentication auth) {
-        return findWorkItemPort.findById(auth.tenantId(), id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
+  @GetMapping("/{id}")
+  public ResponseEntity<WorkItem> getWorkItem(
+      @PathVariable String id, @AuthenticationPrincipal ApiAuthentication auth) {
+    return findWorkItemPort
+        .findById(auth.tenantId(), id)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+  }
 
-    @PostMapping("/{id}/transitions")
-    public ResponseEntity<WorkItem> triggerTransition(@PathVariable String id,
-                                                       @Valid @RequestBody TriggerTransitionRequest body,
-                                                       @AuthenticationPrincipal ApiAuthentication auth) {
-        WorkItem updated = transitionUseCase.transition(new TransitionCommand(
-                id, auth.tenantId(), body.transition(),
-                auth.userId(), auth.role(), body.additionalFields()));
-        return ResponseEntity.ok(updated);
-    }
+  @PostMapping("/{id}/transitions")
+  public ResponseEntity<WorkItem> triggerTransition(
+      @PathVariable String id,
+      @Valid @RequestBody TriggerTransitionRequest body,
+      @AuthenticationPrincipal ApiAuthentication auth) {
+    WorkItem updated =
+        transitionUseCase.transition(
+            new TransitionCommand(
+                id,
+                auth.tenantId(),
+                body.transition(),
+                auth.userId(),
+                auth.role(),
+                body.additionalFields()));
+    return ResponseEntity.ok(updated);
+  }
 }

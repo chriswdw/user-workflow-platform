@@ -55,6 +55,36 @@ Feature: Source connection API
     When I POST /api/v1/admin/source-connections with body {"name":"x","displayName":"X","connectionType":"KAFKA","config":{"bootstrapServers":"broker:9092","topicName":"t"},"credentialsRef":"ref"}
     Then the response status is 403
 
+  Scenario: Non-admin listing all source connections returns 403
+    Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
+    When I GET /api/v1/admin/source-connections
+    Then the response status is 403
+
+  Scenario: Non-admin updating a source connection returns 403
+    Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
+    And a source connection "conn-1" of type "KAFKA" exists
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Hacked Name"}
+    Then the response status is 403
+
+  Scenario: Non-admin deleting a source connection returns 403
+    Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
+    And a source connection "conn-1" of type "KAFKA" exists
+    When I DELETE /api/v1/admin/source-connections/conn-1
+    Then the response status is 403
+
+  Scenario: Non-admin granting tenant access returns 403
+    Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
+    And a source connection "conn-1" of type "KAFKA" exists
+    When I POST /api/v1/admin/source-connections/conn-1/access with body {"tenantId":"tenant-2"}
+    Then the response status is 403
+
+  Scenario: Non-admin revoking tenant access returns 403
+    Given I am authenticated as user "alice" with role "ANALYST" for tenant "tenant-1"
+    And a source connection "conn-1" of type "KAFKA" exists
+    And tenant "tenant-1" has access to source connection "conn-1"
+    When I DELETE /api/v1/admin/source-connections/conn-1/access/tenant-1
+    Then the response status is 403
+
   Scenario: Admin updates a source connection
     Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
     And a source connection "conn-1" of type "KAFKA" exists

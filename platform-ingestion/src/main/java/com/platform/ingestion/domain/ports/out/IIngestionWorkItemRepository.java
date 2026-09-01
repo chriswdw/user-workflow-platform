@@ -4,5 +4,5 @@ import com.platform.domain.model.WorkItem;
 
 public interface IIngestionWorkItemRepository {
 
-    WorkItem save(WorkItem workItem);
+  WorkItem save(WorkItem workItem);
 }
