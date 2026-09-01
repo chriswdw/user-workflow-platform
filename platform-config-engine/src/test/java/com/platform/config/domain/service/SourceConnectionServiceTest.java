@@ -65,6 +65,27 @@ class SourceConnectionServiceTest {
     }
 
     @Test
+    void updateAppliesEveryProvidedFieldOverExisting() {
+        SourceConnection created = service.create(draftConnection("kafka-c2"));
+
+        SourceConnection fullUpdate = new SourceConnection(
+                created.id(), "kafka-c2-renamed", "New Display Name", ConnectionType.DB_POLL,
+                new ConnectionConfig.DbPollConfig("jdbc:postgresql://host:5432/db", "SELECT 1", 30),
+                "vault://new-creds", null, null, null);
+
+        SourceConnection updated = service.update(fullUpdate);
+
+        assertThat(updated.name()).isEqualTo("kafka-c2-renamed");
+        assertThat(updated.displayName()).isEqualTo("New Display Name");
+        assertThat(updated.connectionType()).isEqualTo(ConnectionType.DB_POLL);
+        assertThat(updated.config()).isEqualTo(fullUpdate.config());
+        assertThat(updated.credentialsRef()).isEqualTo("vault://new-creds");
+        // createdBy/createdAt are never taken from the incoming request, even when non-null
+        assertThat(updated.createdBy()).isEqualTo(created.createdBy());
+        assertThat(updated.createdAt()).isEqualTo(created.createdAt());
+    }
+
+    @Test
     void updateAdvancesUpdatedAtButPreservesCreatedAt() {
         SourceConnection created = service.create(draftConnection("kafka-d"));
 

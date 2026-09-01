@@ -102,6 +102,20 @@ class KafkaIngestionIntegrationTest {
         assertThat(workItemStore.all()).hasSize(1);
     }
 
+    // ── Correlation-id header is honoured for trace propagation ───────────────
+
+    @Test
+    void messageWithCorrelationIdHeader_isProcessedSuccessfully() throws Exception {
+        var record = new org.apache.kafka.clients.producer.ProducerRecord<String, String>(
+                INGEST_TOPIC, null, ingestMessage("TRD-CORR", "ACME Corp"));
+        record.headers().add("X-Correlation-ID", "corr-abc-123".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        kafkaTemplate.send(record).get(5, TimeUnit.SECONDS);
+
+        assertThat(resultCaptor.latch().await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(resultCaptor.results().get(0)).isInstanceOf(IngestionResult.Created.class);
+    }
+
     // ── Idempotency: duplicate discarded, only one work item saved ────────────
 
     @Test

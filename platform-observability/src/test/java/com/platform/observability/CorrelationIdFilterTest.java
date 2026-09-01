@@ -41,6 +41,19 @@ class CorrelationIdFilterTest {
     }
 
     @Test
+    void blank_header_generates_uuid_correlation_id() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(CorrelationIdFilter.HEADER, "   ");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, (req, res) -> {
+            String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+            assertThat(correlationId).isNotBlank().matches(
+                    "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+        });
+    }
+
+    @Test
     void correlation_id_is_added_to_response_header() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(CorrelationIdFilter.HEADER, "resp-id");

@@ -106,6 +106,14 @@ Feature: Detail panel renders work item details and audit trail
     When I click Confirm in the confirmation dialog
     Then the transition "reject" was fired with no additional fields
 
+  Scenario: A failed confirmation-required transition shows the server error in the dialog
+    Given a confirmation-required action "Reject" for transition "reject" with message "Are you sure?"
+    And the transition will fail with message "Item is locked by another user"
+    When I render the detail panel for that work item
+    And I click the "Reject" action button
+    And I click Confirm in the confirmation dialog
+    Then the confirmation dialog shows the server error "Item is locked by another user"
+
   Scenario: Cancelling a confirmation dialog does not fire the transition
     Given a confirmation-required action "Reject" for transition "reject" with message "Are you sure?"
     And the transition will succeed
