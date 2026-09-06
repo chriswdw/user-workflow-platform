@@ -1,4 +1,5 @@
 {
-    "sonarQubeUri": "http://192.168.1.198:9000",
-    "projectKey": "user-workflow-platform"
+    "sonarCloudOrganization": "chriswdw",
+    "projectKey": "chriswdw_user-workflow-platform",
+    "region": "EU"
 }
