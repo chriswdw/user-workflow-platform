@@ -12,7 +12,7 @@ export const WorkItemSchema = z.object({
   status: z.string(),
   assignedGroup: z.string(),
   routedByDefault: z.boolean(),
-  fields: z.record(z.unknown()),
+  fields: z.record(z.string(), z.unknown()),
   priorityScore: z.number().nullable(),
   priorityLevel: z.string().nullable(),
   priorityLastCalculatedAt: z.string().nullable(),

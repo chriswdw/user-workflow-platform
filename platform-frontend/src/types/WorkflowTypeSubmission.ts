@@ -13,7 +13,7 @@ export const WorkflowTypeSubmissionSchema = z.object({
   reviewedBy: z.string().nullable(),
   reviewedAt: z.string().nullable(),
   rejectionReason: z.string().nullable(),
-  draftConfigs: z.record(z.unknown()),
+  draftConfigs: z.record(z.string(), z.unknown()),
   currentStep: z.number(),
   version: z.number(),
   createdAt: z.string(),
@@ -27,7 +27,7 @@ export const SourceConnectionSchema = z.object({
   tenantId: z.string(),
   displayName: z.string(),
   type: z.enum(['KAFKA', 'DB_POLL', 'FILE_SHARE', 'MANUAL_UPLOAD']),
-  config: z.record(z.unknown()),
+  config: z.record(z.string(), z.unknown()),
   createdAt: z.string(),
 });
 
