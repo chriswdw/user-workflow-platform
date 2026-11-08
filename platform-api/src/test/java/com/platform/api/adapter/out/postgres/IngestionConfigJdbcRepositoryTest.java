@@ -144,9 +144,9 @@ class IngestionConfigJdbcRepositoryTest {
     }
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, 'INGESTION_SOURCE_CONFIG', CAST(:content AS jsonb), '1', :active)
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, 'INGESTION_SOURCE_CONFIG', CAST(:content AS jsonb), '1', :active)
+        """,
         new MapSqlParameterSource()
             .addValue("id", "test-ing-" + tenantId + "-" + sourceType)
             .addValue("tenantId", tenantId)

@@ -63,39 +63,35 @@ class ConnectionConfigTest {
   @Test
   void dbPollConfigRejectsNonPositivePollInterval() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new ConnectionConfig.DbPollConfig("jdbc:postgresql://localhost/db", "SELECT 1", 0))
+        .isThrownBy(() ->
+            new ConnectionConfig.DbPollConfig("jdbc:postgresql://localhost/db", "SELECT 1", 0))
         .withMessageContaining("pollIntervalSeconds");
   }
 
   @Test
   void dbPollConfigRejectsInlineUserPasswordCredentials() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new ConnectionConfig.DbPollConfig(
-                    "jdbc:postgresql://appuser:secret@localhost:5432/workflow", "SELECT 1", 30))
+        .isThrownBy(() ->
+            new ConnectionConfig.DbPollConfig(
+                "jdbc:postgresql://appuser:secret@localhost:5432/workflow", "SELECT 1", 30))
         .withMessageContaining("inline credentials");
   }
 
   @Test
   void dbPollConfigRejectsPasswordQueryParameter() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new ConnectionConfig.DbPollConfig(
-                    "jdbc:postgresql://localhost:5432/workflow?password=secret", "SELECT 1", 30))
+        .isThrownBy(() ->
+            new ConnectionConfig.DbPollConfig(
+                "jdbc:postgresql://localhost:5432/workflow?password=secret", "SELECT 1", 30))
         .withMessageContaining("inline credentials");
   }
 
   @Test
   void dbPollConfigRejectsUserQueryParameterCaseInsensitively() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new ConnectionConfig.DbPollConfig(
-                    "jdbc:postgresql://localhost:5432/workflow?USER=appuser", "SELECT 1", 30))
+        .isThrownBy(() ->
+            new ConnectionConfig.DbPollConfig(
+                "jdbc:postgresql://localhost:5432/workflow?USER=appuser", "SELECT 1", 30))
         .withMessageContaining("inline credentials");
   }
 

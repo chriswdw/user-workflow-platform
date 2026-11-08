@@ -33,16 +33,16 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IAuditRe
   public void save(AuditEntry entry) {
     String sql =
         """
-                INSERT INTO audit_entries
-                  (id, tenant_id, work_item_id, correlation_id, event_type,
-                   previous_state, new_state, transition_name, changed_fields,
-                   actor_user_id, actor_role, timestamp, idempotency_key)
-                VALUES
-                  (:id, :tenantId, :workItemId, :correlationId, :eventType,
-                   :previousState, :newState, :transitionName, CAST(:changedFields AS jsonb),
-                   :actorUserId, :actorRole, :timestamp, :idempotencyKey)
-                ON CONFLICT (id) DO NOTHING
-                """;
+        INSERT INTO audit_entries
+          (id, tenant_id, work_item_id, correlation_id, event_type,
+           previous_state, new_state, transition_name, changed_fields,
+           actor_user_id, actor_role, timestamp, idempotency_key)
+        VALUES
+          (:id, :tenantId, :workItemId, :correlationId, :eventType,
+           :previousState, :newState, :transitionName, CAST(:changedFields AS jsonb),
+           :actorUserId, :actorRole, :timestamp, :idempotencyKey)
+        ON CONFLICT (id) DO NOTHING
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("id", entry.id())
@@ -65,10 +65,10 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IAuditRe
   public List<AuditEntry> findByTenantAndWorkItemId(String tenantId, String workItemId) {
     String sql =
         """
-                SELECT * FROM audit_entries
-                WHERE tenant_id = :tenantId AND work_item_id = :workItemId
-                ORDER BY timestamp ASC
-                """;
+        SELECT * FROM audit_entries
+        WHERE tenant_id = :tenantId AND work_item_id = :workItemId
+        ORDER BY timestamp ASC
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("tenantId", tenantId)
@@ -110,14 +110,13 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IAuditRe
       // "value was an empty string".
       List<Map<String, Object>> raw =
           fields.stream()
-              .map(
-                  f -> {
-                    Map<String, Object> field = new LinkedHashMap<>();
-                    field.put("fieldPath", f.fieldPath());
-                    field.put("previousValue", f.previousValue());
-                    field.put("newValue", f.newValue());
-                    return field;
-                  })
+              .map(f -> {
+                Map<String, Object> field = new LinkedHashMap<>();
+                field.put("fieldPath", f.fieldPath());
+                field.put("previousValue", f.previousValue());
+                field.put("newValue", f.newValue());
+                return field;
+              })
               .toList();
       return objectMapper.writeValueAsString(raw);
     } catch (JacksonException e) {
@@ -129,10 +128,9 @@ public class AuditEntryJdbcRepository implements IAuditEntryRepository, IAuditRe
     try {
       List<Map<String, Object>> raw = objectMapper.readValue(json, new TypeReference<>() {});
       return raw.stream()
-          .map(
-              m ->
-                  new ChangedField(
-                      (String) m.get("fieldPath"), m.get("previousValue"), m.get("newValue")))
+          .map(m ->
+              new ChangedField(
+                  (String) m.get("fieldPath"), m.get("previousValue"), m.get("newValue")))
           .toList();
     } catch (JacksonException e) {
       throw new IllegalStateException("Failed to deserialise changedFields from JSONB", e);

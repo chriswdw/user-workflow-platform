@@ -374,22 +374,21 @@ public class ApiStepDefinitions {
 
   private List<AuditEntry> buildAuditEntries(String tenantId, String workItemId, int count) {
     return java.util.stream.IntStream.range(0, count)
-        .mapToObj(
-            i ->
-                new AuditEntry(
-                    UUID.randomUUID().toString(),
-                    tenantId,
-                    workItemId,
-                    UUID.randomUUID().toString(),
-                    AuditEventType.INGESTION,
-                    null,
-                    null,
-                    null,
-                    List.of(),
-                    "user-1",
-                    "ANALYST",
-                    Instant.now(),
-                    null))
+        .mapToObj(i ->
+            new AuditEntry(
+                UUID.randomUUID().toString(),
+                tenantId,
+                workItemId,
+                UUID.randomUUID().toString(),
+                AuditEventType.INGESTION,
+                null,
+                null,
+                null,
+                List.of(),
+                "user-1",
+                "ANALYST",
+                Instant.now(),
+                null))
         .toList();
   }
 

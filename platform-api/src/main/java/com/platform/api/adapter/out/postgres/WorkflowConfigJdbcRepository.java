@@ -35,13 +35,13 @@ public class WorkflowConfigJdbcRepository implements IWorkflowConfigRepository {
       String tenantId, String workflowType) {
     String sql =
         """
-                SELECT content FROM config_documents
-                WHERE tenant_id = :tenantId
-                  AND workflow_type = :workflowType
-                  AND config_type  = 'WORKFLOW_CONFIG'
-                  AND active       = true
-                LIMIT 1
-                """;
+        SELECT content FROM config_documents
+        WHERE tenant_id = :tenantId
+          AND workflow_type = :workflowType
+          AND config_type  = 'WORKFLOW_CONFIG'
+          AND active       = true
+        LIMIT 1
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("tenantId", tenantId)
@@ -66,12 +66,11 @@ public class WorkflowConfigJdbcRepository implements IWorkflowConfigRepository {
     List<Map<String, Object>> raw = (List<Map<String, Object>>) c.get("states");
     if (raw == null) return List.of();
     return raw.stream()
-        .map(
-            s ->
-                new WorkflowState(
-                    (String) s.get("name"),
-                    Boolean.TRUE.equals(s.get("terminal")),
-                    (List<String>) s.get("allowedRoles")))
+        .map(s ->
+            new WorkflowState(
+                (String) s.get("name"),
+                Boolean.TRUE.equals(s.get("terminal")),
+                (List<String>) s.get("allowedRoles")))
         .toList();
   }
 
@@ -80,18 +79,17 @@ public class WorkflowConfigJdbcRepository implements IWorkflowConfigRepository {
     List<Map<String, Object>> raw = (List<Map<String, Object>>) c.get("transitions");
     if (raw == null) return List.of();
     return raw.stream()
-        .map(
-            t ->
-                new WorkflowTransition(
-                    (String) t.get("name"),
-                    (String) t.get("fromState"),
-                    (String) t.get("toState"),
-                    TransitionTrigger.valueOf((String) t.get("trigger")),
-                    (String) t.get("systemEventType"),
-                    (List<String>) t.get("allowedRoles"),
-                    Boolean.TRUE.equals(t.get("requiresMakerChecker")),
-                    parseActions((List<Map<String, Object>>) t.get("actions")),
-                    parseValidationRules((List<Map<String, Object>>) t.get("validationRules"))))
+        .map(t ->
+            new WorkflowTransition(
+                (String) t.get("name"),
+                (String) t.get("fromState"),
+                (String) t.get("toState"),
+                TransitionTrigger.valueOf((String) t.get("trigger")),
+                (String) t.get("systemEventType"),
+                (List<String>) t.get("allowedRoles"),
+                Boolean.TRUE.equals(t.get("requiresMakerChecker")),
+                parseActions((List<Map<String, Object>>) t.get("actions")),
+                parseValidationRules((List<Map<String, Object>>) t.get("validationRules"))))
         .toList();
   }
 
@@ -99,24 +97,20 @@ public class WorkflowConfigJdbcRepository implements IWorkflowConfigRepository {
   private static List<TransitionAction> parseActions(List<Map<String, Object>> raw) {
     if (raw == null) return List.of();
     return raw.stream()
-        .map(
-            a ->
-                new TransitionAction(
-                    TransitionActionType.valueOf((String) a.get("type")),
-                    (Map<String, String>) a.get("config"),
-                    a.get("onFailure") != null
-                        ? OnFailure.valueOf((String) a.get("onFailure"))
-                        : null))
+        .map(a ->
+            new TransitionAction(
+                TransitionActionType.valueOf((String) a.get("type")),
+                (Map<String, String>) a.get("config"),
+                a.get("onFailure") != null ? OnFailure.valueOf((String) a.get("onFailure")) : null))
         .toList();
   }
 
   private static List<ValidationRule> parseValidationRules(List<Map<String, Object>> raw) {
     if (raw == null) return List.of();
     return raw.stream()
-        .map(
-            r ->
-                new ValidationRule(
-                    (String) r.get("field"), (String) r.get("operator"), (String) r.get("value")))
+        .map(r ->
+            new ValidationRule(
+                (String) r.get("field"), (String) r.get("operator"), (String) r.get("value")))
         .toList();
   }
 

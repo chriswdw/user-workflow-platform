@@ -128,19 +128,19 @@ class MultiTenantIsolationTest {
     Instant now = Instant.now();
     jdbc.update(
         """
-                INSERT INTO work_items
-                  (id, tenant_id, workflow_type, correlation_id, config_version_id,
-                   source, source_ref, idempotency_key, status, assigned_group,
-                   routed_by_default, fields, priority_score, priority_level,
-                   priority_last_calculated_at, pending_checker_id, pending_checker_transition,
-                   version, maker_user_id, created_at, updated_at)
-                VALUES
-                  (:id, :tenantId, :workflowType, :corrId, null,
-                   'KAFKA', :sourceRef, :idemKey, 'OPEN', 'ops',
-                   false, '{}', null, null,
-                   null, null, null,
-                   1, 'system', :now, :now)
-                """,
+        INSERT INTO work_items
+          (id, tenant_id, workflow_type, correlation_id, config_version_id,
+           source, source_ref, idempotency_key, status, assigned_group,
+           routed_by_default, fields, priority_score, priority_level,
+           priority_last_calculated_at, pending_checker_id, pending_checker_transition,
+           version, maker_user_id, created_at, updated_at)
+        VALUES
+          (:id, :tenantId, :workflowType, :corrId, null,
+           'KAFKA', :sourceRef, :idemKey, 'OPEN', 'ops',
+           false, '{}', null, null,
+           null, null, null,
+           1, 'system', :now, :now)
+        """,
         new MapSqlParameterSource()
             .addValue("id", id)
             .addValue("tenantId", tenantId)
@@ -173,9 +173,9 @@ class MultiTenantIsolationTest {
       String json = objectMapper.writeValueAsString(Map.of("key", "val"));
       jdbc.update(
           """
-                    INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                    VALUES (:id, :tenantId, 'SETTLEMENT_EXCEPTION', 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
-                    """,
+          INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+          VALUES (:id, :tenantId, 'SETTLEMENT_EXCEPTION', 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
+          """,
           new MapSqlParameterSource()
               .addValue("id", id)
               .addValue("tenantId", tenantId)

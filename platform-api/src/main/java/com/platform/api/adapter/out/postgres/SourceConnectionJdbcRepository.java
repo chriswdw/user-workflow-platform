@@ -35,17 +35,17 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
   public SourceConnection save(SourceConnection c) {
     String sql =
         """
-                INSERT INTO source_connections
-                    (id, name, display_name, connection_type, config, credentials_ref,
-                     created_by, created_at, updated_at)
-                VALUES (:id, :name, :displayName, :connectionType, CAST(:config AS jsonb),
-                        :credentialsRef, :createdBy, :createdAt, :updatedAt)
-                ON CONFLICT (id) DO UPDATE SET
-                    display_name    = EXCLUDED.display_name,
-                    config          = EXCLUDED.config,
-                    credentials_ref = EXCLUDED.credentials_ref,
-                    updated_at      = EXCLUDED.updated_at
-                """;
+        INSERT INTO source_connections
+            (id, name, display_name, connection_type, config, credentials_ref,
+             created_by, created_at, updated_at)
+        VALUES (:id, :name, :displayName, :connectionType, CAST(:config AS jsonb),
+                :credentialsRef, :createdBy, :createdAt, :updatedAt)
+        ON CONFLICT (id) DO UPDATE SET
+            display_name    = EXCLUDED.display_name,
+            config          = EXCLUDED.config,
+            credentials_ref = EXCLUDED.credentials_ref,
+            updated_at      = EXCLUDED.updated_at
+        """;
     jdbc.update(
         sql,
         new MapSqlParameterSource()
@@ -78,12 +78,12 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
       String tenantId, ConnectionType type) {
     String sql =
         """
-                SELECT sc.*
-                FROM source_connections sc
-                JOIN source_connection_access sca ON sca.source_connection_id = sc.id
-                WHERE sca.tenant_id = :tenantId AND sc.connection_type = :connectionType
-                ORDER BY sc.display_name
-                """;
+        SELECT sc.*
+        FROM source_connections sc
+        JOIN source_connection_access sca ON sca.source_connection_id = sc.id
+        WHERE sca.tenant_id = :tenantId AND sc.connection_type = :connectionType
+        ORDER BY sc.display_name
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue(COL_TENANT_ID, tenantId)
@@ -95,11 +95,11 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
   public void grantAccess(SourceConnectionAccess access) {
     String sql =
         """
-                INSERT INTO source_connection_access
-                    (id, source_connection_id, tenant_id, granted_by, granted_at)
-                VALUES (:id, :sourceConnectionId, :tenantId, :grantedBy, :grantedAt)
-                ON CONFLICT (source_connection_id, tenant_id) DO NOTHING
-                """;
+        INSERT INTO source_connection_access
+            (id, source_connection_id, tenant_id, granted_by, granted_at)
+        VALUES (:id, :sourceConnectionId, :tenantId, :grantedBy, :grantedAt)
+        ON CONFLICT (source_connection_id, tenant_id) DO NOTHING
+        """;
     jdbc.update(
         sql,
         new MapSqlParameterSource()
@@ -114,9 +114,9 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
   public void revokeAccess(String sourceConnectionId, String tenantId) {
     jdbc.update(
         """
-                DELETE FROM source_connection_access
-                WHERE source_connection_id = :sourceConnectionId AND tenant_id = :tenantId
-                """,
+        DELETE FROM source_connection_access
+        WHERE source_connection_id = :sourceConnectionId AND tenant_id = :tenantId
+        """,
         new MapSqlParameterSource()
             .addValue(COL_SOURCE_CONNECTION_ID, sourceConnectionId)
             .addValue(COL_TENANT_ID, tenantId));
@@ -132,9 +132,9 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
   public boolean hasAccess(String sourceConnectionId, String tenantId) {
     String sql =
         """
-                SELECT COUNT(*) > 0 FROM source_connection_access
-                WHERE source_connection_id = :sourceConnectionId AND tenant_id = :tenantId
-                """;
+        SELECT COUNT(*) > 0 FROM source_connection_access
+        WHERE source_connection_id = :sourceConnectionId AND tenant_id = :tenantId
+        """;
     return Boolean.TRUE.equals(
         jdbc.queryForObject(
             sql,

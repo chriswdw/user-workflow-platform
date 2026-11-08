@@ -69,18 +69,14 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
     WorkflowConfig config =
         workflowConfigRepository
             .findActiveByTenantAndWorkflowType(workItem.tenantId(), workItem.workflowType())
-            .orElseThrow(
-                () ->
-                    new WorkflowConfigNotFoundException(
-                        workItem.workflowType(), workItem.tenantId()));
+            .orElseThrow(() ->
+                new WorkflowConfigNotFoundException(workItem.workflowType(), workItem.tenantId()));
 
     WorkflowTransition transition =
         config
             .findTransition(command.transitionName())
-            .orElseThrow(
-                () ->
-                    new InvalidTransitionException(
-                        "Unknown transition: " + command.transitionName()));
+            .orElseThrow(() ->
+                new InvalidTransitionException("Unknown transition: " + command.transitionName()));
 
     // Validate current state matches fromState
     if (!transition.fromState().equals(workItem.status())) {
@@ -124,12 +120,11 @@ public class WorkflowService implements ITransitionWorkItemUseCase {
       java.util.Map<String, Object> merged = new java.util.HashMap<>(workItem.fields());
       List<AuditEntry.ChangedField> fieldChanges =
           command.additionalFields().entrySet().stream()
-              .map(
-                  e ->
-                      new AuditEntry.ChangedField(
-                          e.getKey(),
-                          FieldPathResolver.resolve(merged, e.getKey()).orElse(null),
-                          e.getValue()))
+              .map(e ->
+                  new AuditEntry.ChangedField(
+                      e.getKey(),
+                      FieldPathResolver.resolve(merged, e.getKey()).orElse(null),
+                      e.getValue()))
               .toList();
       command.additionalFields().forEach((path, value) -> setNestedValue(merged, path, value));
       updated = updated.withFields(java.util.Collections.unmodifiableMap(merged));

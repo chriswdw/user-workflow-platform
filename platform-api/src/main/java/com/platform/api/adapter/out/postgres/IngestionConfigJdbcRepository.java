@@ -31,14 +31,14 @@ public class IngestionConfigJdbcRepository implements IIngestionConfigRepository
       String tenantId, String workflowType, SourceType sourceType) {
     String sql =
         """
-                SELECT content FROM config_documents
-                WHERE tenant_id = :tenantId
-                  AND workflow_type = :workflowType
-                  AND config_type = :configType
-                  AND active = true
-                  AND content->>'sourceType' = :sourceType
-                LIMIT 1
-                """;
+        SELECT content FROM config_documents
+        WHERE tenant_id = :tenantId
+          AND workflow_type = :workflowType
+          AND config_type = :configType
+          AND active = true
+          AND content->>'sourceType' = :sourceType
+        LIMIT 1
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("tenantId", tenantId)
@@ -57,12 +57,11 @@ public class IngestionConfigJdbcRepository implements IIngestionConfigRepository
           (List<Map<String, Object>>) m.getOrDefault("fieldMappings", List.of());
       List<FieldMapping> fieldMappings =
           rawMappings.stream()
-              .map(
-                  fm ->
-                      new FieldMapping(
-                          (String) fm.get("sourceField"),
-                          (String) fm.get("targetField"),
-                          Boolean.TRUE.equals(fm.get("required"))))
+              .map(fm ->
+                  new FieldMapping(
+                      (String) fm.get("sourceField"),
+                      (String) fm.get("targetField"),
+                      Boolean.TRUE.equals(fm.get("required"))))
               .toList();
       List<String> idempotencyKeyFields =
           (List<String>) m.getOrDefault("idempotencyKeyFields", List.of());

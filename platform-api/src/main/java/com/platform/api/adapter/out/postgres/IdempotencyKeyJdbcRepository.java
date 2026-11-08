@@ -21,11 +21,11 @@ public class IdempotencyKeyJdbcRepository implements IIdempotencyKeyRepository {
   public boolean exists(String tenantId, String workflowType, String idempotencyKey) {
     String sql =
         """
-                SELECT COUNT(*) FROM work_items
-                WHERE tenant_id = :tenantId
-                  AND workflow_type = :workflowType
-                  AND idempotency_key = :idempotencyKey
-                """;
+        SELECT COUNT(*) FROM work_items
+        WHERE tenant_id = :tenantId
+          AND workflow_type = :workflowType
+          AND idempotency_key = :idempotencyKey
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("tenantId", tenantId)
