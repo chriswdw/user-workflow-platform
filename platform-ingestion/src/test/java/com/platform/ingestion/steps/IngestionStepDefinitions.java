@@ -12,6 +12,7 @@ import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
 import com.platform.ingestion.domain.model.UnknownColumnPolicy;
 import com.platform.ingestion.domain.ports.in.IIngestRecordUseCase;
+import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort;
 import com.platform.ingestion.domain.service.IngestionService;
 import com.platform.ingestion.doubles.InMemoryIdempotencyKeyRepository;
 import com.platform.ingestion.doubles.InMemoryIngestionAuditRepository;
@@ -53,6 +54,7 @@ public class IngestionStepDefinitions {
 
   private String tenantId = "tenant-1";
   private IngestionResult result;
+  private RuntimeException failure;
 
   // ── Given ────────────────────────────────────────────────────────────────
 
@@ -74,6 +76,16 @@ public class IngestionStepDefinitions {
     groupPort.configure(workflowType, groupId);
   }
 
+  @Given("the routing port falls back to group {string} for workflow type {string}")
+  public void routingPortFallsBackToGroup(String groupId, String workflowType) {
+    groupPort.configure(workflowType, groupId, true);
+  }
+
+  @Given("the routing port fails with {string}")
+  public void routingPortFailsWith(String message) {
+    groupPort.failWith(new IllegalStateException(message));
+  }
+
   @Given("a record with idempotency key {string} has already been ingested for workflow {string}")
   public void recordAlreadyIngested(String idempotencyKey, String workflowType) {
     idempotencyRepo.save(tenantId, workflowType, idempotencyKey);
@@ -84,15 +96,19 @@ public class IngestionStepDefinitions {
   @When("a {string} record is ingested for workflow {string} with fields:")
   public void recordIngested(String sourceType, String workflowType, DataTable dataTable) {
     Map<String, String> fields = dataTable.asMap();
-    result =
-        ingestionService.ingest(
-            new RawInboundRecord(
-                tenantId,
-                workflowType,
-                SourceType.valueOf(sourceType),
-                "ref-001",
-                fields,
-                "user-1"));
+    try {
+      result =
+          ingestionService.ingest(
+              new RawInboundRecord(
+                  tenantId,
+                  workflowType,
+                  SourceType.valueOf(sourceType),
+                  "ref-001",
+                  fields,
+                  "user-1"));
+    } catch (RuntimeException e) {
+      failure = e;
+    }
   }
 
   // ── Then ─────────────────────────────────────────────────────────────────
@@ -152,12 +168,67 @@ public class IngestionStepDefinitions {
         .anyMatch(e -> e.eventType() == AuditEventType.DUPLICATE_INGESTION_DISCARDED);
   }
 
+  @Then("the routing port was asked to route the created work item")
+  public void routingPortWasAskedToRouteTheCreatedWorkItem() {
+    var created = ((IngestionResult.Created) result).workItem();
+    assertThat(groupPort.requests()).as("routing requests").hasSize(1);
+    assertThat(groupPort.requests().get(0).workItemId())
+        .as("work item id in the routing request")
+        .isEqualTo(created.id());
+  }
+
+  @Then("the routing request contains field {string} equal to {string}")
+  public void routingRequestContainsField(String dotPath, String expected) {
+    Object value = FieldPathResolver.resolve(onlyRoutingRequest().fields(), dotPath).orElse(null);
+    assertThat(value).as("routing request field " + dotPath).isEqualTo(expected);
+  }
+
+  @Then("the routing request is for tenant {string} workflow {string} and maker {string}")
+  public void routingRequestIsFor(String tenant, String workflow, String maker) {
+    var request = onlyRoutingRequest();
+    assertThat(request.tenantId()).as("tenant").isEqualTo(tenant);
+    assertThat(request.workflowType()).as("workflow type").isEqualTo(workflow);
+    assertThat(request.makerUserId()).as("maker").isEqualTo(maker);
+  }
+
+  @Then("the work item is flagged as routed by default")
+  public void theWorkItemIsFlaggedAsRoutedByDefault() {
+    assertThat(((IngestionResult.Created) result).workItem().routedByDefault())
+        .as("routedByDefault")
+        .isTrue();
+  }
+
+  @Then("the work item is not flagged as routed by default")
+  public void theWorkItemIsNotFlaggedAsRoutedByDefault() {
+    assertThat(((IngestionResult.Created) result).workItem().routedByDefault())
+        .as("routedByDefault")
+        .isFalse();
+  }
+
+  @Then("ingestion fails with a message mentioning {string}")
+  public void ingestionFailsWithMessageMentioning(String keyword) {
+    assertThat(failure).as("ingestion failure").isNotNull().hasMessageContaining(keyword);
+    assertThat(result).as("ingestion result").isNull();
+  }
+
+  @Then("no idempotency key {string} is recorded for workflow {string}")
+  public void noIdempotencyKeyIsRecorded(String key, String workflowType) {
+    assertThat(idempotencyRepo.exists(tenantId, workflowType, key))
+        .as("idempotency key recorded")
+        .isFalse();
+  }
+
   @Then("no new work item is saved")
   public void noNewWorkItemIsSaved() {
     assertThat(workItemRepo.all()).as("saved work items").isEmpty();
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private IGroupAssignmentPort.AssignmentRequest onlyRoutingRequest() {
+    assertThat(groupPort.requests()).as("routing requests").hasSize(1);
+    return groupPort.requests().get(0);
+  }
 
   private void saveConfig(
       String tenant,

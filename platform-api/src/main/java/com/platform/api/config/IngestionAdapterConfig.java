@@ -40,8 +40,7 @@ public class IngestionAdapterConfig {
   @Bean
   IGroupAssignmentPort groupAssignmentPort(
       @Value("${platform.ingestion.default-group:group-ops}") String defaultGroup) {
-    return (tenantId, workflowType, fields) ->
-        new IGroupAssignmentPort.AssignmentResult(defaultGroup, true);
+    return request -> new IGroupAssignmentPort.AssignmentResult(defaultGroup, true);
   }
 
   @Bean

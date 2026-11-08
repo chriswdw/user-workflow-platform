@@ -131,14 +131,22 @@ public class IngestionService implements IIngestRecordUseCase {
       return new IngestionResult.Duplicate(idempotencyKey);
     }
 
+    // The ids are fixed before routing so the router's audit entry refers to the work item that is
+    // actually created.
+    String workItemId = UUID.randomUUID().toString();
+    String correlationId = UUID.randomUUID().toString();
+
     // Assign group
     IGroupAssignmentPort.AssignmentResult assignment =
         groupAssignmentPort.assignGroup(
-            inboundRecord.tenantId(), inboundRecord.workflowType(), mappedFields);
+            new IGroupAssignmentPort.AssignmentRequest(
+                workItemId,
+                inboundRecord.tenantId(),
+                inboundRecord.workflowType(),
+                inboundRecord.makerUserId(),
+                mappedFields));
 
     // Build WorkItem
-    String workItemId = UUID.randomUUID().toString();
-    String correlationId = UUID.randomUUID().toString();
     WorkItem workItem =
         new WorkItem(
             workItemId,
