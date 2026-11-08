@@ -92,10 +92,12 @@ jobs:
 
   frontend-e2e:
     runs-on: ubuntu-latest
-    # Pinned to the @playwright/test version in package.json so the browser build
+    # Pinned to the @playwright/test version in package-lock.json so the browser build
     # matches the one checked-in visual snapshots were generated against — a
-    # mismatched Chromium build here is what causes snapshot-diff flakes.
-    container: mcr.microsoft.com/playwright:v1.62.1-jammy
+    # mismatched Chromium build here is what causes snapshot-diff flakes. This tag MUST be
+    # bumped together with @playwright/test: a PR run installs the merge result's lockfile, and a
+    # mismatch fails with "Executable doesn't exist at /ms-playwright/chromium_headless_shell-*".
+    container: mcr.microsoft.com/playwright:v1.64.1-jammy
     defaults:
       run:
         working-directory: platform-frontend
