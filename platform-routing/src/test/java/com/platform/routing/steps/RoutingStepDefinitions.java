@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.platform.domain.model.AuditEventType;
 import com.platform.routing.domain.model.ConditionNode;
+import com.platform.routing.domain.model.EffectivePeriod;
 import com.platform.routing.domain.model.GroupCondition;
 import com.platform.routing.domain.model.LeafCondition;
 import com.platform.routing.domain.model.LogicalOperator;
@@ -21,6 +22,9 @@ import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -42,11 +46,10 @@ public class RoutingStepDefinitions {
   private final InMemoryRoutingConfigRepository routingConfigRepo =
       new InMemoryRoutingConfigRepository();
   private final InMemoryAuditRepository auditRepo = new InMemoryAuditRepository();
-  private final IRouteWorkItemUseCase routingService =
-      new RoutingService(routingConfigRepo, auditRepo, new SimpleMeterRegistry());
   private final ObjectMapper objectMapper = new JsonMapper();
 
   // Scenario state
+  private Clock clock = Clock.systemUTC();
   private String tenantId;
   private String workflowType;
   private String defaultGroupId;
@@ -120,6 +123,16 @@ public class RoutingStepDefinitions {
 
   private void addLeafRule(
       int priority, String field, Operator operator, String value, String targetGroupId) {
+    addLeafRule(priority, field, operator, value, targetGroupId, EffectivePeriod.unbounded());
+  }
+
+  private void addLeafRule(
+      int priority,
+      String field,
+      Operator operator,
+      String value,
+      String targetGroupId,
+      EffectivePeriod effective) {
     pendingRules.add(
         new RoutingRule(
             "rule-" + (++ruleCounter),
@@ -127,7 +140,59 @@ public class RoutingStepDefinitions {
             priority,
             new LeafCondition(field, operator, value),
             targetGroupId,
-            true));
+            true,
+            effective));
+  }
+
+  @Given("the current date is {string}")
+  public void theCurrentDateIs(String isoDate) {
+    // Midday UTC, so the instant falls unambiguously inside the given calendar date.
+    clock =
+        Clock.fixed(
+            LocalDate.parse(isoDate).atTime(12, 0).toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
+  }
+
+  @Given(
+      "the config has a rule with priority {int} matching {string} EQ {string} routing to {string} effective from {string}")
+  public void addEqRuleEffectiveFrom(
+      int priority, String field, String value, String targetGroupId, String from) {
+    addLeafRule(
+        priority,
+        field,
+        Operator.EQ,
+        value,
+        targetGroupId,
+        new EffectivePeriod(LocalDate.parse(from), null));
+  }
+
+  @Given(
+      "the config has a rule with priority {int} matching {string} EQ {string} routing to {string} effective until {string}")
+  public void addEqRuleEffectiveUntil(
+      int priority, String field, String value, String targetGroupId, String to) {
+    addLeafRule(
+        priority,
+        field,
+        Operator.EQ,
+        value,
+        targetGroupId,
+        new EffectivePeriod(null, LocalDate.parse(to)));
+  }
+
+  @Given(
+      "the config has a rule with priority {int} matching {string} EQ {string} routing to {string} effective from {string} until {string}")
+  public void addEqRuleEffectiveBetween(
+      int priority, String field, String value, String targetGroupId, String from, String to) {
+    addLeafRule(
+        priority,
+        field,
+        Operator.EQ,
+        value,
+        targetGroupId,
+        new EffectivePeriod(LocalDate.parse(from), LocalDate.parse(to)));
+  }
+
+  private IRouteWorkItemUseCase routingService() {
+    return new RoutingService(routingConfigRepo, auditRepo, new SimpleMeterRegistry(), clock);
   }
 
   @Given(
@@ -173,8 +238,8 @@ public class RoutingStepDefinitions {
     Map<String, Object> fields = buildNestedMap(dataTable.asMap());
 
     result =
-        routingService.route(
-            new WorkItemToRoute("work-item-001", tenantId, workflowType, "system", fields));
+        routingService()
+            .route(new WorkItemToRoute("work-item-001", tenantId, workflowType, "system", fields));
   }
 
   @When("a work item is routed with a non-numeric value for {string} of {string}")
@@ -189,8 +254,9 @@ public class RoutingStepDefinitions {
 
     try {
       result =
-          routingService.route(
-              new WorkItemToRoute("work-item-001", tenantId, workflowType, "system", fields));
+          routingService()
+              .route(
+                  new WorkItemToRoute("work-item-001", tenantId, workflowType, "system", fields));
     } catch (IllegalArgumentException e) {
       routingFailure = e;
     }

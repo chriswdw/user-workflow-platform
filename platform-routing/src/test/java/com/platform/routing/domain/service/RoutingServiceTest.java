@@ -10,6 +10,7 @@ import com.platform.routing.domain.model.RoutingRule;
 import com.platform.routing.domain.model.WorkItemToRoute;
 import com.platform.routing.doubles.InMemoryAuditRepository;
 import com.platform.routing.doubles.InMemoryRoutingConfigRepository;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,17 @@ class RoutingServiceTest {
 
   private final InMemoryRoutingConfigRepository configRepo = new InMemoryRoutingConfigRepository();
   private final InMemoryAuditRepository auditRepo = new InMemoryAuditRepository();
-  private final RoutingService service =
-      new RoutingService(configRepo, auditRepo, new SimpleMeterRegistry());
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final RoutingService service = new RoutingService(configRepo, auditRepo, meterRegistry);
+
+  private long timerCount(String outcome) {
+    Timer timer =
+        meterRegistry
+            .find("routing.evaluation.duration")
+            .tags("workflowType", WORKFLOW_TYPE, "outcome", outcome)
+            .timer();
+    return timer == null ? 0 : timer.count();
+  }
 
   private WorkItemToRoute workItem(Map<String, Object> fields) {
     return new WorkItemToRoute("wi-1", TENANT, WORKFLOW_TYPE, "maker-1", fields);
@@ -112,5 +122,35 @@ class RoutingServiceTest {
     service.route(workItem(Map.of()));
 
     assertThat(auditRepo.all()).hasSize(1);
+  }
+
+  @Test
+  void route_timesEvaluationWithMatchedOutcome_whenARuleMatches() {
+    service.route(workItem(Map.of()));
+
+    assertThat(timerCount("matched")).isEqualTo(1);
+    assertThat(timerCount("default")).isZero();
+    assertThat(timerCount("error")).isZero();
+  }
+
+  @Test
+  void route_timesEvaluationWithDefaultOutcome_whenFallingBack() {
+    configRepo.save(
+        new RoutingConfig("cfg-1", TENANT, WORKFLOW_TYPE, "default-group", false, List.of()));
+
+    service.route(workItem(Map.of()));
+
+    assertThat(timerCount("default")).isEqualTo(1);
+  }
+
+  @Test
+  void route_stillTimesEvaluationWithErrorOutcome_whenRoutingFails() {
+    WorkItemToRoute noConfig =
+        new WorkItemToRoute("wi-3", "unknown-tenant", WORKFLOW_TYPE, "user", Map.of());
+
+    assertThatThrownBy(() -> service.route(noConfig))
+        .isInstanceOf(RoutingConfigNotFoundException.class);
+
+    assertThat(timerCount("error")).isEqualTo(1);
   }
 }

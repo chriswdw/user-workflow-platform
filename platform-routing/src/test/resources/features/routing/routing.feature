@@ -224,3 +224,56 @@ Feature: Work item routing
     Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" GT "1000000.00" routing to "group-settlement"
     When a work item is routed with a non-numeric value for "trade.notionalAmount.amount" of "not-a-number"
     Then routing fails because the field value is not numeric
+
+  # ── Effective dates ────────────────────────────────────────────────────────
+  # effectiveFrom / effectiveTo are inclusive calendar dates (UTC). A rule outside its window is
+  # skipped exactly as an inactive rule is.
+
+  Scenario: A rule that is not yet effective is skipped
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective from "2026-07-01"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-default"
+    And routedByDefault is true
+
+  Scenario: A rule that has expired is skipped
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective until "2026-06-14"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-default"
+    And routedByDefault is true
+
+  Scenario: A rule is still effective on its last day
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective until "2026-06-15"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-settlement"
+    And routedByDefault is false
+
+  Scenario: A rule is already effective on its first day
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective from "2026-06-15"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-settlement"
+    And routedByDefault is false
+
+  Scenario: A rule inside its effective window matches
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective from "2026-06-01" until "2026-06-30"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-settlement"
+    And routedByDefault is false
+
+  Scenario: An expired rule falls through to the next matching rule
+    Given the current date is "2026-06-15"
+    And the config has a rule with priority 10 matching "counterparty.region" EQ "EMEA" routing to "group-settlement" effective until "2026-06-14"
+    And the config has a rule with priority 20 matching "counterparty.region" EQ "EMEA" routing to "group-senior"
+    When a work item is routed with fields:
+      | counterparty.region | EMEA |
+    Then the work item is assigned to "group-senior"
+    And routedByDefault is false

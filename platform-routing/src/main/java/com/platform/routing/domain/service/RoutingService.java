@@ -12,7 +12,8 @@ import com.platform.routing.domain.ports.in.IRouteWorkItemUseCase;
 import com.platform.routing.domain.ports.out.IRoutingConfigRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.time.Instant;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -29,34 +30,64 @@ import java.util.UUID;
  */
 public class RoutingService implements IRouteWorkItemUseCase {
 
+  private static final String OUTCOME_MATCHED = "matched";
+  private static final String OUTCOME_DEFAULT = "default";
+  private static final String OUTCOME_ERROR = "error";
+
   private final IRoutingConfigRepository routingConfigRepository;
   private final IAuditRepository auditRepository;
   private final MeterRegistry meterRegistry;
+  private final Clock clock;
 
   public RoutingService(
       IRoutingConfigRepository routingConfigRepository,
       IAuditRepository auditRepository,
       MeterRegistry meterRegistry) {
+    this(routingConfigRepository, auditRepository, meterRegistry, Clock.systemUTC());
+  }
+
+  public RoutingService(
+      IRoutingConfigRepository routingConfigRepository,
+      IAuditRepository auditRepository,
+      MeterRegistry meterRegistry,
+      Clock clock) {
     this.routingConfigRepository = routingConfigRepository;
     this.auditRepository = auditRepository;
     this.meterRegistry = meterRegistry;
+    this.clock = clock;
   }
 
   @Override
   public RoutingResult route(WorkItemToRoute workItem) {
     Timer.Sample sample = Timer.start(meterRegistry);
+    String outcome = OUTCOME_ERROR;
+    try {
+      RoutingResult result = evaluate(workItem);
+      outcome = result.routedByDefault() ? OUTCOME_DEFAULT : OUTCOME_MATCHED;
+      return result;
+    } finally {
+      // Recorded on every path, including failures, so evaluation latency and error rate are both
+      // visible.
+      sample.stop(
+          meterRegistry.timer(
+              "routing.evaluation.duration",
+              "workflowType",
+              workItem.workflowType(),
+              "outcome",
+              outcome));
+    }
+  }
+
+  private RoutingResult evaluate(WorkItemToRoute workItem) {
     RoutingConfig config =
         routingConfigRepository
             .findActiveByTenantAndWorkflowType(workItem.tenantId(), workItem.workflowType())
             .orElseThrow(() ->
                 new RoutingConfigNotFoundException(workItem.workflowType(), workItem.tenantId()));
 
-    for (RoutingRule rule : activeRulesInPriorityOrder(config)) {
+    for (RoutingRule rule : effectiveRulesInPriorityOrder(config)) {
       if (ConditionEvaluator.evaluate(rule.conditions(), workItem.fields())) {
         auditRepository.save(auditEntry(workItem, AuditEventType.ASSIGNMENT, rule.targetGroupId()));
-        sample.stop(
-            meterRegistry.timer(
-                "routing.evaluation.duration", "workflowType", workItem.workflowType()));
         return new RoutingResult(rule.targetGroupId(), false, rule.id());
       }
     }
@@ -64,20 +95,20 @@ public class RoutingService implements IRouteWorkItemUseCase {
     // No rule matched — fall back to defaultGroup
     auditRepository.save(
         auditEntry(workItem, AuditEventType.ROUTING_FALLBACK, config.defaultGroupId()));
-    sample.stop(
-        meterRegistry.timer(
-            "routing.evaluation.duration", "workflowType", workItem.workflowType()));
     return new RoutingResult(config.defaultGroupId(), true, null);
   }
 
-  private static List<RoutingRule> activeRulesInPriorityOrder(RoutingConfig config) {
+  /** Active rules that are in force today (UTC calendar date), lowest priority number first. */
+  private List<RoutingRule> effectiveRulesInPriorityOrder(RoutingConfig config) {
+    LocalDate today = LocalDate.now(clock);
     return config.rules().stream()
         .filter(RoutingRule::active)
+        .filter(rule -> rule.effective().isEffectiveOn(today))
         .sorted(Comparator.comparingInt(RoutingRule::priority))
         .toList();
   }
 
-  private static AuditEntry auditEntry(
+  private AuditEntry auditEntry(
       WorkItemToRoute workItem, AuditEventType eventType, String assignedGroupId) {
     return new AuditEntry(
         UUID.randomUUID().toString(),
@@ -91,7 +122,7 @@ public class RoutingService implements IRouteWorkItemUseCase {
         List.of(new AuditEntry.ChangedField("assignedGroup", null, assignedGroupId)),
         workItem.makerUserId(),
         "SYSTEM",
-        Instant.now(),
+        clock.instant(),
         workItem.id() + ":" + eventType.name());
   }
 }
