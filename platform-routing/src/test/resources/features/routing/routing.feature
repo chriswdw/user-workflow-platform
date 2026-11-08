@@ -224,6 +224,7 @@ Feature: Work item routing
     Given the config has a rule with priority 10 matching "trade.notionalAmount.amount" GT "1000000.00" routing to "group-settlement"
     When a work item is routed with a non-numeric value for "trade.notionalAmount.amount" of "not-a-number"
     Then routing fails because the field value is not numeric
+    And the failure names the field "trade.notionalAmount.amount" but not the value "not-a-number"
 
   # ── Effective dates ────────────────────────────────────────────────────────
   # effectiveFrom / effectiveTo are inclusive calendar dates (UTC). A rule outside its window is

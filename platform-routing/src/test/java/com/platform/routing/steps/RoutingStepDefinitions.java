@@ -272,6 +272,15 @@ public class RoutingStepDefinitions {
         .hasMessageContaining("Numeric operator applied to non-numeric values");
   }
 
+  @Then("the failure names the field {string} but not the value {string}")
+  public void theFailureNamesTheFieldButNotTheValue(String field, String value) {
+    // Field values can be personal or financial data, and exception messages end up in logs.
+    assertThat(routingFailure.getMessage())
+        .as("failure message")
+        .contains(field)
+        .doesNotContain(value);
+  }
+
   @Then("the work item is assigned to {string}")
   public void theWorkItemIsAssignedTo(String expectedGroupId) {
     assertThat(result.assignedGroupId()).as("assigned group").isEqualTo(expectedGroupId);
