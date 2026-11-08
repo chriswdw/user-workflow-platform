@@ -178,6 +178,16 @@ npx playwright show-report
 
 `npm run test:e2e` reuses an already-running `npm run dev` server if one is on port 5173; otherwise it starts one automatically.
 
+### Visual snapshots
+
+`wizard-step2-layout.spec.ts` compares a screenshot against a checked-in baseline in
+`e2e/*-snapshots/`. The app's fonts (Inter, JetBrains Mono) are bundled via `@fontsource-variable/*`, so
+every environment renders the same typeface, but Chromium's text rasterisation can still differ slightly
+between machines. **CI is the authority**: it runs in `mcr.microsoft.com/playwright:v<locked version>-jammy`, so
+regenerate baselines there, not on a developer machine. If the visual test fails after a Playwright or font
+upgrade, download the `playwright-report` artifact from the failed CI run, check the *actual* image has the
+expected layout, and commit it over the baseline. A local mismatch on that one test does not mean a regression.
+
 ### Updating visual snapshots
 
 The `wizard-step2-layout` spec includes a pixel-diff screenshot of the wizard step 2 body. After any intentional CSS change, regenerate the baseline and commit the updated PNG:

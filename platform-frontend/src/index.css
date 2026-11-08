@@ -32,8 +32,10 @@
   --shadow-md:   0 4px 16px rgba(0,0,0,.12);
   --shadow-panel:-4px 0 24px rgba(0,0,0,.14);
 
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  /* "... Variable" families are bundled via @fontsource-variable (see main.tsx); the plain names
+     and system fonts remain only as fallbacks. */
+  --font: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 /* ── Reset & base ────────────────────────────────────────────────────────── */
