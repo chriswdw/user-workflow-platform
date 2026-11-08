@@ -1,7 +1,6 @@
 plugins {
     java
     alias(libs.plugins.sonarqube)
-    alias(libs.plugins.openrewrite)
     alias(libs.plugins.owasp.dependencycheck)
     alias(libs.plugins.spotless)
 }
@@ -28,13 +27,7 @@ if (!isCi) {
     }
 }
 
-rewrite {
-    activeRecipe("org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0")
-}
-
 dependencies {
-    rewrite(libs.rewrite.spring)
-
     runtimeOnly("javax.xml.bind:jaxb-api:2.3.1")
 }
 
