@@ -37,15 +37,13 @@ public class SecurityConfig {
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(
             e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401, "Unauthorized")))
-        .authorizeHttpRequests(
-            auth ->
-                auth.requestMatchers("/api/dev/**")
-                    .permitAll()
-                    .requestMatchers(
-                        "/api/v1/admin/**", "/api/v1/workflow-type-submissions/all-drafts")
-                    .hasRole(PLATFORM_ADMIN)
-                    .anyRequest()
-                    .authenticated())
+        .authorizeHttpRequests(auth ->
+            auth.requestMatchers("/api/dev/**")
+                .permitAll()
+                .requestMatchers("/api/v1/admin/**", "/api/v1/workflow-type-submissions/all-drafts")
+                .hasRole(PLATFORM_ADMIN)
+                .anyRequest()
+                .authenticated())
         .addFilterBefore(
             new JwtAuthenticationFilter(jwtSecret), UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(new RateLimitingFilter(requestsPerMinute), JwtAuthenticationFilter.class);

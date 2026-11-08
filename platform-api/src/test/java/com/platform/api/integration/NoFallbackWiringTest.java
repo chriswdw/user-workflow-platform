@@ -21,11 +21,10 @@ class NoFallbackWiringTest {
 
   @Test
   void noDatasourceMeansNoWorkItemPortsAreRegistered() {
-    runner.run(
-        context -> {
-          assertThat(context).doesNotHaveBean(IFindWorkItemPort.class);
-          assertThat(context).doesNotHaveBean(IListWorkItemsPort.class);
-          assertThat(context).doesNotHaveBean(ITransitionWorkItemUseCase.class);
-        });
+    runner.run(context -> {
+      assertThat(context).doesNotHaveBean(IFindWorkItemPort.class);
+      assertThat(context).doesNotHaveBean(IListWorkItemsPort.class);
+      assertThat(context).doesNotHaveBean(ITransitionWorkItemUseCase.class);
+    });
   }
 }

@@ -201,12 +201,11 @@ public class WorkflowStepDefinitions {
   public void theWorkItemHasFieldSetTo(String dotPath, String value) {
     workItemRepo
         .findById(tenantId, workItemId)
-        .ifPresent(
-            item -> {
-              Map<String, Object> fields = new HashMap<>(item.fields());
-              setNestedValue(fields, dotPath, value);
-              workItemRepo.save(item.withFields(fields));
-            });
+        .ifPresent(item -> {
+          Map<String, Object> fields = new HashMap<>(item.fields());
+          setNestedValue(fields, dotPath, value);
+          workItemRepo.save(item.withFields(fields));
+        });
   }
 
   // ── When ─────────────────────────────────────────────────────────────────

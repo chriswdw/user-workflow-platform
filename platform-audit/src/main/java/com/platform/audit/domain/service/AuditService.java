@@ -29,11 +29,10 @@ public class AuditService implements IAppendAuditEntryUseCase, IQueryAuditTrailU
         repository.findByTenantAndWorkItemId(query.tenantId(), query.workItemId());
 
     return entries.stream()
-        .filter(
-            e ->
-                query.eventTypes() == null
-                    || query.eventTypes().isEmpty()
-                    || query.eventTypes().contains(e.eventType()))
+        .filter(e ->
+            query.eventTypes() == null
+                || query.eventTypes().isEmpty()
+                || query.eventTypes().contains(e.eventType()))
         .filter(e -> query.from() == null || !e.timestamp().isBefore(query.from()))
         .filter(e -> query.to() == null || !e.timestamp().isAfter(query.to()))
         .toList();

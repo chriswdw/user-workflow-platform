@@ -54,14 +54,14 @@ public class LocalDemoDataLoader {
       NamedParameterJdbcTemplate jdbc, ObjectMapper mapper, OffsetDateTime now) {
     String sql =
         """
-                INSERT INTO work_items (id, tenant_id, workflow_type, correlation_id, source, source_ref,
-                    idempotency_key, status, assigned_group, routed_by_default, fields, priority_score,
-                    priority_level, version, maker_user_id, created_at, updated_at)
-                VALUES (:id, :tenantId, :workflowType, :correlationId, :source, :sourceRef,
-                    :idempotencyKey, :status, :assignedGroup, false, CAST(:fields AS jsonb), :priorityScore,
-                    :priorityLevel, 1, 'system', :createdAt, :createdAt)
-                ON CONFLICT DO NOTHING
-                """;
+        INSERT INTO work_items (id, tenant_id, workflow_type, correlation_id, source, source_ref,
+            idempotency_key, status, assigned_group, routed_by_default, fields, priority_score,
+            priority_level, version, maker_user_id, created_at, updated_at)
+        VALUES (:id, :tenantId, :workflowType, :correlationId, :source, :sourceRef,
+            :idempotencyKey, :status, :assignedGroup, false, CAST(:fields AS jsonb), :priorityScore,
+            :priorityLevel, 1, 'system', :createdAt, :createdAt)
+        ON CONFLICT DO NOTHING
+        """;
 
     for (var item : demoItems(now)) {
       jdbc.update(
@@ -86,11 +86,11 @@ public class LocalDemoDataLoader {
   private void insertAuditEntries(NamedParameterJdbcTemplate jdbc, OffsetDateTime now) {
     String sql =
         """
-                INSERT INTO audit_entries (id, tenant_id, work_item_id, correlation_id, event_type,
-                    previous_state, new_state, changed_fields, actor_user_id, actor_role, timestamp)
-                VALUES (:id, :tenantId, :workItemId, :correlationId, :eventType,
-                    :previousState, :newState, '[]'::jsonb, 'system', 'SYSTEM', :timestamp)
-                """;
+        INSERT INTO audit_entries (id, tenant_id, work_item_id, correlation_id, event_type,
+            previous_state, new_state, changed_fields, actor_user_id, actor_role, timestamp)
+        VALUES (:id, :tenantId, :workItemId, :correlationId, :eventType,
+            :previousState, :newState, '[]'::jsonb, 'system', 'SYSTEM', :timestamp)
+        """;
 
     record AuditRow(
         String workItemId,

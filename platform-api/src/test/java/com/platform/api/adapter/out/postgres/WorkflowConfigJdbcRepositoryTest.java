@@ -23,30 +23,30 @@ class WorkflowConfigJdbcRepositoryTest {
 
   private static final String WORKFLOW_CONFIG_JSON =
       """
-            {
-              "id": "wf-test-1",
-              "tenantId": "tenant-1",
-              "workflowType": "TEST_TYPE",
-              "initialState": "OPEN",
-              "active": true,
-              "states": [
-                {"name": "OPEN",   "terminal": false, "allowedRoles": ["ANALYST"]},
-                {"name": "CLOSED", "terminal": true,  "allowedRoles": ["ANALYST", "SUPERVISOR"]}
-              ],
-              "transitions": [
-                {
-                  "name": "close",
-                  "fromState": "OPEN",
-                  "toState": "CLOSED",
-                  "trigger": "USER_ACTION",
-                  "allowedRoles": ["ANALYST"],
-                  "requiresMakerChecker": false,
-                  "actions": [],
-                  "validationRules": []
-                }
-              ]
-            }
-            """;
+      {
+        "id": "wf-test-1",
+        "tenantId": "tenant-1",
+        "workflowType": "TEST_TYPE",
+        "initialState": "OPEN",
+        "active": true,
+        "states": [
+          {"name": "OPEN",   "terminal": false, "allowedRoles": ["ANALYST"]},
+          {"name": "CLOSED", "terminal": true,  "allowedRoles": ["ANALYST", "SUPERVISOR"]}
+        ],
+        "transitions": [
+          {
+            "name": "close",
+            "fromState": "OPEN",
+            "toState": "CLOSED",
+            "trigger": "USER_ACTION",
+            "allowedRoles": ["ANALYST"],
+            "requiresMakerChecker": false,
+            "actions": [],
+            "validationRules": []
+          }
+        ]
+      }
+      """;
 
   private static final NamedParameterJdbcTemplate jdbc =
       new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
@@ -130,23 +130,23 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesTransitions_withSystemEventTriggerAndSystemEventType() {
     String json =
         """
-                {
-                  "id": "wf-sys", "tenantId": "tenant-1", "workflowType": "SE_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}],
-                  "transitions": [
-                    {
-                      "name": "auto-escalate",
-                      "fromState": "OPEN", "toState": "OPEN",
-                      "trigger": "SYSTEM_EVENT",
-                      "systemEventType": "BREACH_THRESHOLD",
-                      "allowedRoles": [],
-                      "requiresMakerChecker": false,
-                      "actions": [], "validationRules": []
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-sys", "tenantId": "tenant-1", "workflowType": "SE_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}],
+          "transitions": [
+            {
+              "name": "auto-escalate",
+              "fromState": "OPEN", "toState": "OPEN",
+              "trigger": "SYSTEM_EVENT",
+              "systemEventType": "BREACH_THRESHOLD",
+              "allowedRoles": [],
+              "requiresMakerChecker": false,
+              "actions": [], "validationRules": []
+            }
+          ]
+        }
+        """;
     insertConfig("wf-sys", "tenant-1", "SE_TYPE", json, true);
 
     WorkflowConfig config =
@@ -161,22 +161,22 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesTransitions_withSlaBreachTrigger() {
     String json =
         """
-                {
-                  "id": "wf-sla", "tenantId": "tenant-1", "workflowType": "SLA_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}],
-                  "transitions": [
-                    {
-                      "name": "breach",
-                      "fromState": "OPEN", "toState": "OPEN",
-                      "trigger": "SLA_BREACH",
-                      "allowedRoles": [],
-                      "requiresMakerChecker": false,
-                      "actions": [], "validationRules": []
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-sla", "tenantId": "tenant-1", "workflowType": "SLA_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}],
+          "transitions": [
+            {
+              "name": "breach",
+              "fromState": "OPEN", "toState": "OPEN",
+              "trigger": "SLA_BREACH",
+              "allowedRoles": [],
+              "requiresMakerChecker": false,
+              "actions": [], "validationRules": []
+            }
+          ]
+        }
+        """;
     insertConfig("wf-sla", "tenant-1", "SLA_TYPE", json, true);
 
     WorkflowConfig config =
@@ -190,28 +190,28 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesActions_withNonNullOnFailureVariants() {
     String json =
         """
-                {
-                  "id": "wf-act", "tenantId": "tenant-1", "workflowType": "ACT_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
-                              {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
-                  "transitions": [
-                    {
-                      "name": "close",
-                      "fromState": "OPEN", "toState": "CLOSED",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST"],
-                      "requiresMakerChecker": false,
-                      "actions": [
-                        {"type": "HTTP_CALL",    "config": {"url": "http://notify"}, "onFailure": "ROLLBACK_TRANSITION"},
-                        {"type": "KAFKA_EVENT",  "config": {"topic": "events"},       "onFailure": "CONTINUE"},
-                        {"type": "REASSIGN_GROUP","config": {"targetGroup": "ops"},   "onFailure": "RETRY"}
-                      ],
-                      "validationRules": []
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-act", "tenantId": "tenant-1", "workflowType": "ACT_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
+                      {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
+          "transitions": [
+            {
+              "name": "close",
+              "fromState": "OPEN", "toState": "CLOSED",
+              "trigger": "USER_ACTION",
+              "allowedRoles": ["ANALYST"],
+              "requiresMakerChecker": false,
+              "actions": [
+                {"type": "HTTP_CALL",    "config": {"url": "http://notify"}, "onFailure": "ROLLBACK_TRANSITION"},
+                {"type": "KAFKA_EVENT",  "config": {"topic": "events"},       "onFailure": "CONTINUE"},
+                {"type": "REASSIGN_GROUP","config": {"targetGroup": "ops"},   "onFailure": "RETRY"}
+              ],
+              "validationRules": []
+            }
+          ]
+        }
+        """;
     insertConfig("wf-act", "tenant-1", "ACT_TYPE", json, true);
 
     WorkflowConfig config =
@@ -232,26 +232,26 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesActions_withNullOnFailure() {
     String json =
         """
-                {
-                  "id": "wf-nof", "tenantId": "tenant-1", "workflowType": "NOF_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
-                              {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
-                  "transitions": [
-                    {
-                      "name": "close",
-                      "fromState": "OPEN", "toState": "CLOSED",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST"],
-                      "requiresMakerChecker": false,
-                      "actions": [
-                        {"type": "EMAIL_NOTIFICATION", "config": {"to": "ops@co"}}
-                      ],
-                      "validationRules": []
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-nof", "tenantId": "tenant-1", "workflowType": "NOF_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
+                      {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
+          "transitions": [
+            {
+              "name": "close",
+              "fromState": "OPEN", "toState": "CLOSED",
+              "trigger": "USER_ACTION",
+              "allowedRoles": ["ANALYST"],
+              "requiresMakerChecker": false,
+              "actions": [
+                {"type": "EMAIL_NOTIFICATION", "config": {"to": "ops@co"}}
+              ],
+              "validationRules": []
+            }
+          ]
+        }
+        """;
     insertConfig("wf-nof", "tenant-1", "NOF_TYPE", json, true);
 
     WorkflowConfig config =
@@ -266,27 +266,27 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesTransitions_withValidationRules() {
     String json =
         """
-                {
-                  "id": "wf-vr", "tenantId": "tenant-1", "workflowType": "VR_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
-                              {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
-                  "transitions": [
-                    {
-                      "name": "close",
-                      "fromState": "OPEN", "toState": "CLOSED",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST"],
-                      "requiresMakerChecker": false,
-                      "actions": [],
-                      "validationRules": [
-                        {"field": "tradeRef",    "operator": "EXISTS", "value": null},
-                        {"field": "counterparty", "operator": "NEQ",    "value": "UNKNOWN"}
-                      ]
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-vr", "tenantId": "tenant-1", "workflowType": "VR_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
+                      {"name": "CLOSED", "terminal": true, "allowedRoles": ["ANALYST"]}],
+          "transitions": [
+            {
+              "name": "close",
+              "fromState": "OPEN", "toState": "CLOSED",
+              "trigger": "USER_ACTION",
+              "allowedRoles": ["ANALYST"],
+              "requiresMakerChecker": false,
+              "actions": [],
+              "validationRules": [
+                {"field": "tradeRef",    "operator": "EXISTS", "value": null},
+                {"field": "counterparty", "operator": "NEQ",    "value": "UNKNOWN"}
+              ]
+            }
+          ]
+        }
+        """;
     insertConfig("wf-vr", "tenant-1", "VR_TYPE", json, true);
 
     WorkflowConfig config =
@@ -306,23 +306,23 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesTransitions_withRequiresMakerChecker() {
     String json =
         """
-                {
-                  "id": "wf-mk", "tenantId": "tenant-1", "workflowType": "MK_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
-                              {"name": "APPROVED", "terminal": true, "allowedRoles": ["ANALYST", "SUPERVISOR"]}],
-                  "transitions": [
-                    {
-                      "name": "approve",
-                      "fromState": "OPEN", "toState": "APPROVED",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST", "SUPERVISOR"],
-                      "requiresMakerChecker": true,
-                      "actions": [], "validationRules": []
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-mk", "tenantId": "tenant-1", "workflowType": "MK_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]},
+                      {"name": "APPROVED", "terminal": true, "allowedRoles": ["ANALYST", "SUPERVISOR"]}],
+          "transitions": [
+            {
+              "name": "approve",
+              "fromState": "OPEN", "toState": "APPROVED",
+              "trigger": "USER_ACTION",
+              "allowedRoles": ["ANALYST", "SUPERVISOR"],
+              "requiresMakerChecker": true,
+              "actions": [], "validationRules": []
+            }
+          ]
+        }
+        """;
     insertConfig("wf-mk", "tenant-1", "MK_TYPE", json, true);
 
     WorkflowConfig config =
@@ -335,12 +335,12 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesConfig_withNullTransitions_defaultsToEmptyList() {
     String json =
         """
-                {
-                  "id": "wf-empty", "tenantId": "tenant-1", "workflowType": "EMPTY_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}]
-                }
-                """;
+        {
+          "id": "wf-empty", "tenantId": "tenant-1", "workflowType": "EMPTY_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": []}]
+        }
+        """;
     insertConfig("wf-empty", "tenant-1", "EMPTY_TYPE", json, true);
 
     WorkflowConfig config =
@@ -361,21 +361,21 @@ class WorkflowConfigJdbcRepositoryTest {
   void parsesTransitions_withNullActions_defaultsToEmptyList() {
     String json =
         """
-                {
-                  "id": "wf-noact", "tenantId": "tenant-1", "workflowType": "NOACT_TYPE",
-                  "initialState": "OPEN", "active": true,
-                  "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]}],
-                  "transitions": [
-                    {
-                      "name": "close",
-                      "fromState": "OPEN", "toState": "OPEN",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST"],
-                      "requiresMakerChecker": false
-                    }
-                  ]
-                }
-                """;
+        {
+          "id": "wf-noact", "tenantId": "tenant-1", "workflowType": "NOACT_TYPE",
+          "initialState": "OPEN", "active": true,
+          "states": [{"name": "OPEN", "terminal": false, "allowedRoles": ["ANALYST"]}],
+          "transitions": [
+            {
+              "name": "close",
+              "fromState": "OPEN", "toState": "OPEN",
+              "trigger": "USER_ACTION",
+              "allowedRoles": ["ANALYST"],
+              "requiresMakerChecker": false
+            }
+          ]
+        }
+        """;
     insertConfig("wf-noact", "tenant-1", "NOACT_TYPE", json, true);
 
     WorkflowConfig config =
@@ -391,9 +391,9 @@ class WorkflowConfigJdbcRepositoryTest {
     // deserialisation fails — simulates data corruption upstream of this adapter.
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
+        """,
         new MapSqlParameterSource()
             .addValue("id", "wf-corrupt")
             .addValue("tenantId", "tenant-1")
@@ -412,9 +412,9 @@ class WorkflowConfigJdbcRepositoryTest {
       String id, String tenantId, String workflowType, String contentJson, boolean active) {
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', :active)
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', :active)
+        """,
         new MapSqlParameterSource()
             .addValue("id", id)
             .addValue("tenantId", tenantId)

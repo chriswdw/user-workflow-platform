@@ -48,10 +48,8 @@ public class RoutingService implements IRouteWorkItemUseCase {
     RoutingConfig config =
         routingConfigRepository
             .findActiveByTenantAndWorkflowType(workItem.tenantId(), workItem.workflowType())
-            .orElseThrow(
-                () ->
-                    new RoutingConfigNotFoundException(
-                        workItem.workflowType(), workItem.tenantId()));
+            .orElseThrow(() ->
+                new RoutingConfigNotFoundException(workItem.workflowType(), workItem.tenantId()));
 
     for (RoutingRule rule : activeRulesInPriorityOrder(config)) {
       if (ConditionEvaluator.evaluate(rule.conditions(), workItem.fields())) {

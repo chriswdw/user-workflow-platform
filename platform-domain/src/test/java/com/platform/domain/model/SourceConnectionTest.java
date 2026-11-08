@@ -69,55 +69,51 @@ class SourceConnectionTest {
   @Test
   void kafkaConnectionTypeRejectsDbPollConfig() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new SourceConnection(
-                    "conn-4",
-                    "mismatched",
-                    "Mismatched",
-                    ConnectionType.KAFKA,
-                    new ConnectionConfig.DbPollConfig(
-                        "jdbc:postgresql://localhost/db", "SELECT 1", 30),
-                    "vault://creds/conn-4",
-                    "user-1",
-                    NOW,
-                    NOW))
+        .isThrownBy(() ->
+            new SourceConnection(
+                "conn-4",
+                "mismatched",
+                "Mismatched",
+                ConnectionType.KAFKA,
+                new ConnectionConfig.DbPollConfig("jdbc:postgresql://localhost/db", "SELECT 1", 30),
+                "vault://creds/conn-4",
+                "user-1",
+                NOW,
+                NOW))
         .withMessageContaining("KAFKA");
   }
 
   @Test
   void dbPollConnectionTypeRejectsFileShareConfig() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new SourceConnection(
-                    "conn-5",
-                    "mismatched",
-                    "Mismatched",
-                    ConnectionType.DB_POLL,
-                    new ConnectionConfig.FileShareConfig("/mnt/inbound", "*.csv"),
-                    "vault://creds/conn-5",
-                    "user-1",
-                    NOW,
-                    NOW))
+        .isThrownBy(() ->
+            new SourceConnection(
+                "conn-5",
+                "mismatched",
+                "Mismatched",
+                ConnectionType.DB_POLL,
+                new ConnectionConfig.FileShareConfig("/mnt/inbound", "*.csv"),
+                "vault://creds/conn-5",
+                "user-1",
+                NOW,
+                NOW))
         .withMessageContaining("DB_POLL");
   }
 
   @Test
   void fileShareConnectionTypeRejectsKafkaConfig() {
     assertThatIllegalArgumentException()
-        .isThrownBy(
-            () ->
-                new SourceConnection(
-                    "conn-6",
-                    "mismatched",
-                    "Mismatched",
-                    ConnectionType.FILE_SHARE,
-                    new ConnectionConfig.KafkaConfig("localhost:9092", "work-items"),
-                    "vault://creds/conn-6",
-                    "user-1",
-                    NOW,
-                    NOW))
+        .isThrownBy(() ->
+            new SourceConnection(
+                "conn-6",
+                "mismatched",
+                "Mismatched",
+                ConnectionType.FILE_SHARE,
+                new ConnectionConfig.KafkaConfig("localhost:9092", "work-items"),
+                "vault://creds/conn-6",
+                "user-1",
+                NOW,
+                NOW))
         .withMessageContaining("FILE_SHARE");
   }
 

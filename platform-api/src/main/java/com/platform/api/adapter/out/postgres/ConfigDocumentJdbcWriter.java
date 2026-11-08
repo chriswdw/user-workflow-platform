@@ -26,22 +26,21 @@ public class ConfigDocumentJdbcWriter implements IConfigDocumentWriter {
     }
     String sql =
         """
-                INSERT INTO config_documents
-                    (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), :version, true)
-                ON CONFLICT (id) DO NOTHING
-                """;
+        INSERT INTO config_documents
+            (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), :version, true)
+        ON CONFLICT (id) DO NOTHING
+        """;
     SqlParameterSource[] params =
         documents.stream()
-            .map(
-                doc ->
-                    new MapSqlParameterSource()
-                        .addValue("id", doc.id())
-                        .addValue("tenantId", doc.tenantId())
-                        .addValue("workflowType", doc.workflowType())
-                        .addValue("configType", doc.configType().name())
-                        .addValue("content", toJson(doc.content()))
-                        .addValue("version", doc.version()))
+            .map(doc ->
+                new MapSqlParameterSource()
+                    .addValue("id", doc.id())
+                    .addValue("tenantId", doc.tenantId())
+                    .addValue("workflowType", doc.workflowType())
+                    .addValue("configType", doc.configType().name())
+                    .addValue("content", toJson(doc.content()))
+                    .addValue("version", doc.version()))
             .toArray(SqlParameterSource[]::new);
     jdbc.batchUpdate(sql, params);
   }
