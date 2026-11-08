@@ -12,7 +12,7 @@ openrewrite           = "7.39.0"
 owasp-dependencycheck = "13.0.0"
 rewrite-spring        = "6.37.1"
 sonarqube             = "7.5.0.8588"
-spotless              = "8.10.4"
+spotless              = "8.11.0"
 spring-boot           = "4.1.2"
 spring-dependency-mgmt = "1.1.7"
 

@@ -126,25 +126,25 @@ class PostgresAdapterConfigWiringTest {
 
   private static String closeTransitionConfig() {
     return """
-                {
-                  "id": "wf-dynamic", "tenantId": "%s", "workflowType": "%s",
-                  "initialState": "OPEN", "active": true,
-                  "states": [
-                    {"name": "OPEN",   "terminal": false, "allowedRoles": ["ANALYST"]},
-                    {"name": "CLOSED", "terminal": true,  "allowedRoles": ["ANALYST"]}
-                  ],
-                  "transitions": [
-                    {
-                      "name": "close",
-                      "fromState": "OPEN", "toState": "CLOSED",
-                      "trigger": "USER_ACTION",
-                      "allowedRoles": ["ANALYST"],
-                      "requiresMakerChecker": false,
-                      "actions": [], "validationRules": []
-                    }
-                  ]
-                }
-                """
+    {
+      "id": "wf-dynamic", "tenantId": "%s", "workflowType": "%s",
+      "initialState": "OPEN", "active": true,
+      "states": [
+        {"name": "OPEN",   "terminal": false, "allowedRoles": ["ANALYST"]},
+        {"name": "CLOSED", "terminal": true,  "allowedRoles": ["ANALYST"]}
+      ],
+      "transitions": [
+        {
+          "name": "close",
+          "fromState": "OPEN", "toState": "CLOSED",
+          "trigger": "USER_ACTION",
+          "allowedRoles": ["ANALYST"],
+          "requiresMakerChecker": false,
+          "actions": [], "validationRules": []
+        }
+      ]
+    }
+    """
         .formatted(TENANT, WORKFLOW_TYPE);
   }
 
@@ -152,19 +152,19 @@ class PostgresAdapterConfigWiringTest {
     Instant now = Instant.now();
     jdbc.update(
         """
-                INSERT INTO work_items
-                  (id, tenant_id, workflow_type, correlation_id, config_version_id,
-                   source, source_ref, idempotency_key, status, assigned_group,
-                   routed_by_default, fields, priority_score, priority_level,
-                   priority_last_calculated_at, pending_checker_id, pending_checker_transition,
-                   version, maker_user_id, created_at, updated_at)
-                VALUES
-                  (:id, :tenantId, :workflowType, :corrId, null,
-                   'KAFKA', :src, :idem, :status, 'ops-team',
-                   false, CAST('{}' AS jsonb), null, null,
-                   null, null, null,
-                   1, 'system', :now, :now)
-                """,
+        INSERT INTO work_items
+          (id, tenant_id, workflow_type, correlation_id, config_version_id,
+           source, source_ref, idempotency_key, status, assigned_group,
+           routed_by_default, fields, priority_score, priority_level,
+           priority_last_calculated_at, pending_checker_id, pending_checker_transition,
+           version, maker_user_id, created_at, updated_at)
+        VALUES
+          (:id, :tenantId, :workflowType, :corrId, null,
+           'KAFKA', :src, :idem, :status, 'ops-team',
+           false, CAST('{}' AS jsonb), null, null,
+           null, null, null,
+           1, 'system', :now, :now)
+        """,
         new MapSqlParameterSource()
             .addValue("id", id)
             .addValue("tenantId", TENANT)
@@ -179,9 +179,9 @@ class PostgresAdapterConfigWiringTest {
   private static void insertWorkflowConfig(String id, String contentJson) {
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, 'WORKFLOW_CONFIG', CAST(:content AS jsonb), '1', true)
+        """,
         new MapSqlParameterSource()
             .addValue("id", id)
             .addValue("tenantId", TENANT)

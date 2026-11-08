@@ -37,9 +37,9 @@ public class WorkItemJdbcRepository
   public Optional<WorkItem> findById(String tenantId, String workItemId) {
     String sql =
         """
-                SELECT * FROM work_items
-                WHERE id = :id AND tenant_id = :tenantId
-                """;
+        SELECT * FROM work_items
+        WHERE id = :id AND tenant_id = :tenantId
+        """;
     var params =
         new MapSqlParameterSource().addValue("id", workItemId).addValue(TENANT_ID, tenantId);
     return jdbc.query(sql, params, this::mapRow).stream().findFirst();
@@ -49,10 +49,10 @@ public class WorkItemJdbcRepository
   public List<WorkItem> findByTenantAndWorkflowType(String tenantId, String workflowType) {
     String sql =
         """
-                SELECT * FROM work_items
-                WHERE tenant_id = :tenantId AND workflow_type = :workflowType
-                ORDER BY priority_score DESC NULLS LAST, created_at DESC
-                """;
+        SELECT * FROM work_items
+        WHERE tenant_id = :tenantId AND workflow_type = :workflowType
+        ORDER BY priority_score DESC NULLS LAST, created_at DESC
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue(TENANT_ID, tenantId)
@@ -64,21 +64,21 @@ public class WorkItemJdbcRepository
   public WorkItem save(WorkItem w) {
     String sql =
         """
-                UPDATE work_items SET
-                  status                      = :status,
-                  assigned_group              = :assignedGroup,
-                  routed_by_default           = :routedByDefault,
-                  fields                      = CAST(:fields AS jsonb),
-                  priority_score              = :priorityScore,
-                  priority_level              = :priorityLevel,
-                  priority_last_calculated_at = :priorityLastCalculatedAt,
-                  pending_checker_id          = :pendingCheckerId,
-                  pending_checker_transition  = :pendingCheckerTransition,
-                  version                     = version + 1,
-                  maker_user_id               = :makerUserId,
-                  updated_at                  = :updatedAt
-                WHERE id = :id AND tenant_id = :tenantId AND version = :version
-                """;
+        UPDATE work_items SET
+          status                      = :status,
+          assigned_group              = :assignedGroup,
+          routed_by_default           = :routedByDefault,
+          fields                      = CAST(:fields AS jsonb),
+          priority_score              = :priorityScore,
+          priority_level              = :priorityLevel,
+          priority_last_calculated_at = :priorityLastCalculatedAt,
+          pending_checker_id          = :pendingCheckerId,
+          pending_checker_transition  = :pendingCheckerTransition,
+          version                     = version + 1,
+          maker_user_id               = :makerUserId,
+          updated_at                  = :updatedAt
+        WHERE id = :id AND tenant_id = :tenantId AND version = :version
+        """;
     Instant now = Instant.now();
     var params =
         new MapSqlParameterSource()

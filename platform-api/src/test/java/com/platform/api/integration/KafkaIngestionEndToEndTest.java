@@ -132,42 +132,42 @@ class KafkaIngestionEndToEndTest {
 
   private static String message(String tradeRef, String counterparty) {
     return """
-                {
-                  "tenantId": "%s",
-                  "workflowType": "%s",
-                  "sourceRef": "e2e-topic-0-1",
-                  "rawFields": { "tradeRef": "%s", "counterparty": "%s" },
-                  "makerUserId": "e2e-system"
-                }
-                """
+    {
+      "tenantId": "%s",
+      "workflowType": "%s",
+      "sourceRef": "e2e-topic-0-1",
+      "rawFields": { "tradeRef": "%s", "counterparty": "%s" },
+      "makerUserId": "e2e-system"
+    }
+    """
         .formatted(TENANT, WORKFLOW_TYPE, tradeRef, counterparty);
   }
 
   private void insertIngestionConfig() {
     String content =
         """
-                {
-                  "tenantId": "%s",
-                  "workflowType": "%s",
-                  "sourceType": "KAFKA",
-                  "fieldMappings": [
-                    {"sourceField": "tradeRef",     "targetField": "trade.ref",        "required": true},
-                    {"sourceField": "counterparty",  "targetField": "counterparty.name", "required": false}
-                  ],
-                  "unknownColumnPolicy": "IGNORE",
-                  "idempotencyKeyStrategy": "EXPLICIT_FIELD",
-                  "idempotencyKeyFields": [],
-                  "idempotencyExplicitField": "tradeRef",
-                  "initialState": "UNDER_REVIEW"
-                }
-                """
+        {
+          "tenantId": "%s",
+          "workflowType": "%s",
+          "sourceType": "KAFKA",
+          "fieldMappings": [
+            {"sourceField": "tradeRef",     "targetField": "trade.ref",        "required": true},
+            {"sourceField": "counterparty",  "targetField": "counterparty.name", "required": false}
+          ],
+          "unknownColumnPolicy": "IGNORE",
+          "idempotencyKeyStrategy": "EXPLICIT_FIELD",
+          "idempotencyKeyFields": [],
+          "idempotencyExplicitField": "tradeRef",
+          "initialState": "UNDER_REVIEW"
+        }
+        """
             .formatted(TENANT, WORKFLOW_TYPE);
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES ('e2e-ing-cfg', :t, :w, 'INGESTION_SOURCE_CONFIG', CAST(:c AS jsonb), '1', true)
-                ON CONFLICT (id) DO NOTHING
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES ('e2e-ing-cfg', :t, :w, 'INGESTION_SOURCE_CONFIG', CAST(:c AS jsonb), '1', true)
+        ON CONFLICT (id) DO NOTHING
+        """,
         new MapSqlParameterSource()
             .addValue("t", TENANT)
             .addValue("w", WORKFLOW_TYPE)

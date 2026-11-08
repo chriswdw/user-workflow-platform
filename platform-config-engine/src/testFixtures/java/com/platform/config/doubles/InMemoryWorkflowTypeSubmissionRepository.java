@@ -37,22 +37,18 @@ public class InMemoryWorkflowTypeSubmissionRepository implements IWorkflowTypeSu
   public List<WorkflowTypeSubmission> findByTenantAndStatusAndUser(
       String tenantId, SubmissionStatus status, String userId) {
     return store.stream()
-        .filter(
-            s ->
-                s.tenantId().equals(tenantId)
-                    && s.status() == status
-                    && s.submittedBy().equals(userId))
+        .filter(s ->
+            s.tenantId().equals(tenantId) && s.status() == status && s.submittedBy().equals(userId))
         .toList();
   }
 
   @Override
   public boolean existsByTenantAndWorkflowType(String tenantId, String workflowType) {
     return store.stream()
-        .anyMatch(
-            s ->
-                s.tenantId().equals(tenantId)
-                    && s.workflowType().equals(workflowType)
-                    && s.status() != SubmissionStatus.REJECTED);
+        .anyMatch(s ->
+            s.tenantId().equals(tenantId)
+                && s.workflowType().equals(workflowType)
+                && s.status() != SubmissionStatus.REJECTED);
   }
 
   @Override

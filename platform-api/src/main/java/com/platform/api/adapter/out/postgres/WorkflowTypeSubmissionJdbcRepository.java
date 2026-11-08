@@ -34,27 +34,27 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
   public WorkflowTypeSubmission save(WorkflowTypeSubmission s) {
     String sql =
         """
-                INSERT INTO workflow_type_submissions
-                    (id, tenant_id, workflow_type, display_name, description,
-                     status, draft_configs, submitted_by, submitted_at,
-                     reviewed_by, reviewed_at, rejection_reason,
-                     current_step, version, created_at, updated_at)
-                VALUES (:id, :tenantId, :workflowType, :displayName, :description,
-                        :status, CAST(:draftConfigs AS jsonb), :submittedBy, :submittedAt,
-                        :reviewedBy, :reviewedAt, :rejectionReason,
-                        :currentStep, :version, :createdAt, :updatedAt)
-                ON CONFLICT (id) DO UPDATE SET
-                    status           = EXCLUDED.status,
-                    draft_configs    = EXCLUDED.draft_configs,
-                    submitted_at     = EXCLUDED.submitted_at,
-                    reviewed_by      = EXCLUDED.reviewed_by,
-                    reviewed_at      = EXCLUDED.reviewed_at,
-                    rejection_reason = EXCLUDED.rejection_reason,
-                    current_step     = EXCLUDED.current_step,
-                    version          = EXCLUDED.version,
-                    updated_at       = EXCLUDED.updated_at
-                WHERE workflow_type_submissions.version = EXCLUDED.version - 1
-                """;
+        INSERT INTO workflow_type_submissions
+            (id, tenant_id, workflow_type, display_name, description,
+             status, draft_configs, submitted_by, submitted_at,
+             reviewed_by, reviewed_at, rejection_reason,
+             current_step, version, created_at, updated_at)
+        VALUES (:id, :tenantId, :workflowType, :displayName, :description,
+                :status, CAST(:draftConfigs AS jsonb), :submittedBy, :submittedAt,
+                :reviewedBy, :reviewedAt, :rejectionReason,
+                :currentStep, :version, :createdAt, :updatedAt)
+        ON CONFLICT (id) DO UPDATE SET
+            status           = EXCLUDED.status,
+            draft_configs    = EXCLUDED.draft_configs,
+            submitted_at     = EXCLUDED.submitted_at,
+            reviewed_by      = EXCLUDED.reviewed_by,
+            reviewed_at      = EXCLUDED.reviewed_at,
+            rejection_reason = EXCLUDED.rejection_reason,
+            current_step     = EXCLUDED.current_step,
+            version          = EXCLUDED.version,
+            updated_at       = EXCLUDED.updated_at
+        WHERE workflow_type_submissions.version = EXCLUDED.version - 1
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("id", s.id())
@@ -90,11 +90,11 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
   public Optional<WorkflowTypeSubmission> findById(String tenantId, String submissionId) {
     String sql =
         """
-                SELECT s.*, ss.display_name AS status_display_name
-                FROM workflow_type_submissions s
-                JOIN submission_statuses ss ON ss.code = s.status
-                WHERE s.tenant_id = :tenantId AND s.id = :id
-                """;
+        SELECT s.*, ss.display_name AS status_display_name
+        FROM workflow_type_submissions s
+        JOIN submission_statuses ss ON ss.code = s.status
+        WHERE s.tenant_id = :tenantId AND s.id = :id
+        """;
     var params =
         new MapSqlParameterSource().addValue(COL_TENANT_ID, tenantId).addValue("id", submissionId);
     return jdbc.query(sql, params, this::mapRow).stream().findFirst();
@@ -105,12 +105,12 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
       String tenantId, SubmissionStatus status) {
     String sql =
         """
-                SELECT s.*, ss.display_name AS status_display_name
-                FROM workflow_type_submissions s
-                JOIN submission_statuses ss ON ss.code = s.status
-                WHERE s.tenant_id = :tenantId AND s.status = :status
-                ORDER BY s.updated_at DESC
-                """;
+        SELECT s.*, ss.display_name AS status_display_name
+        FROM workflow_type_submissions s
+        JOIN submission_statuses ss ON ss.code = s.status
+        WHERE s.tenant_id = :tenantId AND s.status = :status
+        ORDER BY s.updated_at DESC
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue(COL_TENANT_ID, tenantId)
@@ -123,12 +123,12 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
       String tenantId, SubmissionStatus status, String userId) {
     String sql =
         """
-                SELECT s.*, ss.display_name AS status_display_name
-                FROM workflow_type_submissions s
-                JOIN submission_statuses ss ON ss.code = s.status
-                WHERE s.tenant_id = :tenantId AND s.submitted_by = :userId AND s.status = :status
-                ORDER BY s.updated_at DESC
-                """;
+        SELECT s.*, ss.display_name AS status_display_name
+        FROM workflow_type_submissions s
+        JOIN submission_statuses ss ON ss.code = s.status
+        WHERE s.tenant_id = :tenantId AND s.submitted_by = :userId AND s.status = :status
+        ORDER BY s.updated_at DESC
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue(COL_TENANT_ID, tenantId)
@@ -148,11 +148,11 @@ public class WorkflowTypeSubmissionJdbcRepository implements IWorkflowTypeSubmis
   public boolean existsByTenantAndWorkflowType(String tenantId, String workflowType) {
     String sql =
         """
-                SELECT COUNT(*) > 0
-                FROM workflow_type_submissions
-                WHERE tenant_id = :tenantId AND workflow_type = :workflowType
-                  AND status NOT IN ('REJECTED')
-                """;
+        SELECT COUNT(*) > 0
+        FROM workflow_type_submissions
+        WHERE tenant_id = :tenantId AND workflow_type = :workflowType
+          AND status NOT IN ('REJECTED')
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue(COL_TENANT_ID, tenantId)

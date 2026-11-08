@@ -119,19 +119,19 @@ class OptimisticLockConcurrencyTest {
   private static void insert(WorkItem w) {
     jdbc.update(
         """
-                INSERT INTO work_items
-                  (id, tenant_id, workflow_type, correlation_id, config_version_id,
-                   source, source_ref, idempotency_key, status, assigned_group,
-                   routed_by_default, fields, priority_score, priority_level,
-                   priority_last_calculated_at, pending_checker_id, pending_checker_transition,
-                   version, maker_user_id, created_at, updated_at)
-                VALUES
-                  (:id, :tenantId, :workflowType, :correlationId, null,
-                   :source, :sourceRef, :idempotencyKey, :status, :assignedGroup,
-                   :routedByDefault, '{}', null, null,
-                   null, null, null,
-                   :version, :makerUserId, :createdAt, :updatedAt)
-                """,
+        INSERT INTO work_items
+          (id, tenant_id, workflow_type, correlation_id, config_version_id,
+           source, source_ref, idempotency_key, status, assigned_group,
+           routed_by_default, fields, priority_score, priority_level,
+           priority_last_calculated_at, pending_checker_id, pending_checker_transition,
+           version, maker_user_id, created_at, updated_at)
+        VALUES
+          (:id, :tenantId, :workflowType, :correlationId, null,
+           :source, :sourceRef, :idempotencyKey, :status, :assignedGroup,
+           :routedByDefault, '{}', null, null,
+           null, null, null,
+           :version, :makerUserId, :createdAt, :updatedAt)
+        """,
         new MapSqlParameterSource()
             .addValue("id", w.id())
             .addValue("tenantId", w.tenantId())

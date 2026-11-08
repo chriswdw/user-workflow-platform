@@ -65,9 +65,8 @@ class ConfigServiceIntegrationTest {
     insertConfig(
         "cfg-inactive", "tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG, false);
 
-    assertThatThrownBy(
-            () ->
-                service.loadActive("tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG))
+    assertThatThrownBy(() ->
+            service.loadActive("tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG))
         .isInstanceOf(ConfigNotFoundException.class)
         .hasMessageContaining("WORKFLOW_CONFIG")
         .hasMessageContaining("tenant-1");
@@ -85,9 +84,8 @@ class ConfigServiceIntegrationTest {
     insertConfig("cfg-v1", "tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG, true);
     insertConfig("cfg-v2", "tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG, true);
 
-    assertThatThrownBy(
-            () ->
-                service.loadActive("tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG))
+    assertThatThrownBy(() ->
+            service.loadActive("tenant-1", "SETTLEMENT_EXCEPTION", ConfigType.WORKFLOW_CONFIG))
         .isInstanceOf(ConfigIntegrityException.class)
         .hasMessageContaining("Multiple active")
         .hasMessageContaining("WORKFLOW_CONFIG");
@@ -199,9 +197,9 @@ class ConfigServiceIntegrationTest {
       String json = objectMapper.writeValueAsString(content);
       jdbc.update(
           """
-                    INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                    VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', :active)
-                    """,
+          INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+          VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', :active)
+          """,
           new MapSqlParameterSource()
               .addValue("id", id)
               .addValue("tenantId", tenantId)

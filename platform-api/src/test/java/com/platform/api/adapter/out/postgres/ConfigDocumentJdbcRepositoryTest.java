@@ -128,9 +128,9 @@ class ConfigDocumentJdbcRepositoryTest {
     // this adapter, since this query has no filter on the content column's shape.
     jdbc.update(
         """
-                INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', true)
-                """,
+        INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+        VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', true)
+        """,
         new MapSqlParameterSource()
             .addValue("id", "doc-corrupt")
             .addValue("tenantId", "tenant-1")
@@ -156,9 +156,9 @@ class ConfigDocumentJdbcRepositoryTest {
       String json = objectMapper.writeValueAsString(content);
       jdbc.update(
           """
-                    INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
-                    VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', :active)
-                    """,
+          INSERT INTO config_documents (id, tenant_id, workflow_type, config_type, content, version, active)
+          VALUES (:id, :tenantId, :workflowType, :configType, CAST(:content AS jsonb), '1', :active)
+          """,
           new MapSqlParameterSource()
               .addValue("id", id)
               .addValue("tenantId", tenantId)
