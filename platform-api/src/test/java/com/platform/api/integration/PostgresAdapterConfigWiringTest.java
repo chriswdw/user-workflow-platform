@@ -63,7 +63,6 @@ class PostgresAdapterConfigWiringTest {
 
   private static final NamedParameterJdbcTemplate jdbc =
       new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE);
-  private static final ObjectMapper objectMapper = new JsonMapper();
 
   @Autowired private IDomainEventPublisher domainEventPublisher;
   @Autowired private WorkflowService workflowService;
