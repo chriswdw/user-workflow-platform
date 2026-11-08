@@ -6,6 +6,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -27,6 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(name = "api.dev.token.enabled", havingValue = "true", matchIfMissing = false)
 public class DevTokenController {
 
+  private static final Duration TOKEN_LIFETIME = Duration.ofHours(8);
+
   private final byte[] secretKeyBytes;
 
   public DevTokenController(@Value("${api.jwt.secret}") String base64Secret) {
@@ -45,13 +49,16 @@ public class DevTokenController {
   }
 
   private String buildToken(String userId, String role, String tenantId) {
+    // java.time for the arithmetic; Nimbus's claims builder only accepts java.util.Date, so convert
+    // at that boundary.
+    Instant issuedAt = Instant.now();
     JWTClaimsSet claims =
         new JWTClaimsSet.Builder()
             .subject(userId)
             .claim("role", role)
             .claim("tenantId", tenantId)
-            .issueTime(new Date())
-            .expirationTime(new Date(System.currentTimeMillis() + 8 * 3_600_000L))
+            .issueTime(Date.from(issuedAt))
+            .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)))
             .build();
 
     SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
