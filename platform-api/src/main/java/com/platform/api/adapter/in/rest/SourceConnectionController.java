@@ -8,6 +8,7 @@ import com.platform.domain.model.SourceConnection;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,10 +33,10 @@ public class SourceConnectionController {
 
   // ── Admin endpoints (/api/v1/admin/source-connections) ────────────────────
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @PostMapping("/api/v1/admin/source-connections")
   public ResponseEntity<SourceConnection> adminCreate(
       @RequestBody SourceConnectionRequest body, @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     SourceConnection created =
         manageUseCase.create(
             new SourceConnection(
@@ -51,19 +52,19 @@ public class SourceConnectionController {
     return ResponseEntity.status(201).body(created);
   }
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @GetMapping("/api/v1/admin/source-connections")
   public ResponseEntity<List<SourceConnection>> adminListAll(
       @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     return ResponseEntity.ok(listUseCase.listAll());
   }
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @PatchMapping("/api/v1/admin/source-connections/{id}")
   public ResponseEntity<SourceConnection> adminUpdate(
       @PathVariable String id,
       @RequestBody SourceConnectionRequest body,
       @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     SourceConnection updated =
         manageUseCase.update(
             new SourceConnection(
@@ -79,30 +80,30 @@ public class SourceConnectionController {
     return ResponseEntity.ok(updated);
   }
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @DeleteMapping("/api/v1/admin/source-connections/{id}")
   public ResponseEntity<Void> adminDelete(
       @PathVariable String id, @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     manageUseCase.delete(id);
     return ResponseEntity.noContent().build();
   }
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @PostMapping("/api/v1/admin/source-connections/{id}/access")
   public ResponseEntity<Void> adminGrantAccess(
       @PathVariable String id,
       @RequestBody Map<String, Object> body,
       @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     manageUseCase.grantAccess(id, (String) body.get("tenantId"), auth.userId());
     return ResponseEntity.noContent().build();
   }
 
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   @DeleteMapping("/api/v1/admin/source-connections/{id}/access/{tenantId}")
   public ResponseEntity<Void> adminRevokeAccess(
       @PathVariable String id,
       @PathVariable String tenantId,
       @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!isPlatformAdmin(auth)) return ResponseEntity.status(403).build();
     manageUseCase.revokeAccess(id, tenantId);
     return ResponseEntity.noContent().build();
   }
@@ -115,9 +116,5 @@ public class SourceConnectionController {
       @AuthenticationPrincipal ApiAuthentication auth) {
     ConnectionType connectionType = type != null ? ConnectionType.valueOf(type) : null;
     return ResponseEntity.ok(listUseCase.listAccessible(auth.tenantId(), connectionType));
-  }
-
-  private static boolean isPlatformAdmin(ApiAuthentication auth) {
-    return "PLATFORM_ADMIN".equals(auth.role());
   }
 }

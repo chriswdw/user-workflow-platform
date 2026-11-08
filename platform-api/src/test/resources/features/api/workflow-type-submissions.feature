@@ -163,3 +163,8 @@ Feature: Workflow type submission API
     And the submission "sub-1" is modified by another session
     When I POST /api/v1/workflow-type-submissions/sub-1/submit with body {}
     Then the response status is 409
+
+  Scenario: Unauthenticated access to all drafts returns 401
+    Given I am not authenticated
+    When I GET /api/v1/workflow-type-submissions/all-drafts
+    Then the response status is 401

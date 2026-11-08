@@ -18,6 +18,7 @@ import org.slf4j.MDC;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 
 class GlobalExceptionHandlerTest {
 
@@ -78,6 +79,14 @@ class GlobalExceptionHandlerTest {
         .isEqualTo(HttpStatus.FORBIDDEN.value());
     assertThat(handler.handleForbidden(new ForbiddenTransitionException("not allowed")).getStatus())
         .isEqualTo(HttpStatus.FORBIDDEN.value());
+  }
+
+  @Test
+  void handleAccessDenied_mapsToForbiddenRatherThanFallingThroughToTheCatchAll() {
+    ProblemDetail pd = handler.handleAccessDenied(new AccessDeniedException("denied"));
+
+    assertThat(pd.getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
+    assertThat(pd.getDetail()).isEqualTo("Access denied");
   }
 
   @Test
