@@ -14,6 +14,9 @@ build/
 node_modules/
 platform-frontend/dist/
 
+# SonarScanner cache
+.sonar/
+
 # Python virtualenv
 .venv/
 
