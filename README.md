@@ -226,13 +226,38 @@ To check your branch locally before opening a PR:
 ./scripts/sonar-check.sh
 ```
 
-The script analyses the current branch on SonarCloud and fails if it reports HIGH or CRITICAL issues.
-To target a local SonarQube instead, set `SONAR_URL=http://localhost:9000 SONAR_ORG=
-SONAR_PROJECT_KEY=user-workflow-platform`.
+The script uploads an analysis of the current branch to SonarCloud and fails if it reports HIGH or
+CRITICAL issues. This SonarCloud organization can only read pull-request and `main` results through
+the API, so on a feature branch the issues it checks come from the open PR's last CI analysis (it
+says so, and fails if there is no PR yet). To target a local SonarQube instead, set
+`SONAR_URL=http://localhost:9000 SONAR_ORG= SONAR_PROJECT_KEY=user-workflow-platform`.
 
 CI needs a `SONAR_TOKEN` repository secret (Settings → Secrets and variables → Actions).
 
 All HIGH and CRITICAL issues must be resolved before merging. See [CLAUDE.md](CLAUDE.md) for the full definition of done.
+
+---
+
+## Routing configuration
+
+Ingested records are assigned to a resolution group by the routing engine (`platform-routing`), driven
+entirely by a `ROUTING_CONFIG` document per tenant and workflow type in `config_documents`
+(schema: `schemas/config/routing-config.schema.json`). There is no hardcoded fallback group.
+
+- Active rules are evaluated in ascending `priority`; the first match wins. Rules may carry
+  `effectiveFrom` / `effectiveTo` (inclusive UTC calendar dates) and are skipped outside that window.
+- If no rule matches, the document's own `defaultGroup` is used and the work item is flagged
+  `routedByDefault`.
+- **A tenant and workflow type with no active `ROUTING_CONFIG` cannot ingest.** The record fails and
+  is published to the dead-letter topic (`work-items.ingest.dlq`); nothing is persisted and nothing is
+  marked as seen, so it can be replayed once the config exists. More than one active config for the
+  same tenant and workflow type, or a malformed one, is also an error, never a guess.
+- Every routing decision writes an audit entry (`ASSIGNMENT` or `ROUTING_FALLBACK`) against the
+  created work item, and `routing.evaluation.duration` is timed per workflow type and outcome
+  (`matched`, `default`, `error`).
+
+Liquibase seeds a demo config for `tenant-1` / `SETTLEMENT_EXCEPTION` (default `group-ops`, trades of
+10,000,000 or more to `group-senior`).
 
 ---
 

@@ -30,6 +30,21 @@ public final class EmbeddedPostgresProvider {
 
   private EmbeddedPostgresProvider() {}
 
+  /**
+   * Starts a separate, freshly migrated instance. Use it to test what the migrations themselves
+   * seed: the shared {@link #DATA_SOURCE} is truncated by other tests, so its seed rows cannot be
+   * relied on.
+   */
+  public static DataSource newMigratedDataSource() {
+    try {
+      DataSource ds = EmbeddedPostgres.start().getPostgresDatabase();
+      runMigrations(ds);
+      return ds;
+    } catch (Exception e) {
+      throw new IllegalStateException("Could not start a fresh embedded PostgreSQL", e);
+    }
+  }
+
   private static void runMigrations(DataSource ds) throws Exception {
     try (Connection conn = ds.getConnection()) {
       var database =

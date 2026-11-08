@@ -50,10 +50,10 @@ final class ConditionEvaluator {
     return switch (leaf.operator()) {
       case EQ -> fieldValue.toString().equals(comparand.toString());
       case NEQ -> !fieldValue.toString().equals(comparand.toString());
-      case GT -> compareBigDecimal(fieldValue, comparand) > 0;
-      case GTE -> compareBigDecimal(fieldValue, comparand) >= 0;
-      case LT -> compareBigDecimal(fieldValue, comparand) < 0;
-      case LTE -> compareBigDecimal(fieldValue, comparand) <= 0;
+      case GT -> compareBigDecimal(leaf.field(), fieldValue, comparand) > 0;
+      case GTE -> compareBigDecimal(leaf.field(), fieldValue, comparand) >= 0;
+      case LT -> compareBigDecimal(leaf.field(), fieldValue, comparand) < 0;
+      case LTE -> compareBigDecimal(leaf.field(), fieldValue, comparand) <= 0;
       case IN -> toStringList(comparand).contains(fieldValue.toString());
       case NOT_IN -> !toStringList(comparand).contains(fieldValue.toString());
       case CONTAINS -> fieldValue.toString().contains(comparand.toString());
@@ -69,19 +69,17 @@ final class ConditionEvaluator {
     };
   }
 
-  private static int compareBigDecimal(Object fieldValue, Object comparand) {
+  private static int compareBigDecimal(String field, Object fieldValue, Object comparand) {
     try {
       BigDecimal a = new BigDecimal(fieldValue.toString().trim());
       BigDecimal b = new BigDecimal(comparand.toString().trim());
       return a.compareTo(b);
     } catch (NumberFormatException e) {
+      // The message names the field but deliberately not the values: a field value can be personal
+      // or financial data, and exception messages are logged. The cause is not chained either,
+      // because NumberFormatException's own message repeats the offending text.
       throw new IllegalArgumentException(
-          "Numeric operator applied to non-numeric values: '"
-              + fieldValue
-              + "' vs '"
-              + comparand
-              + "'",
-          e);
+          "Numeric operator applied to non-numeric values for field '" + field + "'");
     }
   }
 

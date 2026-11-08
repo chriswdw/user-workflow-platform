@@ -290,8 +290,7 @@ class KafkaIngestionIntegrationTest {
 
     @Bean
     IGroupAssignmentPort groupAssignmentPort() {
-      return (tenantId, workflowType, fields) ->
-          new IGroupAssignmentPort.AssignmentResult("default-group", false);
+      return request -> new IGroupAssignmentPort.AssignmentResult("default-group", false);
     }
 
     @Bean

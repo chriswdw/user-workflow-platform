@@ -76,3 +76,43 @@ Feature: Work item ingestion
       | KAFKA       |
       | DB_POLL     |
       | FILE_UPLOAD |
+
+  # ── Routing integration ────────────────────────────────────────────────────
+  # Ingestion asks the routing port for the group and trusts its answer. The request must carry the
+  # id the work item is created under, so the router's audit entry refers to the real work item.
+
+  Scenario: The routing request carries the id of the work item that is created
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF | TRD-010 |
+    Then the ingestion result is Created
+    And the routing port was asked to route the created work item
+
+  Scenario: The routing request carries the mapped fields, tenant, workflow and maker
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF         | TRD-011  |
+      | COUNTERPARTY_NAME | Barclays |
+    Then the routing request contains field "trade.ref" equal to "TRD-011"
+    And the routing request contains field "counterparty.name" equal to "Barclays"
+    And the routing request is for tenant "tenant-1" workflow "SETTLEMENT_EXCEPTION" and maker "user-1"
+
+  Scenario: A work item routed to the fallback group is flagged as routed by default
+    Given the routing port falls back to group "group-default" for workflow type "SETTLEMENT_EXCEPTION"
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF | TRD-012 |
+    Then the ingestion result is Created
+    And the work item is assigned to group "group-default"
+    And the work item is flagged as routed by default
+
+  Scenario: A work item routed by a rule is not flagged as routed by default
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF | TRD-013 |
+    Then the ingestion result is Created
+    And the work item is not flagged as routed by default
+
+  Scenario: A routing failure stops ingestion and persists nothing, so the record can be replayed
+    Given the routing port fails with "No active routing config for workflowType=SETTLEMENT_EXCEPTION, tenantId=tenant-1"
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF | TRD-014 |
+    Then ingestion fails with a message mentioning "No active routing config"
+    And no new work item is saved
+    And no idempotency key "TRD-014" is recorded for workflow "SETTLEMENT_EXCEPTION"
