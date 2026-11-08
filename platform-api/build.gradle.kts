@@ -10,6 +10,7 @@ dependencies {
     implementation(project(":platform-audit"))
     implementation(project(":platform-observability"))
     implementation(project(":platform-ingestion"))
+    implementation(project(":platform-routing"))
     implementation(libs.spring.boot.starter.actuator)
 
     implementation(libs.spring.boot.starter.web)

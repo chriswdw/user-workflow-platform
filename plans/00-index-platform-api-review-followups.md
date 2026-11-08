@@ -16,7 +16,7 @@ ones that actually matter for a financial-services system, the rest are real but
 | 01 | `01-vault-local-setup.md` | — (enabler) | Set up HashiCorp Vault locally on Ubuntu; prerequisite for 02 |
 | 02 | `02-fix-dev-token-privilege-escalation.md` | CRITICAL (DONE) | Anonymous caller can mint a `PLATFORM_ADMIN` JWT in prod |
 | 03 | `03-fix-admin-authorization-defense-in-depth.md` | HIGH (DONE) | Admin authz is only inline `if`s; `getAuthorities()` is always empty |
-| 04 | `04-wire-real-routing-engine.md` | HIGH | Production ingestion wiring hardcodes `group-ops`, never calls `platform-routing` |
+| 04 | `04-wire-real-routing-engine.md` | HIGH (DONE) | Production ingestion wiring hardcodes `group-ops`, never calls `platform-routing` |
 | 05 | `05-fix-devconfig-profile-and-fake-state-machine.md` | HIGH (DONE) | Dev fallback beans + fake trades active in every profile except `local`. **Resolved by deleting `DevConfig` entirely** (not re-gating): `local` + `LocalDemoDataLoader` already seeds demo data |
 | 06 | `06-add-source-connection-optimistic-locking.md` | MEDIUM-HIGH | `SourceConnection` has no `version`; concurrent admin edits silently clobber |
 | 07 | `07-fix-ingestion-duplicate-exception-handling.md` | MEDIUM-HIGH | Any DB constraint violation gets mislabeled + silently discarded as a duplicate |
