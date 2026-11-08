@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { loginAs } from './helpers/auth';
 import { MOCK_SUBMISSION } from './helpers/fixtures';
 
@@ -22,6 +22,27 @@ async function navigateToStep2(page: Parameters<typeof loginAs>[0]) {
   await page.locator('#displayName').fill('E2E Test Type');
   await page.getByRole('button', { name: 'Next →' }).click();
   await page.getByText('Source Configuration').waitFor({ state: 'visible', timeout: 5_000 });
+}
+
+/**
+ * Logs in and returns every workflow-type-submissions request seen on page load.
+ *
+ * The expected request is awaited, not merely checked for: the app fires its data fetches
+ * asynchronously after login, so asserting on "whatever has fired by the time login returns" is a
+ * race that passes or fails depending on timing. The waiter is registered before login so the
+ * request cannot slip past it.
+ */
+async function requestsOnLoadAwaiting(page: Page, expectedPathFragment: string): Promise<string[]> {
+  const requests: string[] = [];
+  page.on('request', req => {
+    if (req.url().includes('workflow-type-submissions')) requests.push(req.url());
+  });
+  const expected = page.waitForRequest(req => req.url().includes(expectedPathFragment));
+
+  await loginAs(page, 'Analyst');
+  await expected;
+
+  return requests;
 }
 
 test.describe('Wizard PATCH URL — save draft', () => {
@@ -57,36 +78,21 @@ test.describe('Wizard PATCH URL — save draft', () => {
 
 test.describe('Submission GET hook URLs — sub-path style', () => {
   test('page load fires GET /workflow-type-submissions/pending — not ?status=PENDING_APPROVAL', async ({ page }) => {
-    const requests: string[] = [];
-    page.on('request', req => {
-      if (req.url().includes('workflow-type-submissions')) requests.push(req.url());
-    });
-
-    await loginAs(page, 'Analyst');
+    const requests = await requestsOnLoadAwaiting(page, '/workflow-type-submissions/pending');
 
     expect(requests.some(u => u.includes('/workflow-type-submissions/pending'))).toBe(true);
     expect(requests.some(u => u.includes('?status=PENDING_APPROVAL'))).toBe(false);
   });
 
   test('page load fires GET /workflow-type-submissions/my-drafts — not ?status=DRAFT', async ({ page }) => {
-    const requests: string[] = [];
-    page.on('request', req => {
-      if (req.url().includes('workflow-type-submissions')) requests.push(req.url());
-    });
-
-    await loginAs(page, 'Analyst');
+    const requests = await requestsOnLoadAwaiting(page, '/workflow-type-submissions/my-drafts');
 
     expect(requests.some(u => u.includes('/workflow-type-submissions/my-drafts'))).toBe(true);
     expect(requests.some(u => u.includes('?status=DRAFT'))).toBe(false);
   });
 
   test('page load fires GET /workflow-type-submissions/my-rejected — not ?status=REJECTED', async ({ page }) => {
-    const requests: string[] = [];
-    page.on('request', req => {
-      if (req.url().includes('workflow-type-submissions')) requests.push(req.url());
-    });
-
-    await loginAs(page, 'Analyst');
+    const requests = await requestsOnLoadAwaiting(page, '/workflow-type-submissions/my-rejected');
 
     expect(requests.some(u => u.includes('/workflow-type-submissions/my-rejected'))).toBe(true);
     expect(requests.some(u => u.includes('?status=REJECTED'))).toBe(false);
