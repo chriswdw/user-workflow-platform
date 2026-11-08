@@ -182,11 +182,12 @@ npx playwright show-report
 
 `wizard-step2-layout.spec.ts` compares a screenshot against a checked-in baseline in
 `e2e/*-snapshots/`. The app's fonts (Inter, JetBrains Mono) are bundled via `@fontsource-variable/*`, so
-every environment renders the same typeface, but Chromium's text rasterisation can still differ slightly
-between machines. **CI is the authority**: it runs in `mcr.microsoft.com/playwright:v<locked version>-jammy`, so
-regenerate baselines there, not on a developer machine. If the visual test fails after a Playwright or font
-upgrade, download the `playwright-report` artifact from the failed CI run, check the *actual* image has the
-expected layout, and commit it over the baseline. A local mismatch on that one test does not mean a regression.
+every environment renders the same typeface (the baseline rendered on a developer Linux machine and in the
+CI image was byte-identical), though Chromium's text rasterisation could still differ on other OSes.
+**CI is the authority**: it runs in `mcr.microsoft.com/playwright:v<locked version>-jammy`, so regenerate
+baselines there. If the visual test fails after a Playwright or font upgrade, download the
+`playwright-report` artifact from the failed CI run, check the *actual* image has the expected layout, and
+commit it over the baseline. A local-only mismatch is most likely environment noise; confirm in CI.
 
 ### Updating visual snapshots
 
