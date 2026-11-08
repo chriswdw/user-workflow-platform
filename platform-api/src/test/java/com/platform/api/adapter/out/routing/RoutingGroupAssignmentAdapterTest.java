@@ -3,6 +3,7 @@ package com.platform.api.adapter.out.routing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.platform.ingestion.domain.exception.GroupAssignmentException;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort.AssignmentRequest;
 import com.platform.ingestion.domain.ports.out.IGroupAssignmentPort.AssignmentResult;
 import com.platform.routing.domain.exception.RoutingConfigNotFoundException;
@@ -63,13 +64,31 @@ class RoutingGroupAssignmentAdapterTest {
   }
 
   @Test
-  void aRoutingFailurePropagatesUnchangedSoIngestionCannotGuessAGroup() {
+  void aRoutingFailureIsRethrownWithTheWorkItemContextAndTheOriginalAsCause() {
     var failure = new RoutingConfigNotFoundException("SETTLEMENT_EXCEPTION", "tenant-1");
     var adapter =
         new RoutingGroupAssignmentAdapter(item -> {
           throw failure;
         });
 
-    assertThatThrownBy(() -> adapter.assignGroup(REQUEST)).isSameAs(failure);
+    assertThatThrownBy(() -> adapter.assignGroup(REQUEST))
+        .isInstanceOf(GroupAssignmentException.class)
+        .hasMessageContaining("workItemId=wi-1")
+        .hasMessageContaining("tenantId=tenant-1")
+        .hasMessageContaining("workflowType=SETTLEMENT_EXCEPTION")
+        .hasCause(failure);
+  }
+
+  @Test
+  void theFailureMessageNeverContainsFieldValues() {
+    var adapter =
+        new RoutingGroupAssignmentAdapter(item -> {
+          throw new IllegalArgumentException("boom");
+        });
+
+    // REQUEST carries the field value "T1": identifiers may be reported, values may not.
+    assertThatThrownBy(() -> adapter.assignGroup(REQUEST))
+        .isInstanceOf(GroupAssignmentException.class)
+        .hasMessageNotContaining("T1");
   }
 }

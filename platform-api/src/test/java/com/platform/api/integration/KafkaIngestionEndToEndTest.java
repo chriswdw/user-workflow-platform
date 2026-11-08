@@ -235,9 +235,9 @@ class KafkaIngestionEndToEndTest {
         String.class);
   }
 
-  private static String headerText(ConsumerRecord<String, String> record) {
+  private static String headerText(ConsumerRecord<String, String> consumerRecord) {
     StringBuilder text = new StringBuilder();
-    record
+    consumerRecord
         .headers()
         .forEach(h -> text.append(new String(h.value(), StandardCharsets.UTF_8)).append('\n'));
     return text.toString();

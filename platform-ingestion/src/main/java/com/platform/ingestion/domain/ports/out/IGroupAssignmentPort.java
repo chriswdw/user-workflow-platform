@@ -13,8 +13,10 @@ import java.util.Map;
 public interface IGroupAssignmentPort {
 
   /**
-   * Returns the assigned group id and whether it was routed by the default fallback. Throws if the
-   * item cannot be routed (for example no routing config exists): ingestion must not guess a group.
+   * Returns the assigned group id and whether it was routed by the default fallback.
+   *
+   * @throws com.platform.ingestion.domain.exception.GroupAssignmentException if the item cannot be
+   *     routed (for example no routing config exists): ingestion must not guess a group
    */
   AssignmentResult assignGroup(AssignmentRequest request);
 

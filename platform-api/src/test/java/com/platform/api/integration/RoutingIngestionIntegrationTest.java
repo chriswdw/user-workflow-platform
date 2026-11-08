@@ -11,6 +11,7 @@ import com.platform.api.adapter.out.postgres.IngestionWorkItemJdbcRepository;
 import com.platform.api.adapter.out.postgres.RoutingConfigJdbcRepository;
 import com.platform.api.adapter.out.routing.RoutingGroupAssignmentAdapter;
 import com.platform.domain.model.SourceType;
+import com.platform.ingestion.domain.exception.GroupAssignmentException;
 import com.platform.ingestion.domain.model.IngestionResult;
 import com.platform.ingestion.domain.model.RawInboundRecord;
 import com.platform.ingestion.domain.service.IngestionService;
@@ -126,7 +127,8 @@ class RoutingIngestionIntegrationTest {
   @Test
   void withNoRoutingConfigIngestionFailsAndPersistsNothing() {
     assertThatThrownBy(() -> ingestResult("T-6", "25000000"))
-        .isInstanceOf(RoutingConfigNotFoundException.class);
+        .isInstanceOf(GroupAssignmentException.class)
+        .hasRootCauseInstanceOf(RoutingConfigNotFoundException.class);
 
     assertThat(workItemCount()).isZero();
   }
@@ -134,7 +136,8 @@ class RoutingIngestionIntegrationTest {
   @Test
   void aRecordRejectedForMissingConfigCanBeReplayedOnceConfigExists() {
     assertThatThrownBy(() -> ingestResult("T-7", "25000000"))
-        .isInstanceOf(RoutingConfigNotFoundException.class);
+        .isInstanceOf(GroupAssignmentException.class)
+        .hasRootCauseInstanceOf(RoutingConfigNotFoundException.class);
 
     insertConfig("rc-1", "ROUTING_CONFIG", routingConfig(seniorRule(null)));
     var replayed = ingest("T-7", "25000000");

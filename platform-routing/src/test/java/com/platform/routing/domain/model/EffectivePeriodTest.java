@@ -48,7 +48,9 @@ class EffectivePeriodTest {
 
   @Test
   void endBeforeStartIsRejectedAtConstruction() {
-    assertThatThrownBy(() -> new EffectivePeriod(DAY, DAY.minusDays(1)))
+    LocalDate dayBefore = DAY.minusDays(1);
+
+    assertThatThrownBy(() -> new EffectivePeriod(DAY, dayBefore))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("must not be before");
   }

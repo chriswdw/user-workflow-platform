@@ -3,6 +3,7 @@ package com.platform.api.adapter.out.postgres;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.platform.routing.domain.model.ConditionNode;
 import com.platform.routing.domain.model.EffectivePeriod;
 import com.platform.routing.domain.model.GroupCondition;
 import com.platform.routing.domain.model.LeafCondition;
@@ -184,21 +185,16 @@ class RoutingConfigJdbcRepositoryTest {
     List<RoutingRule> result =
         repository.findActiveByTenantAndWorkflowType(TENANT, WORKFLOW).get().rules();
 
+    List<ConditionNode> expected = new ArrayList<>();
     for (Operator operator : Operator.values()) {
-      assertThat(result)
-          .anySatisfy(r ->
-              assertThat(r.conditions())
-                  .isEqualTo(new LeafCondition("f." + operator, operator, "x")));
+      expected.add(new LeafCondition("f." + operator, operator, "x"));
     }
+    expected.add(new LeafCondition("trade.notionalAmount.amount", Operator.GT, "1000000.5"));
+    expected.add(new LeafCondition("trade.quantity", Operator.LT, "250"));
+
     assertThat(result)
-        .anySatisfy(r ->
-            assertThat(r.conditions())
-                .isEqualTo(
-                    new LeafCondition("trade.notionalAmount.amount", Operator.GT, "1000000.5")));
-    assertThat(result)
-        .anySatisfy(r ->
-            assertThat(r.conditions())
-                .isEqualTo(new LeafCondition("trade.quantity", Operator.LT, "250")));
+        .extracting(RoutingRule::conditions)
+        .containsExactlyInAnyOrderElementsOf(expected);
   }
 
   // ── Malformed config is surfaced, never guessed ───────────────────────────
