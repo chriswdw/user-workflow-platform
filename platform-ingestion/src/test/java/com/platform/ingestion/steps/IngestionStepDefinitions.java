@@ -42,6 +42,7 @@ public class IngestionStepDefinitions {
       new InMemoryIngestionWorkItemRepository();
   private final InMemoryIngestionAuditRepository auditRepo = new InMemoryIngestionAuditRepository();
   private final StubGroupAssignmentPort groupPort = new StubGroupAssignmentPort();
+  private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final IIngestRecordUseCase ingestionService =
       new IngestionService(
           configRepo,
@@ -50,7 +51,7 @@ public class IngestionStepDefinitions {
           auditRepo,
           groupPort,
           event -> {},
-          new SimpleMeterRegistry());
+          meterRegistry);
 
   private String tenantId = "tenant-1";
   private IngestionResult result;
@@ -79,6 +80,11 @@ public class IngestionStepDefinitions {
   @Given("the routing port falls back to group {string} for workflow type {string}")
   public void routingPortFallsBackToGroup(String groupId, String workflowType) {
     groupPort.configure(workflowType, groupId, true);
+  }
+
+  @Given("saving a work item fails with {string}")
+  public void savingAWorkItemFailsWith(String message) {
+    workItemRepo.failWith(new IllegalStateException(message));
   }
 
   @Given("the routing port fails with {string}")
@@ -216,6 +222,22 @@ public class IngestionStepDefinitions {
     assertThat(idempotencyRepo.exists(tenantId, workflowType, key))
         .as("idempotency key recorded")
         .isFalse();
+  }
+
+  @Then("no DUPLICATE_INGESTION_DISCARDED audit entry is written")
+  public void noDuplicateDiscardedAuditEntry() {
+    assertThat(auditRepo.all())
+        .noneMatch(e -> e.eventType() == AuditEventType.DUPLICATE_INGESTION_DISCARDED);
+  }
+
+  @Then("the ingestion counter for source {string} records result {string}")
+  public void theIngestionCounterRecordsResult(String source, String resultTag) {
+    assertThat(
+            meterRegistry
+                .counter("workitems.ingested", "source", source, "result", resultTag)
+                .count())
+        .as("workitems.ingested{source=" + source + ", result=" + resultTag + "}")
+        .isEqualTo(1.0);
   }
 
   @Then("no new work item is saved")

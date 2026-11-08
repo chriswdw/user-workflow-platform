@@ -5,7 +5,8 @@ import com.platform.ingestion.domain.exception.DuplicateIdempotencyKeyException;
 import com.platform.ingestion.domain.ports.out.IIngestionWorkItemRepository;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.postgresql.util.PSQLException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.core.JacksonException;
@@ -14,6 +15,8 @@ import tools.jackson.databind.ObjectMapper;
 public class IngestionWorkItemJdbcRepository implements IIngestionWorkItemRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
+  private static final String IDEMPOTENCY_KEY_INDEX = "idx_work_items_idempotency";
+
   private final ObjectMapper objectMapper;
 
   public IngestionWorkItemJdbcRepository(
@@ -66,10 +69,30 @@ public class IngestionWorkItemJdbcRepository implements IIngestionWorkItemReposi
             .addValue("updatedAt", toOdt(w.updatedAt()));
     try {
       jdbc.update(sql, params);
-    } catch (DataIntegrityViolationException e) {
-      throw new DuplicateIdempotencyKeyException(w.idempotencyKey());
+    } catch (DuplicateKeyException e) {
+      // Only a collision on the idempotency-key index means "this record was already ingested".
+      // Any other unique violation (for example the primary key) or integrity failure is a real
+      // fault and must surface unchanged, not be reported as a duplicate delivery.
+      if (isIdempotencyKeyViolation(e)) {
+        throw new DuplicateIdempotencyKeyException(w.idempotencyKey());
+      }
+      throw e;
     }
     return w;
+  }
+
+  /**
+   * True when PostgreSQL reports that the unique index on (tenant, workflow type, idempotency key)
+   * was the one violated. If the violated constraint cannot be determined the answer is false: an
+   * unknown unique violation is surfaced, never assumed to be a duplicate.
+   */
+  private static boolean isIdempotencyKeyViolation(DuplicateKeyException e) {
+    for (Throwable cause = e.getCause(); cause != null; cause = cause.getCause()) {
+      if (cause instanceof PSQLException psql && psql.getServerErrorMessage() != null) {
+        return IDEMPOTENCY_KEY_INDEX.equals(psql.getServerErrorMessage().getConstraint());
+      }
+    }
+    return false;
   }
 
   private static OffsetDateTime toOdt(java.time.Instant instant) {

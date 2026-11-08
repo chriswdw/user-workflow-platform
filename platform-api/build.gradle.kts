@@ -18,7 +18,7 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.liquibase.core)
-    runtimeOnly(libs.postgresql.driver)
+    implementation(libs.postgresql.driver)
 
     testImplementation(libs.embedded.postgres)
     implementation(libs.spring.kafka)
