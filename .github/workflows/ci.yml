@@ -14,13 +14,8 @@ permissions:
   contents: read
 
 # Intentionally excluded from this workflow:
-#   - Sonar: sonar.host.url is http://localhost:9000, unreachable from a GitHub-hosted runner.
-#     Needs SonarCloud or a public self-hosted server + SONAR_TOKEN secret to wire in.
 #   - OWASP dependency-check: needs an NVD_API_KEY secret to avoid NVD rate-limiting; without
 #     one it's slow and flaky, so it's left out of the required PR check for now.
-#   - Playwright e2e (test:e2e): needs browser binaries and a running dev server/webServer
-#     config — heavier than what's needed to catch a dependency-bump regression. Can be added
-#     as a follow-up job later.
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -54,3 +49,93 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npm run test:bdd
+
+  sonar:
+    # SonarCloud analysis with backend (JaCoCo) and frontend (lcov) coverage. Needs the SONAR_TOKEN
+    # repository secret, which GitHub does not expose to fork PRs or to Dependabot-triggered runs,
+    # so those are skipped rather than failed.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: Sonar needs blame data and the PR/branch merge base
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: platform-frontend/package-lock.json
+
+      - name: Backend build, tests and JaCoCo reports
+        run: ./gradlew build cucumber --no-daemon
+
+      - name: Frontend tests and lcov coverage
+        working-directory: platform-frontend
+        run: |
+          npm ci
+          npm run test:coverage
+
+      - name: SonarCloud analysis (waits for the quality gate)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar --no-daemon -Dsonar.token="$SONAR_TOKEN" -Dsonar.qualitygate.wait=true
+
+  # Reads the @playwright/test version the lockfile will install, so the e2e container image below
+  # always matches it. A hand-pinned image tag drifts whenever Dependabot bumps Playwright, and a
+  # mismatch fails with "Executable doesn't exist at /ms-playwright/chromium_headless_shell-*".
+  playwright-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.lock.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: lock
+        run: |
+          version="$(jq -r '.packages["node_modules/@playwright/test"].version' platform-frontend/package-lock.json)"
+          # The value becomes part of an image name: refuse anything that is not a plain semver.
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Unexpected @playwright/test version in package-lock.json: '$version'" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  frontend-e2e:
+    needs: playwright-version
+    runs-on: ubuntu-latest
+    # The official image gives a deterministic Chromium and fonts, which the checked-in visual
+    # snapshots depend on. Its tag follows the lockfile (see playwright-version above). A Playwright
+    # upgrade also ships a new Chromium, so snapshots may need regenerating in this same image.
+    container: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-jammy
+    defaults:
+      run:
+        working-directory: platform-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: platform-frontend/package-lock.json
+
+      - run: npm ci
+      - run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: platform-frontend/playwright-report/
+          retention-days: 14

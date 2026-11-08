@@ -154,7 +154,12 @@ subprojects {
     // The documented fix is to scope these per subproject, with paths relative to that subproject.
     sonar {
         properties {
-            property("sonar.sources", "src/main/java")
+            // Java sources, plus the Liquibase SQL migrations where a module has them (platform-api),
+            // which are analysed with Sonar's PostgreSQL rules (see the suffix settings below).
+            val sourceDirs =
+                listOf("src/main/java", "src/main/resources/db")
+                    .filter { file(it).exists() }
+            property("sonar.sources", sourceDirs.joinToString(","))
             val testDirs =
                 listOf("src/test/java", "src/testFixtures/java")
                     .filter { file(it).exists() }
@@ -164,15 +169,32 @@ subprojects {
             // list of all subprojects' report paths fails to resolve against each module's own
             // relatively-scoped sonar.sources above ("File not found in project sources").
             property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+
+            // Mirror the JaCoCo exclusions above. Sonar does not read them, so without this the
+            // Spring @Configuration wiring classes (exempt per CLAUDE.md) count as new, uncovered
+            // lines and fail the quality gate's coverage condition.
+            property(
+                "sonar.coverage.exclusions",
+                "**/com/platform/*/config/**,**/*Application*,**/*AutoConfiguration*,**/CucumberSuiteTest*",
+            )
         }
     }
 }
 
 sonar {
     properties {
-        property("sonar.projectKey", "user-workflow-platform")
+        // SonarCloud (https://sonarcloud.io/project/overview?id=chriswdw_user-workflow-platform).
+        // Pass -Dsonar.token / SONAR_TOKEN; never commit a token.
+        property("sonar.projectKey", "chriswdw_user-workflow-platform")
         property("sonar.projectName", "User Workflow Platform")
-        property("sonar.host.url", "http://localhost:9000")
+        property("sonar.organization", "chriswdw")
+        property("sonar.host.url", "https://sonarcloud.io")
+
+        // The database is PostgreSQL, but Sonar's PL/SQL (Oracle) analyzer claims *.sql by default
+        // and applies Oracle rules (VARCHAR2, ...) to our migrations. Hand .sql to the PostgreSQL
+        // analyzer instead. A suffix may belong to only one language, so it is removed from PL/SQL.
+        property("sonar.plsql.file.suffixes", "pks,pkb")
+        property("sonar.postgres.file.suffixes", "sql,pgsql,psql")
 
         // The root project itself has no Java sources — this scopes only to the frontend, which
         // isn't a Gradle subproject and so isn't covered by the per-subproject block above.

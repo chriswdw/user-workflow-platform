@@ -310,6 +310,16 @@ public class ApiStepDefinitions {
     lastResult.andExpect(jsonPath("$.length()").value(count));
   }
 
+  @Then("the response is an empty JSON array")
+  public void responseIsEmptyArray() throws Exception {
+    lastResult.andExpect(jsonPath("$").isArray()).andExpect(jsonPath("$.length()").value(0));
+  }
+
+  @Then("the response lists work item {string}")
+  public void responseListsWorkItem(String id) throws Exception {
+    lastResult.andExpect(jsonPath("$[?(@.id == '" + id + "')]").isNotEmpty());
+  }
+
   @Then("the response is a non-empty JSON array")
   public void responseIsNonEmptyArray() throws Exception {
     lastResult

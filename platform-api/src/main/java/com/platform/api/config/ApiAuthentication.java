@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 public record ApiAuthentication(String userId, String role, String tenantId)
     implements Authentication, TenantAwareAuthentication {
@@ -16,7 +17,7 @@ public record ApiAuthentication(String userId, String role, String tenantId)
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of();
+    return role == null ? List.of() : List.of(new SimpleGrantedAuthority("ROLE_" + role));
   }
 
   @Override

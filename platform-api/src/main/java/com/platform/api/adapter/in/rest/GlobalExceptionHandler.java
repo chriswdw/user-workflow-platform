@@ -17,6 +17,7 @@ import org.slf4j.MDC;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -57,6 +58,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler({SelfApprovalException.class, ForbiddenTransitionException.class})
   public ProblemDetail handleForbidden(RuntimeException ex) {
     return problem(HttpStatus.FORBIDDEN, ex.getMessage());
+  }
+
+  // Thrown by @PreAuthorize. Without this, the catch-all handler below would turn an authorisation
+  // failure into a 500.
+  @ExceptionHandler(AccessDeniedException.class)
+  public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+    return problem(HttpStatus.FORBIDDEN, "Access denied");
   }
 
   @ExceptionHandler(IllegalArgumentException.class)

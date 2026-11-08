@@ -82,23 +82,46 @@ Tests use embedded infrastructure and need no setup. To run the Spring Boot API 
        url: jdbc:postgresql://localhost:5432/platform_dev
        username: <your-os-username>
        password: localdev
+     kafka:
+       bootstrap-servers: localhost:9092   # required: domain events are published to Kafka
+   api:
+     dev:
+       token:
+         enabled: true   # opt-in /api/dev/token endpoint; never enable in production
    ```
 
-5. Start the API:
+   There are no in-memory fallbacks: without a datasource and a Kafka bootstrap server the API
+   refuses to start rather than serving fake data.
+
+5. Create a private env file holding the JWT secret (outside the repo, mode 600):
    ```bash
-   ./gradlew :platform-api:bootRun --args='--spring.profiles.active=local'
+   mkdir -p ~/.config/workflow-platform
+   ( umask 077; echo "API_JWT_SECRET=$(openssl rand -base64 32)" > ~/.config/workflow-platform/env )
    ```
 
-   Liquibase runs schema migrations and seeds config data automatically on first startup.
+6. Start the API (loads the env file, then runs `bootRun` with the `local` profile):
+   ```bash
+   ./scripts/run-local.sh
+   ```
+
+   Liquibase runs schema migrations and seeds config data, and the `local` profile loads five demo
+   work items with audit history on first startup (skipped once data exists). To start from a clean
+   slate, drop and recreate the `platform_dev` database.
    The API will be available at `http://localhost:8080`.
 
-6. Get a dev JWT (no credentials required in local mode):
+7. Get a dev JWT (no credentials required). This endpoint is opt-in: it only exists when
+   `api.dev.token.enabled=true`, which the `local` profile sets in your `application-local.yml`.
+   It is never enabled in `prod`.
    ```bash
    curl -s -X POST http://localhost:8080/api/dev/token \
      -H "Content-Type: application/json" \
      -d '{"userId":"dev-user","role":"ANALYST","tenantId":"tenant-1"}' \
      | jq -r .token
    ```
+
+   > **Secrets:** `api.jwt.secret` has no default in the base config. Only the `test` profile
+   > carries a throwaway value; locally it comes from `API_JWT_SECRET` (step 5), and every other
+   > environment must supply its own the same way, or the app fails at startup.
 
 ---
 
@@ -155,6 +178,17 @@ npx playwright show-report
 
 `npm run test:e2e` reuses an already-running `npm run dev` server if one is on port 5173; otherwise it starts one automatically.
 
+### Visual snapshots
+
+`wizard-step2-layout.spec.ts` compares a screenshot against a checked-in baseline in
+`e2e/*-snapshots/`. The app's fonts (Inter, JetBrains Mono) are bundled via `@fontsource-variable/*`, so
+every environment renders the same typeface (the baseline rendered on a developer Linux machine and in the
+CI image was byte-identical), though Chromium's text rasterisation could still differ on other OSes.
+**CI is the authority**: it runs in `mcr.microsoft.com/playwright:v<locked version>-jammy`, so regenerate
+baselines there. If the visual test fails after a Playwright or font upgrade, download the
+`playwright-report` artifact from the failed CI run, check the *actual* image has the expected layout, and
+commit it over the baseline. A local-only mismatch is most likely environment noise; confirm in CI.
+
 ### Updating visual snapshots
 
 The `wizard-step2-layout` spec includes a pixel-diff screenshot of the wizard step 2 body. After any intentional CSS change, regenerate the baseline and commit the updated PNG:
@@ -174,26 +208,29 @@ git add e2e/wizard-step2-layout.spec.ts-snapshots/
 
 ---
 
-## Static analysis (SonarQube)
+## Static analysis (SonarCloud)
 
-SonarQube is optional for local development but required before every PR. A local instance can be started with Docker:
+Analysis runs on [SonarCloud](https://sonarcloud.io/project/overview?id=chriswdw_user-workflow-platform)
+(organization `chriswdw`, project `chriswdw_user-workflow-platform`). CI runs it on every PR and on
+`main`, imports the backend JaCoCo and frontend lcov coverage, and waits for the quality gate.
+SonarCloud's *Automatic Analysis* must stay **off** for the project — it cannot import coverage and
+conflicts with CI analysis.
+
+To check your branch locally before opening a PR:
+
+1. Generate a token in SonarCloud (My Account → Security) and add `SONAR_TOKEN=<token>` to your
+   private env file, `~/.config/workflow-platform/env` (mode 600 — never commit it).
+2. Run `./gradlew build cucumber` (so class files and coverage reports exist), then:
 
 ```bash
-docker run -d --name sonarqube -p 9000:9000 sonarqube:community
+./scripts/sonar-check.sh
 ```
 
-Once running at `http://localhost:9000` (default credentials `admin` / `admin`):
+The script analyses the current branch on SonarCloud and fails if it reports HIGH or CRITICAL issues.
+To target a local SonarQube instead, set `SONAR_URL=http://localhost:9000 SONAR_ORG=
+SONAR_PROJECT_KEY=user-workflow-platform`.
 
-1. Create a project with key `user-workflow-platform`
-2. Generate a project analysis token
-3. Run analysis:
-
-```bash
-./gradlew sonar \
-  -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token=<your-token> \
-  -Dsonar.projectKey=user-workflow-platform
-```
+CI needs a `SONAR_TOKEN` repository secret (Settings → Secrets and variables → Actions).
 
 All HIGH and CRITICAL issues must be resolved before merging. See [CLAUDE.md](CLAUDE.md) for the full definition of done.
 

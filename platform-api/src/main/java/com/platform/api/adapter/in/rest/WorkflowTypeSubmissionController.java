@@ -13,6 +13,7 @@ import com.platform.config.domain.ports.in.ISubmitForApprovalUseCase;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -127,11 +128,9 @@ public class WorkflowTypeSubmissionController {
   }
 
   @GetMapping("/all-drafts")
+  @PreAuthorize("hasRole('PLATFORM_ADMIN')")
   public ResponseEntity<List<WorkflowTypeSubmissionResponse>> getAllDrafts(
       @AuthenticationPrincipal ApiAuthentication auth) {
-    if (!"PLATFORM_ADMIN".equals(auth.role())) {
-      return ResponseEntity.status(403).build();
-    }
     return ResponseEntity.ok(
         getUseCase.getAllDraftsForTenant(auth.tenantId()).stream()
             .map(WorkflowTypeSubmissionResponse::from)
@@ -163,6 +162,9 @@ public class WorkflowTypeSubmissionController {
         WorkflowTypeSubmissionResponse.from(getUseCase.getById(auth.tenantId(), id)));
   }
 
+  // Deliberately NOT @PreAuthorize: the owner may discard their own draft as well as an admin, so
+  // the decision is business-rule branching enforced in the domain service (the admin flag below),
+  // not a pure role gate. Do not "fix" the inconsistency with the admin-only endpoints.
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> discard(
       @PathVariable String id, @AuthenticationPrincipal ApiAuthentication auth) {

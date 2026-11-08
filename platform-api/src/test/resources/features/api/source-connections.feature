@@ -102,3 +102,8 @@ Feature: Source connection API
     Given I am not authenticated
     When I GET /api/v1/source-connections
     Then the response status is 401
+
+  Scenario: Unauthenticated listing of all source connections returns 401
+    Given I am not authenticated
+    When I GET /api/v1/admin/source-connections
+    Then the response status is 401
