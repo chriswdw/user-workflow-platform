@@ -18,12 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Issues JWTs without credentials — for local development only. Disable in production by setting
- * api.dev.token.enabled=false.
+ * Issues JWTs without credentials, for any requested role — for local development only. Strictly
+ * opt-in: the bean exists only when api.dev.token.enabled=true, which is set in the dev, local and
+ * test profiles and must never be set in any production configuration.
  */
 @RestController
 @RequestMapping("/api/dev")
-@ConditionalOnProperty(name = "api.dev.token.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "api.dev.token.enabled", havingValue = "true", matchIfMissing = false)
 public class DevTokenController {
 
   private final byte[] secretKeyBytes;

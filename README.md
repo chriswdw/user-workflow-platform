@@ -82,6 +82,13 @@ Tests use embedded infrastructure and need no setup. To run the Spring Boot API 
        url: jdbc:postgresql://localhost:5432/platform_dev
        username: <your-os-username>
        password: localdev
+   api:
+     jwt:
+       # Throwaway local-only secret (base64, >= 32 bytes). Never reuse outside local dev.
+       secret: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLUhTMjU2
+     dev:
+       token:
+         enabled: true   # opt-in /api/dev/token endpoint; never enable in production
    ```
 
 5. Start the API:
@@ -92,13 +99,19 @@ Tests use embedded infrastructure and need no setup. To run the Spring Boot API 
    Liquibase runs schema migrations and seeds config data automatically on first startup.
    The API will be available at `http://localhost:8080`.
 
-6. Get a dev JWT (no credentials required in local mode):
+6. Get a dev JWT (no credentials required). This endpoint is opt-in: it only exists when
+   `api.dev.token.enabled=true`, which the `local` and `dev` profiles set. It is never enabled in
+   `prod`.
    ```bash
    curl -s -X POST http://localhost:8080/api/dev/token \
      -H "Content-Type: application/json" \
      -d '{"userId":"dev-user","role":"ANALYST","tenantId":"tenant-1"}' \
      | jq -r .token
    ```
+
+   > **Secrets:** `api.jwt.secret` has no default in the base config. The `local`, `dev` and
+   > `test` profiles carry a throwaway value; every other environment must supply its own
+   > (e.g. the `API_JWT_SECRET` environment variable) or the app fails at startup.
 
 ---
 
