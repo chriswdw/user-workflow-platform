@@ -90,14 +90,33 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: ./gradlew sonar --no-daemon -Dsonar.token="$SONAR_TOKEN" -Dsonar.qualitygate.wait=true
 
-  frontend-e2e:
+  # Reads the @playwright/test version the lockfile will install, so the e2e container image below
+  # always matches it. A hand-pinned image tag drifts whenever Dependabot bumps Playwright, and a
+  # mismatch fails with "Executable doesn't exist at /ms-playwright/chromium_headless_shell-*".
+  playwright-version:
     runs-on: ubuntu-latest
-    # Pinned to the @playwright/test version in package-lock.json so the browser build
-    # matches the one checked-in visual snapshots were generated against — a
-    # mismatched Chromium build here is what causes snapshot-diff flakes. This tag MUST be
-    # bumped together with @playwright/test: a PR run installs the merge result's lockfile, and a
-    # mismatch fails with "Executable doesn't exist at /ms-playwright/chromium_headless_shell-*".
-    container: mcr.microsoft.com/playwright:v1.64.1-jammy
+    outputs:
+      version: ${{ steps.lock.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: lock
+        run: |
+          version="$(jq -r '.packages["node_modules/@playwright/test"].version' platform-frontend/package-lock.json)"
+          # The value becomes part of an image name: refuse anything that is not a plain semver.
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Unexpected @playwright/test version in package-lock.json: '$version'" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  frontend-e2e:
+    needs: playwright-version
+    runs-on: ubuntu-latest
+    # The official image gives a deterministic Chromium and fonts, which the checked-in visual
+    # snapshots depend on. Its tag follows the lockfile (see playwright-version above). A Playwright
+    # upgrade also ships a new Chromium, so snapshots may need regenerating in this same image.
+    container: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-jammy
     defaults:
       run:
         working-directory: platform-frontend
