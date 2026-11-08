@@ -14,8 +14,6 @@ permissions:
   contents: read
 
 # Intentionally excluded from this workflow:
-#   - Sonar: sonar.host.url is http://localhost:9000, unreachable from a GitHub-hosted runner.
-#     Needs SonarCloud or a public self-hosted server + SONAR_TOKEN secret to wire in.
 #   - OWASP dependency-check: needs an NVD_API_KEY secret to avoid NVD rate-limiting; without
 #     one it's slow and flaky, so it's left out of the required PR check for now.
 jobs:
@@ -51,6 +49,46 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npm run test:bdd
+
+  sonar:
+    # SonarCloud analysis with backend (JaCoCo) and frontend (lcov) coverage. Needs the SONAR_TOKEN
+    # repository secret, which GitHub does not expose to fork PRs or to Dependabot-triggered runs,
+    # so those are skipped rather than failed.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: Sonar needs blame data and the PR/branch merge base
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: platform-frontend/package-lock.json
+
+      - name: Backend build, tests and JaCoCo reports
+        run: ./gradlew build cucumber --no-daemon
+
+      - name: Frontend tests and lcov coverage
+        working-directory: platform-frontend
+        run: |
+          npm ci
+          npm run test:coverage
+
+      - name: SonarCloud analysis (waits for the quality gate)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar --no-daemon -Dsonar.token="$SONAR_TOKEN" -Dsonar.qualitygate.wait=true
 
   frontend-e2e:
     runs-on: ubuntu-latest

@@ -16,10 +16,7 @@ Configuration-driven workflow platform for financial services. Work items ingest
 ./gradlew generateTypes                                          # Generate TypeScript types from schemas
 ./gradlew simulatePriority --workflowType=X                     # Simulate priority score impact before deploying priorityConfig changes
 docker compose -f docker/observability/docker-compose.yml up    # Full Grafana stack (optional — not required for dev or tests)
-./gradlew sonar \
-  -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token=<token> \
-  -Dsonar.projectKey=user-workflow-platform                      # Static analysis — run before every PR; resolve all HIGH and CRITICAL issues
+./scripts/sonar-check.sh                                        # SonarCloud analysis of the current branch (reads SONAR_TOKEN from ~/.config/workflow-platform/env) — run before every PR; resolve all HIGH and CRITICAL issues
 ```
 
 **Developer environment**: Tests use `io.zonky.test:embedded-postgres` (real PostgreSQL binary in-JVM, no Docker) and `@EmbeddedKafka` from `spring-kafka-test`. No Docker required for running tests. **H2/HSQL are explicitly excluded** — they do not support PostgreSQL's JSONB operators (`@>`, `#>>`) or GIN indexes, making them unsuitable for validating the core data access pattern.

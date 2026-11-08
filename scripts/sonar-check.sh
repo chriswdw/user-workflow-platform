@@ -1,17 +1,59 @@
 #!/usr/bin/env bash
 # Run SonarQube analysis and report high-severity issues.
 # Usage: ./scripts/sonar-check.sh
+#
+# SONAR_TOKEN is read from the environment, or else from the private env file
+# (~/.config/workflow-platform/env, override with WORKFLOW_ENV_FILE) — never from this repo.
 set -euo pipefail
 
-SONAR_URL="http://localhost:9000"
-SONAR_TOKEN="sqp_4ac42a243a89ec45aa26828299f4dcf203066ad3"
-PROJECT_KEY="user-workflow-platform"
+if [ -z "${SONAR_TOKEN:-}" ]; then
+  ENV_FILE="${WORKFLOW_ENV_FILE:-$HOME/.config/workflow-platform/env}"
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "SONAR_TOKEN is not set and env file $ENV_FILE does not exist." >&2
+    exit 1
+  fi
+  PERMS=$(stat -c '%a' "$ENV_FILE")
+  if [ "${PERMS: -2}" != "00" ]; then
+    echo "Refusing to use $ENV_FILE: permissions are $PERMS, expected 600." >&2
+    exit 1
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
+fi
 
-echo "Running SonarQube analysis..."
+if [ -z "${SONAR_TOKEN:-}" ]; then
+  echo "SONAR_TOKEN is not set in the environment or the env file." >&2
+  exit 1
+fi
+
+# Defaults target SonarCloud; override via env to use a local SonarQube instead, e.g.
+#   SONAR_URL=http://localhost:9000 SONAR_ORG= SONAR_PROJECT_KEY=user-workflow-platform
+SONAR_URL="${SONAR_URL:-https://sonarcloud.io}"
+SONAR_ORG="${SONAR_ORG-chriswdw}"
+PROJECT_KEY="${SONAR_PROJECT_KEY:-chriswdw_user-workflow-platform}"
+
+# SonarCloud keeps results per branch: analyse the current branch and query that same branch,
+# otherwise the issue check would read the main branch's results.
+BRANCH="$(git branch --show-current)"
+SCAN_ARGS=()
+BRANCH_QUERY=""
+if [ -n "$SONAR_ORG" ]; then
+  SCAN_ARGS+=("-Dsonar.organization=$SONAR_ORG")
+  BRANCH_QUERY="&organization=$SONAR_ORG"
+fi
+if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ] && [ -n "$SONAR_ORG" ]; then
+  SCAN_ARGS+=("-Dsonar.branch.name=$BRANCH")
+  BRANCH_QUERY="$BRANCH_QUERY&branch=$BRANCH"
+fi
+
+echo "Running Sonar analysis ($SONAR_URL, project $PROJECT_KEY, branch ${BRANCH:-n/a})..."
 ./gradlew sonar \
   -Dsonar.host.url="$SONAR_URL" \
   -Dsonar.token="$SONAR_TOKEN" \
-  -Dsonar.projectKey="$PROJECT_KEY"
+  -Dsonar.projectKey="$PROJECT_KEY" \
+  "${SCAN_ARGS[@]}"
 
 # The gradle task returns as soon as the report is *uploaded* — SonarQube then processes it
 # asynchronously via a background Compute Engine task. Querying the Issues API immediately
@@ -41,8 +83,8 @@ query_issues() {
   curl -s -H "Authorization: Bearer $SONAR_TOKEN" "$1"
 }
 
-OLD_ISSUES=$(query_issues "$SONAR_URL/api/issues/search?projectKeys=$PROJECT_KEY&severities=CRITICAL%2CBLOCKER&resolved=false&ps=50")
-NEW_ISSUES=$(query_issues "$SONAR_URL/api/issues/search?projectKeys=$PROJECT_KEY&impactSeverities=HIGH&resolved=false&ps=50")
+OLD_ISSUES=$(query_issues "$SONAR_URL/api/issues/search?projectKeys=$PROJECT_KEY&severities=CRITICAL%2CBLOCKER&resolved=false&ps=50$BRANCH_QUERY")
+NEW_ISSUES=$(query_issues "$SONAR_URL/api/issues/search?projectKeys=$PROJECT_KEY&impactSeverities=HIGH&resolved=false&ps=50$BRANCH_QUERY")
 
 print_issues() {
   python3 - "$1" <<'EOF'

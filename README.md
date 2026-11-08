@@ -187,26 +187,29 @@ git add e2e/wizard-step2-layout.spec.ts-snapshots/
 
 ---
 
-## Static analysis (SonarQube)
+## Static analysis (SonarCloud)
 
-SonarQube is optional for local development but required before every PR. A local instance can be started with Docker:
+Analysis runs on [SonarCloud](https://sonarcloud.io/project/overview?id=chriswdw_user-workflow-platform)
+(organization `chriswdw`, project `chriswdw_user-workflow-platform`). CI runs it on every PR and on
+`main`, imports the backend JaCoCo and frontend lcov coverage, and waits for the quality gate.
+SonarCloud's *Automatic Analysis* must stay **off** for the project — it cannot import coverage and
+conflicts with CI analysis.
+
+To check your branch locally before opening a PR:
+
+1. Generate a token in SonarCloud (My Account → Security) and add `SONAR_TOKEN=<token>` to your
+   private env file, `~/.config/workflow-platform/env` (mode 600 — never commit it).
+2. Run `./gradlew build cucumber` (so class files and coverage reports exist), then:
 
 ```bash
-docker run -d --name sonarqube -p 9000:9000 sonarqube:community
+./scripts/sonar-check.sh
 ```
 
-Once running at `http://localhost:9000` (default credentials `admin` / `admin`):
+The script analyses the current branch on SonarCloud and fails if it reports HIGH or CRITICAL issues.
+To target a local SonarQube instead, set `SONAR_URL=http://localhost:9000 SONAR_ORG=
+SONAR_PROJECT_KEY=user-workflow-platform`.
 
-1. Create a project with key `user-workflow-platform`
-2. Generate a project analysis token
-3. Run analysis:
-
-```bash
-./gradlew sonar \
-  -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token=<your-token> \
-  -Dsonar.projectKey=user-workflow-platform
-```
+CI needs a `SONAR_TOKEN` repository secret (Settings → Secrets and variables → Actions).
 
 All HIGH and CRITICAL issues must be resolved before merging. See [CLAUDE.md](CLAUDE.md) for the full definition of done.
 

@@ -170,9 +170,12 @@ subprojects {
 
 sonar {
     properties {
-        property("sonar.projectKey", "user-workflow-platform")
+        // SonarCloud (https://sonarcloud.io/project/overview?id=chriswdw_user-workflow-platform).
+        // Pass -Dsonar.token / SONAR_TOKEN; never commit a token.
+        property("sonar.projectKey", "chriswdw_user-workflow-platform")
         property("sonar.projectName", "User Workflow Platform")
-        property("sonar.host.url", "http://localhost:9000")
+        property("sonar.organization", "chriswdw")
+        property("sonar.host.url", "https://sonarcloud.io")
 
         // The root project itself has no Java sources — this scopes only to the frontend, which
         // isn't a Gradle subproject and so isn't covered by the per-subproject block above.
