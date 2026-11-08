@@ -6,10 +6,10 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Date;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -49,24 +49,32 @@ public class DevTokenController {
   }
 
   private String buildToken(String userId, String role, String tenantId) {
-    // java.time for the arithmetic; Nimbus's claims builder only accepts java.util.Date, so convert
-    // at that boundary.
-    Instant issuedAt = Instant.now();
-    JWTClaimsSet claims =
-        new JWTClaimsSet.Builder()
-            .subject(userId)
-            .claim("role", role)
-            .claim("tenantId", tenantId)
-            .issueTime(Date.from(issuedAt))
-            .expirationTime(Date.from(issuedAt.plus(TOKEN_LIFETIME)))
-            .build();
-
-    SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+    SignedJWT signedJwt =
+        new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims(userId, role, tenantId));
     try {
       signedJwt.sign(new MACSigner(secretKeyBytes));
     } catch (JOSEException e) {
       throw new IllegalStateException("Failed to sign dev token", e);
     }
     return signedJwt.serialize();
+  }
+
+  // Claims are built as a plain map (iat/exp are epoch seconds, per RFC 7519) rather than through
+  // JWTClaimsSet.Builder, whose time setters accept only java.util.Date. That keeps the time
+  // arithmetic in java.time with no Date conversion.
+  private static JWTClaimsSet claims(String userId, String role, String tenantId) {
+    Instant issuedAt = Instant.now();
+    Map<String, Object> claims =
+        Map.of(
+            "sub", userId,
+            "role", role,
+            "tenantId", tenantId,
+            "iat", issuedAt.getEpochSecond(),
+            "exp", issuedAt.plus(TOKEN_LIFETIME).getEpochSecond());
+    try {
+      return JWTClaimsSet.parse(claims);
+    } catch (ParseException e) {
+      throw new IllegalStateException("Failed to build dev token claims", e);
+    }
   }
 }

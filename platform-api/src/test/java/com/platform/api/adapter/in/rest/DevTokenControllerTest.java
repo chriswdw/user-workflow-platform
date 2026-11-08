@@ -3,6 +3,9 @@ package com.platform.api.adapter.in.rest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,25 @@ class DevTokenControllerTest {
             Map.of("userId", "alice", "role", "SUPERVISOR", "tenantId", "tenant-9"));
 
     assertThat(response.getBody().get("token")).isNotBlank();
+  }
+
+  @Test
+  void issuedTokenCarriesTheRequestedClaimsAndAnEightHourLifetime() throws Exception {
+    var controller = new DevTokenController(VALID_SECRET);
+
+    String token =
+        controller
+            .issueToken(Map.of("userId", "alice", "role", "SUPERVISOR", "tenantId", "tenant-9"))
+            .getBody()
+            .get("token");
+    JWTClaimsSet claims = SignedJWT.parse(token).getJWTClaimsSet();
+
+    assertThat(claims.getSubject()).isEqualTo("alice");
+    assertThat(claims.getStringClaim("role")).isEqualTo("SUPERVISOR");
+    assertThat(claims.getStringClaim("tenantId")).isEqualTo("tenant-9");
+    assertThat(claims.getIssueTime()).isNotNull();
+    assertThat(claims.getExpirationTime().toInstant())
+        .isEqualTo(claims.getIssueTime().toInstant().plus(Duration.ofHours(8)));
   }
 
   @Test
