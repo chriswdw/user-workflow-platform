@@ -116,3 +116,17 @@ Feature: Work item ingestion
     Then ingestion fails with a message mentioning "No active routing config"
     And no new work item is saved
     And no idempotency key "TRD-014" is recorded for workflow "SETTLEMENT_EXCEPTION"
+    And the ingestion counter for source "KAFKA" records result "error"
+
+  # ── Failures that are not duplicates ───────────────────────────────────────
+  # Only a collision on the idempotency key means "this record was already ingested". Any other
+  # persistence failure is a real fault: it must surface, not be audited as a discarded duplicate.
+
+  Scenario: A persistence failure that is not a duplicate propagates and is counted as an error
+    Given saving a work item fails with "work_items.assigned_group is null"
+    When a "KAFKA" record is ingested for workflow "SETTLEMENT_EXCEPTION" with fields:
+      | TRADE_REF | TRD-020 |
+    Then ingestion fails with a message mentioning "assigned_group"
+    And no new work item is saved
+    And no DUPLICATE_INGESTION_DISCARDED audit entry is written
+    And the ingestion counter for source "KAFKA" records result "error"

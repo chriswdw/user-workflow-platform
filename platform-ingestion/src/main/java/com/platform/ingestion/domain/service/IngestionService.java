@@ -45,6 +45,8 @@ import java.util.stream.Collectors;
  */
 public class IngestionService implements IIngestRecordUseCase {
 
+  private static final String RESULT_ERROR = "error";
+
   private final IIngestionConfigRepository configRepository;
   private final IIdempotencyKeyRepository idempotencyRepository;
   private final IIngestionWorkItemRepository workItemRepository;
@@ -72,6 +74,18 @@ public class IngestionService implements IIngestRecordUseCase {
 
   @Override
   public IngestionResult ingest(RawInboundRecord inboundRecord) {
+    try {
+      return ingestRecord(inboundRecord);
+    } catch (RuntimeException e) {
+      // A failure that is not a normal outcome (no routing config, a persistence fault, ...) is
+      // counted so a spike is visible, then rethrown unchanged for the consumer to dead-letter.
+      // It is deliberately not logged here: the consumer's error handler logs it once.
+      recordIngested(inboundRecord.sourceType().name(), RESULT_ERROR);
+      throw e;
+    }
+  }
+
+  private IngestionResult ingestRecord(RawInboundRecord inboundRecord) {
     IngestionConfig config =
         configRepository
             .findByTenantAndWorkflowTypeAndSourceType(

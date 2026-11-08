@@ -4,54 +4,152 @@
   "title": "SourceConnection",
   "description": "A data source connection managed by platform admins and accessed by tenants",
   "type": "object",
-  "required": ["id", "name", "displayName", "connectionType", "config", "createdBy", "createdAt", "updatedAt"],
+  "required": [
+    "id",
+    "name",
+    "displayName",
+    "connectionType",
+    "config",
+    "version",
+    "createdBy",
+    "createdAt",
+    "updatedAt"
+  ],
   "properties": {
-    "id":             { "type": "string", "format": "uuid" },
-    "name":           { "type": "string", "description": "Machine-readable unique name" },
-    "displayName":    { "type": "string" },
-    "connectionType": { "type": "string", "enum": ["KAFKA", "DB_POLL", "FILE_SHARE"] },
-    "config":         { "$ref": "#/definitions/connectionConfig" },
-    "credentialsRef": { "type": ["string", "null"], "description": "Vault or secrets-manager reference" },
-    "createdBy":      { "type": "string" },
-    "createdAt":      { "type": "string", "format": "date-time" },
-    "updatedAt":      { "type": "string", "format": "date-time" }
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "type": "string",
+      "description": "Machine-readable unique name"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "connectionType": {
+      "type": "string",
+      "enum": [
+        "KAFKA",
+        "DB_POLL",
+        "FILE_SHARE"
+      ]
+    },
+    "config": {
+      "$ref": "#/definitions/connectionConfig"
+    },
+    "credentialsRef": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Vault or secrets-manager reference"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optimistic-locking version. 1 when first stored; each successful update adds one. An update must send the version it last read, and is rejected with a conflict if the stored version has moved on."
+    },
+    "createdBy": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
   },
   "definitions": {
     "connectionConfig": {
       "oneOf": [
-        { "$ref": "#/definitions/kafkaConfig" },
-        { "$ref": "#/definitions/dbPollConfig" },
-        { "$ref": "#/definitions/fileShareConfig" }
+        {
+          "$ref": "#/definitions/kafkaConfig"
+        },
+        {
+          "$ref": "#/definitions/dbPollConfig"
+        },
+        {
+          "$ref": "#/definitions/fileShareConfig"
+        }
       ]
     },
     "kafkaConfig": {
       "type": "object",
-      "required": ["type", "bootstrapServers", "topicName"],
+      "required": [
+        "type",
+        "bootstrapServers",
+        "topicName"
+      ],
       "properties": {
-        "type":             { "type": "string", "enum": ["KAFKA"] },
-        "bootstrapServers": { "type": "string", "description": "Comma-separated host:port pairs" },
-        "topicName":        { "type": "string" }
+        "type": {
+          "type": "string",
+          "enum": [
+            "KAFKA"
+          ]
+        },
+        "bootstrapServers": {
+          "type": "string",
+          "description": "Comma-separated host:port pairs"
+        },
+        "topicName": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
     "dbPollConfig": {
       "type": "object",
-      "required": ["type", "jdbcUrl", "query", "pollIntervalSeconds"],
+      "required": [
+        "type",
+        "jdbcUrl",
+        "query",
+        "pollIntervalSeconds"
+      ],
       "properties": {
-        "type":                { "type": "string", "enum": ["DB_POLL"] },
-        "jdbcUrl":             { "type": "string", "description": "JDBC connection URL — no inline credentials" },
-        "query":               { "type": "string" },
-        "pollIntervalSeconds": { "type": "integer", "minimum": 1 }
+        "type": {
+          "type": "string",
+          "enum": [
+            "DB_POLL"
+          ]
+        },
+        "jdbcUrl": {
+          "type": "string",
+          "description": "JDBC connection URL \u2014 no inline credentials"
+        },
+        "query": {
+          "type": "string"
+        },
+        "pollIntervalSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "fileShareConfig": {
       "type": "object",
-      "required": ["type", "path", "filePattern"],
+      "required": [
+        "type",
+        "path",
+        "filePattern"
+      ],
       "properties": {
-        "type":        { "type": "string", "enum": ["FILE_SHARE"] },
-        "path":        { "type": "string" },
-        "filePattern": { "type": "string", "description": "Glob pattern, e.g. *.csv" }
+        "type": {
+          "type": "string",
+          "enum": [
+            "FILE_SHARE"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "filePattern": {
+          "type": "string",
+          "description": "Glob pattern, e.g. *.csv"
+        }
       },
       "additionalProperties": false
     }

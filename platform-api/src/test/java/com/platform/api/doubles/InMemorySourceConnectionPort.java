@@ -1,5 +1,6 @@
 package com.platform.api.doubles;
 
+import com.platform.config.domain.exception.SourceConnectionNotFoundException;
 import com.platform.config.domain.ports.in.IListSourceConnectionsUseCase;
 import com.platform.config.domain.ports.in.IManageSourceConnectionsUseCase;
 import com.platform.domain.model.ConnectionType;
@@ -9,9 +10,9 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 public class InMemorySourceConnectionPort
     implements IManageSourceConnectionsUseCase, IListSourceConnectionsUseCase {
@@ -44,6 +45,7 @@ public class InMemorySourceConnectionPort
             connection.connectionType(),
             connection.config(),
             connection.credentialsRef(),
+            SourceConnection.INITIAL_VERSION,
             connection.createdBy(),
             now,
             now);
@@ -51,32 +53,42 @@ public class InMemorySourceConnectionPort
     return saved;
   }
 
+  /**
+   * Mirrors the real service plus adapter: a caller's expected version must match the stored one,
+   * otherwise the write is rejected as Spring's OptimisticLockingFailureException (mapped to 409 by
+   * GlobalExceptionHandler); on success the stored version advances by one.
+   */
   @Override
   public SourceConnection update(SourceConnection connection) {
-    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    Optional<SourceConnection> existing =
-        connections.stream().filter(c -> c.id().equals(connection.id())).findFirst();
+    SourceConnection existing =
+        connections.stream()
+            .filter(c -> c.id().equals(connection.id()))
+            .findFirst()
+            .orElseThrow(() -> new SourceConnectionNotFoundException(connection.id()));
+    if (existing.version() != connection.version()) {
+      throw new OptimisticLockingFailureException(
+          "SourceConnection "
+              + connection.id()
+              + " was modified concurrently (expected version "
+              + connection.version()
+              + ")");
+    }
     SourceConnection updated =
         new SourceConnection(
-            connection.id(),
-            connection.name() != null
-                ? connection.name()
-                : existing.map(SourceConnection::name).orElse(null),
-            connection.displayName() != null
-                ? connection.displayName()
-                : existing.map(SourceConnection::displayName).orElse(null),
+            existing.id(),
+            connection.name() != null ? connection.name() : existing.name(),
+            connection.displayName() != null ? connection.displayName() : existing.displayName(),
             connection.connectionType() != null
                 ? connection.connectionType()
-                : existing.map(SourceConnection::connectionType).orElse(null),
-            connection.config() != null
-                ? connection.config()
-                : existing.map(SourceConnection::config).orElse(null),
+                : existing.connectionType(),
+            connection.config() != null ? connection.config() : existing.config(),
             connection.credentialsRef() != null
                 ? connection.credentialsRef()
-                : existing.map(SourceConnection::credentialsRef).orElse(null),
-            existing.map(SourceConnection::createdBy).orElse(null),
-            existing.map(SourceConnection::createdAt).orElse(now),
-            now);
+                : existing.credentialsRef(),
+            existing.version() + 1,
+            existing.createdBy(),
+            existing.createdAt(),
+            OffsetDateTime.now(ZoneOffset.UTC));
     connections.removeIf(c -> c.id().equals(connection.id()));
     connections.add(updated);
     return updated;

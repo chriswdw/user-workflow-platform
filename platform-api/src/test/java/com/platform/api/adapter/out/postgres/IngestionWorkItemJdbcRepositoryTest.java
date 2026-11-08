@@ -10,7 +10,10 @@ import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -87,6 +90,49 @@ class IngestionWorkItemJdbcRepositoryTest {
         .hasMessageContaining("TRD-ING-001");
   }
 
+  // ── Only the idempotency-key index means "duplicate" ─────────────────────
+
+  @Test
+  void save_doesNotMislabelANotNullViolationAsADuplicate() {
+    WorkItem unassigned = workItemWith("wi-ing-null", "TRD-ING-NULL", null);
+
+    assertThatThrownBy(() -> repository.save(unassigned))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .isNotInstanceOf(DuplicateKeyException.class)
+        .isNotInstanceOf(DuplicateIdempotencyKeyException.class);
+  }
+
+  @Test
+  void save_doesNotMislabelAPrimaryKeyCollisionAsADuplicateIdempotencyKey() {
+    repository.save(workItemWith("wi-ing-pk", "TRD-ING-PK-1", "group-ops"));
+
+    // Same work item id, a different idempotency key: a genuine bug, not a re-delivered record.
+    WorkItem sameIdDifferentKey = workItemWith("wi-ing-pk", "TRD-ING-PK-2", "group-ops");
+
+    assertThatThrownBy(() -> repository.save(sameIdDifferentKey))
+        .isInstanceOf(DuplicateKeyException.class)
+        .isNotInstanceOf(DuplicateIdempotencyKeyException.class);
+  }
+
+  @Test
+  void save_surfacesAUniqueViolationWhoseConstraintCannotBeDetermined() {
+    // If the driver gives no constraint detail we cannot know it was the idempotency index, so the
+    // violation must surface as it is, never be assumed to be a duplicate delivery.
+    var unidentifiable =
+        new NamedParameterJdbcTemplate(EmbeddedPostgresProvider.DATA_SOURCE) {
+          @Override
+          public int update(String sql, SqlParameterSource paramSource) {
+            throw new DuplicateKeyException("unique violation with no driver detail");
+          }
+        };
+    var repo = new IngestionWorkItemJdbcRepository(unidentifiable, objectMapper);
+    WorkItem item = workItemWith("wi-ing-unknown", "TRD-ING-UNKNOWN", "group-ops");
+
+    assertThatThrownBy(() -> repo.save(item))
+        .isInstanceOf(DuplicateKeyException.class)
+        .isNotInstanceOf(DuplicateIdempotencyKeyException.class);
+  }
+
   @Test
   void save_respectsTenantIsolation() {
     repository.save(workItem("wi-ing-3", "tenant-A", "SETTLEMENT_EXCEPTION"));
@@ -96,6 +142,32 @@ class IngestionWorkItemJdbcRepositoryTest {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private static WorkItem workItemWith(String id, String idempotencyKey, String assignedGroup) {
+    Instant now = Instant.now();
+    return new WorkItem(
+        id,
+        "tenant-1",
+        "SETTLEMENT_EXCEPTION",
+        "corr-" + id,
+        null,
+        SourceType.KAFKA,
+        "src-" + id,
+        idempotencyKey,
+        "UNDER_REVIEW",
+        assignedGroup,
+        false,
+        Map.of(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        1,
+        "system",
+        now,
+        now);
+  }
 
   private static WorkItem workItem(String id, String tenantId, String workflowType) {
     Instant now = Instant.now();

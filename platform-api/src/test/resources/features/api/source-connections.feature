@@ -88,9 +88,44 @@ Feature: Source connection API
   Scenario: Admin updates a source connection
     Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
     And a source connection "conn-1" of type "KAFKA" exists
-    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Updated Name"}
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Updated Name","version":1}
     Then the response status is 200
     And the response contains a "id" field
+    And the response field "version" is 2
+
+  # ── Optimistic locking ─────────────────────────────────────────────────────
+  # The caller sends the version it last read. A write based on an out-of-date read is rejected
+  # instead of silently overwriting another admin's change.
+
+  Scenario: A newly created source connection starts at version 1
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    When I POST /api/v1/admin/source-connections with body {"name":"kafka-v","displayName":"Kafka V","connectionType":"KAFKA","config":{"bootstrapServers":"broker:9092","topicName":"trades"}}
+    Then the response status is 201
+    And the response field "version" is 1
+
+  Scenario: Updating with a stale version is rejected as a conflict
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    And a source connection "conn-1" of type "KAFKA" exists at version 3
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Late Edit","version":2}
+    Then the response status is 409
+
+  Scenario: Updating without a version is rejected
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    And a source connection "conn-1" of type "KAFKA" exists
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"No Version"}
+    Then the response status is 400
+
+  Scenario: Each update needs the version returned by the previous one
+    Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"
+    And a source connection "conn-1" of type "KAFKA" exists
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"First","version":1}
+    Then the response status is 200
+    And the response field "version" is 2
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Replayed","version":1}
+    Then the response status is 409
+    When I PATCH /api/v1/admin/source-connections/conn-1 with body {"displayName":"Second","version":2}
+    Then the response status is 200
+    And the response field "version" is 3
 
   Scenario: Admin deletes a source connection
     Given I am authenticated as user "admin" with role "PLATFORM_ADMIN" for tenant "platform"

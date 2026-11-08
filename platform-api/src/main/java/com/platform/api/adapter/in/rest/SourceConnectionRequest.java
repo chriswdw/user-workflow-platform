@@ -9,7 +9,8 @@ public record SourceConnectionRequest(
     String displayName,
     String connectionType,
     Map<String, Object> config,
-    String credentialsRef) {
+    String credentialsRef,
+    Integer version) {
   public ConnectionType parsedConnectionType() {
     return connectionType != null ? ConnectionType.valueOf(connectionType) : null;
   }

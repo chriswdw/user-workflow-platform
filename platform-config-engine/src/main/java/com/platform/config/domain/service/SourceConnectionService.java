@@ -24,7 +24,7 @@ public class SourceConnectionService
   @Override
   public SourceConnection create(SourceConnection connection) {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    return repo.save(
+    return repo.insert(
         new SourceConnection(
             UUID.randomUUID().toString(),
             connection.name(),
@@ -32,6 +32,7 @@ public class SourceConnectionService
             connection.connectionType(),
             connection.config(),
             connection.credentialsRef(),
+            SourceConnection.INITIAL_VERSION,
             connection.createdBy(),
             now,
             now));
@@ -43,7 +44,10 @@ public class SourceConnectionService
         repo.findById(connection.id())
             .orElseThrow(() -> new SourceConnectionNotFoundException(connection.id()));
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-    return repo.save(
+    // connection.version() is the version the caller last read. It is passed through unchanged:
+    // the repository applies the update only if the stored version still matches it, which is
+    // what rejects a stale write (and closes the race between the read above and this write).
+    return repo.update(
         new SourceConnection(
             existing.id(),
             connection.name() != null ? connection.name() : existing.name(),
@@ -55,6 +59,7 @@ public class SourceConnectionService
             connection.credentialsRef() != null
                 ? connection.credentialsRef()
                 : existing.credentialsRef(),
+            connection.version(),
             existing.createdBy(),
             existing.createdAt(),
             now));

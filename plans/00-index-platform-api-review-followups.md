@@ -18,8 +18,8 @@ ones that actually matter for a financial-services system, the rest are real but
 | 03 | `03-fix-admin-authorization-defense-in-depth.md` | HIGH (DONE) | Admin authz is only inline `if`s; `getAuthorities()` is always empty |
 | 04 | `04-wire-real-routing-engine.md` | HIGH (DONE) | Production ingestion wiring hardcodes `group-ops`, never calls `platform-routing` |
 | 05 | `05-fix-devconfig-profile-and-fake-state-machine.md` | HIGH (DONE) | Dev fallback beans + fake trades active in every profile except `local`. **Resolved by deleting `DevConfig` entirely** (not re-gating): `local` + `LocalDemoDataLoader` already seeds demo data |
-| 06 | `06-add-source-connection-optimistic-locking.md` | MEDIUM-HIGH | `SourceConnection` has no `version`; concurrent admin edits silently clobber |
-| 07 | `07-fix-ingestion-duplicate-exception-handling.md` | MEDIUM-HIGH | Any DB constraint violation gets mislabeled + silently discarded as a duplicate |
+| 06 | `06-add-source-connection-optimistic-locking.md` | MEDIUM-HIGH (DONE) | `SourceConnection` has no `version`; concurrent admin edits silently clobber |
+| 07 | `07-fix-ingestion-duplicate-exception-handling.md` | MEDIUM-HIGH (DONE) | Any DB constraint violation gets mislabeled + silently discarded as a duplicate |
 | 08 | `08-fix-kafka-domain-event-publisher-reliability.md` | MEDIUM | Domain events can be silently dropped (swallowed exception, unchecked future) |
 | 09 | `09-harden-dlq-producer-config.md` | MEDIUM | DLQ producer weaker than happy-path producer; zero-retry backoff for all errors |
 | 10 | `10-constructor-injection-cleanup.md` | MEDIUM | Four `@Configuration` classes use field `@Value` injection instead of constructor |

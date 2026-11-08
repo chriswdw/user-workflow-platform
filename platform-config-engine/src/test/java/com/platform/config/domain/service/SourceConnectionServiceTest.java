@@ -1,6 +1,7 @@
 package com.platform.config.domain.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.platform.config.doubles.InMemorySourceConnectionRepository;
 import com.platform.domain.model.ConnectionConfig;
@@ -8,6 +9,7 @@ import com.platform.domain.model.ConnectionType;
 import com.platform.domain.model.SourceConnection;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +32,7 @@ class SourceConnectionServiceTest {
         ConnectionType.KAFKA,
         new ConnectionConfig.KafkaConfig("localhost:9092", "topic-" + name),
         "vault://creds",
+        1,
         "admin-1",
         now,
         now);
@@ -57,7 +60,7 @@ class SourceConnectionServiceTest {
 
     SourceConnection partialUpdate =
         new SourceConnection(
-            created.id(), "kafka-c-renamed", null, null, null, null, null, null, null);
+            created.id(), "kafka-c-renamed", null, null, null, null, 1, null, null, null);
     SourceConnection updated = service.update(partialUpdate);
 
     assertThat(updated.name()).isEqualTo("kafka-c-renamed");
@@ -82,6 +85,7 @@ class SourceConnectionServiceTest {
             ConnectionType.DB_POLL,
             new ConnectionConfig.DbPollConfig("jdbc:postgresql://host:5432/db", "SELECT 1", 30),
             "vault://new-creds",
+            1,
             null,
             null,
             null);
@@ -105,7 +109,7 @@ class SourceConnectionServiceTest {
     SourceConnection updated =
         service.update(
             new SourceConnection(
-                created.id(), "kafka-d-v2", null, null, null, null, null, null, null));
+                created.id(), "kafka-d-v2", null, null, null, null, 1, null, null, null));
 
     assertThat(updated.createdAt()).isEqualTo(created.createdAt());
     assertThat(updated.updatedAt()).isAfterOrEqualTo(created.updatedAt());
@@ -114,7 +118,7 @@ class SourceConnectionServiceTest {
   @Test
   void updateThrowsWhenConnectionDoesNotExist() {
     SourceConnection nonExistent =
-        new SourceConnection("missing-id", "x", null, null, null, null, null, null, null);
+        new SourceConnection("missing-id", "x", null, null, null, null, 1, null, null, null);
 
     assertThat(catchThrowableMessage(() -> service.update(nonExistent))).contains("missing-id");
   }
@@ -170,5 +174,40 @@ class SourceConnectionServiceTest {
     } catch (RuntimeException e) {
       return e.getMessage();
     }
+  }
+
+  // ── Optimistic locking ───────────────────────────────────────────────────
+
+  @Test
+  void createStartsAtTheInitialVersion() {
+    SourceConnection created = service.create(draftConnection("kafka-v1"));
+
+    assertThat(created.version()).isEqualTo(SourceConnection.INITIAL_VERSION);
+  }
+
+  @Test
+  void updateAdvancesTheVersionByOne() {
+    SourceConnection created = service.create(draftConnection("kafka-v2"));
+
+    SourceConnection updated = service.update(edit(created.id(), "Renamed", created.version()));
+
+    assertThat(updated.version()).isEqualTo(created.version() + 1);
+  }
+
+  @Test
+  void updateForwardsTheCallersExpectedVersionSoAStaleWriteIsRejectedAndNothingChanges() {
+    SourceConnection created = service.create(draftConnection("kafka-v3"));
+    service.update(edit(created.id(), "First edit", 1)); // the row is now at version 2
+
+    // A second caller still holding version 1 must be turned away, not silently win.
+    assertThatThrownBy(() -> service.update(edit(created.id(), "Late edit", 1)))
+        .isInstanceOf(ConcurrentModificationException.class);
+
+    assertThat(repo.findById(created.id()).orElseThrow().displayName()).isEqualTo("First edit");
+  }
+
+  private static SourceConnection edit(String id, String displayName, int expectedVersion) {
+    return new SourceConnection(
+        id, null, displayName, null, null, null, expectedVersion, null, null, null);
   }
 }
