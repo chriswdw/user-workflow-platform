@@ -164,6 +164,14 @@ subprojects {
             // list of all subprojects' report paths fails to resolve against each module's own
             // relatively-scoped sonar.sources above ("File not found in project sources").
             property("sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml")
+
+            // Mirror the JaCoCo exclusions above. Sonar does not read them, so without this the
+            // Spring @Configuration wiring classes (exempt per CLAUDE.md) count as new, uncovered
+            // lines and fail the quality gate's coverage condition.
+            property(
+                "sonar.coverage.exclusions",
+                "**/com/platform/*/config/**,**/*Application*,**/*AutoConfiguration*,**/CucumberSuiteTest*",
+            )
         }
     }
 }

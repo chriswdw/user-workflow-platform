@@ -30,7 +30,10 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) {
-    http.csrf(AbstractHttpConfigurer::disable)
+    // CSRF protection is intentionally off: the API is stateless (no session, no cookies) and
+    // authenticates every request with an Authorization: Bearer JWT header, which browsers never
+    // attach cross-site automatically, so there is no ambient credential for CSRF to abuse.
+    http.csrf(AbstractHttpConfigurer::disable) // NOSONAR java:S4502 - stateless bearer-token API
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(
             e -> e.authenticationEntryPoint((req, res, ex) -> res.sendError(401, "Unauthorized")))
