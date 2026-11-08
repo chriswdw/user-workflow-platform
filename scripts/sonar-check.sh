@@ -45,7 +45,18 @@ if [ -n "$SONAR_ORG" ]; then
 fi
 if [ -n "$BRANCH" ] && [ "$BRANCH" != "main" ] && [ -n "$SONAR_ORG" ]; then
   SCAN_ARGS+=("-Dsonar.branch.name=$BRANCH")
-  BRANCH_QUERY="$BRANCH_QUERY&branch=$BRANCH"
+  # This SonarCloud organization may not read non-main *branch* results through the API
+  # ("Organization is not allowed to access data from non main branches"), but pull request
+  # results are readable. So check the PR analysis; it reflects the last CI run, not this local scan.
+  PR_NUMBER="$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)"
+  if [ -n "$PR_NUMBER" ]; then
+    BRANCH_QUERY="$BRANCH_QUERY&pullRequest=$PR_NUMBER"
+    echo "Note: issues below are read from the SonarCloud analysis of PR #$PR_NUMBER (last CI run)."
+  else
+    echo "No open PR for $BRANCH: the analysis will upload, but its issues cannot be read via the API." >&2
+    echo "Open a PR and let CI analyse it, then re-run this script." >&2
+    NO_READABLE_RESULTS=1
+  fi
 fi
 
 echo "Running Sonar analysis ($SONAR_URL, project $PROJECT_KEY, branch ${BRANCH:-n/a})..."
@@ -79,8 +90,21 @@ echo ""
 echo "Checking for high-severity issues..."
 
 # Query both old-style (CRITICAL,BLOCKER) and new clean-code model (impactSeverities=HIGH)
+if [ "${NO_READABLE_RESULTS:-0}" = 1 ]; then
+  echo "✗ Cannot verify issues for this branch (see above)."
+  exit 1
+fi
+
+# Fail loudly on an API error body: an error has no 'issues' key and would otherwise read as
+# "no issues" and report a false pass.
 query_issues() {
-  curl -s -H "Authorization: Bearer $SONAR_TOKEN" "$1"
+  local body
+  body=$(curl -s -H "Authorization: Bearer $SONAR_TOKEN" "$1")
+  if echo "$body" | python3 -c "import json,sys; sys.exit(0 if 'errors' in json.load(sys.stdin) else 1)"; then
+    echo "✗ SonarQube API error: $body" >&2
+    exit 1
+  fi
+  echo "$body"
 }
 
 OLD_ISSUES=$(query_issues "$SONAR_URL/api/issues/search?projectKeys=$PROJECT_KEY&severities=CRITICAL%2CBLOCKER&resolved=false&ps=50$BRANCH_QUERY")

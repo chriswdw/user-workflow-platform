@@ -154,7 +154,12 @@ subprojects {
     // The documented fix is to scope these per subproject, with paths relative to that subproject.
     sonar {
         properties {
-            property("sonar.sources", "src/main/java")
+            // Java sources, plus the Liquibase SQL migrations where a module has them (platform-api),
+            // which are analysed with Sonar's PostgreSQL rules (see the suffix settings below).
+            val sourceDirs =
+                listOf("src/main/java", "src/main/resources/db")
+                    .filter { file(it).exists() }
+            property("sonar.sources", sourceDirs.joinToString(","))
             val testDirs =
                 listOf("src/test/java", "src/testFixtures/java")
                     .filter { file(it).exists() }
@@ -184,6 +189,12 @@ sonar {
         property("sonar.projectName", "User Workflow Platform")
         property("sonar.organization", "chriswdw")
         property("sonar.host.url", "https://sonarcloud.io")
+
+        // The database is PostgreSQL, but Sonar's PL/SQL (Oracle) analyzer claims *.sql by default
+        // and applies Oracle rules (VARCHAR2, ...) to our migrations. Hand .sql to the PostgreSQL
+        // analyzer instead. A suffix may belong to only one language, so it is removed from PL/SQL.
+        property("sonar.plsql.file.suffixes", "pks,pkb")
+        property("sonar.postgres.file.suffixes", "sql,pgsql,psql")
 
         // The root project itself has no Java sources — this scopes only to the frontend, which
         // isn't a Gradle subproject and so isn't covered by the per-subproject block above.
