@@ -230,6 +230,11 @@ public class ApiStepDefinitions {
 
   @Given("a source connection {string} of type {string} exists")
   public void sourceConnectionExists(String id, String type) {
+    sourceConnectionExistsAtVersion(id, type, SourceConnection.INITIAL_VERSION);
+  }
+
+  @Given("a source connection {string} of type {string} exists at version {int}")
+  public void sourceConnectionExistsAtVersion(String id, String type, int version) {
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     ConnectionType connectionType = ConnectionType.valueOf(type);
     ConnectionConfig config =
@@ -242,7 +247,7 @@ public class ApiStepDefinitions {
         };
     sourceConnectionStore.putConnection(
         new SourceConnection(
-            id, id, id + " Display", connectionType, config, null, "admin", now, now));
+            id, id, id + " Display", connectionType, config, null, version, "admin", now, now));
   }
 
   @Given("tenant {string} has access to source connection {string}")
@@ -325,6 +330,11 @@ public class ApiStepDefinitions {
     lastResult
         .andExpect(jsonPath("$").isArray())
         .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+  }
+
+  @Then("the response field {string} is {int}")
+  public void responseFieldIsInt(String fieldName, int expected) throws Exception {
+    lastResult.andExpect(jsonPath("$." + fieldName).value(expected));
   }
 
   @Then("the response contains a {string} field")

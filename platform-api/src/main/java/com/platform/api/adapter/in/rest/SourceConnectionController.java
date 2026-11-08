@@ -46,6 +46,7 @@ public class SourceConnectionController {
                 body.parsedConnectionType(),
                 body.toConnectionConfig(),
                 body.credentialsRef(),
+                SourceConnection.INITIAL_VERSION,
                 auth.userId(),
                 null,
                 null));
@@ -65,6 +66,12 @@ public class SourceConnectionController {
       @PathVariable String id,
       @RequestBody SourceConnectionRequest body,
       @AuthenticationPrincipal ApiAuthentication auth) {
+    if (body.version() == null) {
+      // An update must say which version it is based on, otherwise it cannot be checked for a
+      // concurrent change and would silently overwrite it.
+      throw new IllegalArgumentException(
+          "version is required: send the version you last read for this source connection");
+    }
     SourceConnection updated =
         manageUseCase.update(
             new SourceConnection(
@@ -74,6 +81,7 @@ public class SourceConnectionController {
                 body.parsedConnectionType(),
                 body.toConnectionConfig(),
                 body.credentialsRef(),
+                body.version(),
                 null,
                 null,
                 null));

@@ -17,28 +17,28 @@ class SourceConnectionRequestTest {
 
   @Test
   void parsedConnectionTypeReturnsNullWhenConnectionTypeIsNull() {
-    var request = new SourceConnectionRequest(null, null, null, null, null);
+    var request = new SourceConnectionRequest(null, null, null, null, null, null);
 
     assertThat(request.parsedConnectionType()).isNull();
   }
 
   @Test
   void parsedConnectionTypeParsesTheEnum() {
-    var request = new SourceConnectionRequest("conn", "Conn", "KAFKA", Map.of(), null);
+    var request = new SourceConnectionRequest("conn", "Conn", "KAFKA", Map.of(), null, null);
 
     assertThat(request.parsedConnectionType()).isEqualTo(ConnectionType.KAFKA);
   }
 
   @Test
   void toConnectionConfigReturnsNullWhenConnectionTypeIsNull() {
-    var request = new SourceConnectionRequest("conn", "Conn", null, Map.of(), null);
+    var request = new SourceConnectionRequest("conn", "Conn", null, Map.of(), null, null);
 
     assertThat(request.toConnectionConfig()).isNull();
   }
 
   @Test
   void toConnectionConfigReturnsNullWhenConfigIsNull() {
-    var request = new SourceConnectionRequest("conn", "Conn", "KAFKA", null, null);
+    var request = new SourceConnectionRequest("conn", "Conn", "KAFKA", null, null, null);
 
     assertThat(request.toConnectionConfig()).isNull();
   }
@@ -51,6 +51,7 @@ class SourceConnectionRequestTest {
             "Conn",
             "KAFKA",
             Map.of("bootstrapServers", "localhost:9092", "topicName", "work-items"),
+            null,
             null);
 
     ConnectionConfig config = request.toConnectionConfig();
@@ -75,6 +76,7 @@ class SourceConnectionRequestTest {
                 "SELECT 1",
                 "pollIntervalSeconds",
                 45),
+            null,
             null);
 
     ConnectionConfig config = request.toConnectionConfig();
@@ -94,6 +96,7 @@ class SourceConnectionRequestTest {
             "Conn",
             "DB_POLL",
             Map.of("jdbcUrl", "jdbc:postgresql://localhost/db", "query", "SELECT 1"),
+            null,
             null);
 
     var dbPoll = (ConnectionConfig.DbPollConfig) request.toConnectionConfig();
@@ -109,6 +112,7 @@ class SourceConnectionRequestTest {
             "Conn",
             "FILE_SHARE",
             Map.of("path", "/mnt/inbound", "filePattern", "*.csv"),
+            null,
             null);
 
     ConnectionConfig config = request.toConnectionConfig();

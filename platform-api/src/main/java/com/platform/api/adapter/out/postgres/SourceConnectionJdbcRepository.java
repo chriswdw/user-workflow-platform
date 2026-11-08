@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.core.JacksonException;
@@ -20,6 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 public class SourceConnectionJdbcRepository implements ISourceConnectionRepository {
 
   private static final String COL_TENANT_ID = "tenantId";
+  private static final String COL_VERSION = "version";
   private static final String COL_SOURCE_CONNECTION_ID = "sourceConnectionId";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -32,19 +34,14 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
   }
 
   @Override
-  public SourceConnection save(SourceConnection c) {
+  public SourceConnection insert(SourceConnection c) {
     String sql =
         """
         INSERT INTO source_connections
-            (id, name, display_name, connection_type, config, credentials_ref,
+            (id, name, display_name, connection_type, config, credentials_ref, version,
              created_by, created_at, updated_at)
         VALUES (:id, :name, :displayName, :connectionType, CAST(:config AS jsonb),
-                :credentialsRef, :createdBy, :createdAt, :updatedAt)
-        ON CONFLICT (id) DO UPDATE SET
-            display_name    = EXCLUDED.display_name,
-            config          = EXCLUDED.config,
-            credentials_ref = EXCLUDED.credentials_ref,
-            updated_at      = EXCLUDED.updated_at
+                :credentialsRef, :version, :createdBy, :createdAt, :updatedAt)
         """;
     jdbc.update(
         sql,
@@ -55,10 +52,53 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
             .addValue("connectionType", c.connectionType().name())
             .addValue("config", configToJson(c.config()))
             .addValue("credentialsRef", c.credentialsRef())
+            .addValue(COL_VERSION, c.version())
             .addValue("createdBy", c.createdBy())
             .addValue("createdAt", c.createdAt())
             .addValue("updatedAt", c.updatedAt()));
     return c;
+  }
+
+  /**
+   * Optimistic locking: the row is changed only if its stored version still equals the version the
+   * caller read. Zero affected rows means someone else got there first (or the row is gone), and is
+   * reported as a conflict, never ignored. As before this change, only the display name, config and
+   * credentials reference are written; the name and connection type are fixed once created.
+   */
+  @Override
+  public SourceConnection update(SourceConnection c) {
+    String sql =
+        """
+        UPDATE source_connections SET
+            display_name    = :displayName,
+            config          = CAST(:config AS jsonb),
+            credentials_ref = :credentialsRef,
+            version         = version + 1,
+            updated_at      = :updatedAt
+        WHERE id = :id AND version = :version
+        """;
+    int rows =
+        jdbc.update(
+            sql,
+            new MapSqlParameterSource()
+                .addValue("id", c.id())
+                .addValue("displayName", c.displayName())
+                .addValue("config", configToJson(c.config()))
+                .addValue("credentialsRef", c.credentialsRef())
+                .addValue(COL_VERSION, c.version())
+                .addValue("updatedAt", c.updatedAt()));
+    if (rows == 0) {
+      throw new OptimisticLockingFailureException(
+          "SourceConnection "
+              + c.id()
+              + " was modified concurrently or no longer exists (expected version "
+              + c.version()
+              + ")");
+    }
+    // Return what is actually stored, so the caller sees the new version and the real row.
+    return findById(c.id())
+        .orElseThrow(() ->
+            new IllegalStateException("SourceConnection " + c.id() + " vanished after update"));
   }
 
   @Override
@@ -153,6 +193,7 @@ public class SourceConnectionJdbcRepository implements ISourceConnectionReposito
         type,
         parseConfig(rs.getString("config"), type),
         rs.getString("credentials_ref"),
+        rs.getInt(COL_VERSION),
         rs.getString("created_by"),
         rs.getObject("created_at", OffsetDateTime.class),
         rs.getObject("updated_at", OffsetDateTime.class));

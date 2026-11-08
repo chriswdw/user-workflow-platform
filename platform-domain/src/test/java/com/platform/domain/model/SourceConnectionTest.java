@@ -25,6 +25,7 @@ class SourceConnectionTest {
             ConnectionType.KAFKA,
             new ConnectionConfig.KafkaConfig("localhost:9092", "work-items"),
             "vault://creds/conn-1",
+            1,
             "user-1",
             NOW,
             NOW);
@@ -42,6 +43,7 @@ class SourceConnectionTest {
             ConnectionType.DB_POLL,
             new ConnectionConfig.DbPollConfig("jdbc:postgresql://localhost/db", "SELECT 1", 30),
             "vault://creds/conn-2",
+            1,
             "user-1",
             NOW,
             NOW);
@@ -59,6 +61,7 @@ class SourceConnectionTest {
             ConnectionType.FILE_SHARE,
             new ConnectionConfig.FileShareConfig("/mnt/inbound", "*.csv"),
             "vault://creds/conn-3",
+            1,
             "user-1",
             NOW,
             NOW);
@@ -77,6 +80,7 @@ class SourceConnectionTest {
                 ConnectionType.KAFKA,
                 new ConnectionConfig.DbPollConfig("jdbc:postgresql://localhost/db", "SELECT 1", 30),
                 "vault://creds/conn-4",
+                1,
                 "user-1",
                 NOW,
                 NOW))
@@ -94,6 +98,7 @@ class SourceConnectionTest {
                 ConnectionType.DB_POLL,
                 new ConnectionConfig.FileShareConfig("/mnt/inbound", "*.csv"),
                 "vault://creds/conn-5",
+                1,
                 "user-1",
                 NOW,
                 NOW))
@@ -111,6 +116,7 @@ class SourceConnectionTest {
                 ConnectionType.FILE_SHARE,
                 new ConnectionConfig.KafkaConfig("localhost:9092", "work-items"),
                 "vault://creds/conn-6",
+                1,
                 "user-1",
                 NOW,
                 NOW))
@@ -123,9 +129,24 @@ class SourceConnectionTest {
     // the compact constructor only validates once both are present.
     var connection =
         new SourceConnection(
-            "conn-7", "draft-conn", "Draft Connection", null, null, null, "user-1", NOW, NOW);
+            "conn-7", "draft-conn", "Draft Connection", null, null, null, 1, "user-1", NOW, NOW);
 
     assertThat(connection.connectionType()).isNull();
     assertThat(connection.config()).isNull();
+  }
+
+  @Test
+  void aVersionBelowOneIsRejected() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new SourceConnection("c", "n", "d", null, null, null, 0, "u", NOW, NOW))
+        .withMessageContaining("version");
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new SourceConnection("c", "n", "d", null, null, null, -3, "u", NOW, NOW))
+        .withMessageContaining("version");
+  }
+
+  @Test
+  void theInitialVersionIsOne() {
+    assertThat(SourceConnection.INITIAL_VERSION).isEqualTo(1);
   }
 }
