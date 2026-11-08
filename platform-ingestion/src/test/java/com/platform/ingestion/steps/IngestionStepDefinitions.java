@@ -167,12 +167,11 @@ public class IngestionStepDefinitions {
       UnknownColumnPolicy policy) {
     List<FieldMapping> mappings =
         dataTable.asMaps().stream()
-            .map(
-                row ->
-                    new FieldMapping(
-                        row.get("sourceField"),
-                        row.get("targetField"),
-                        Boolean.parseBoolean(row.get("required"))))
+            .map(row ->
+                new FieldMapping(
+                    row.get("sourceField"),
+                    row.get("targetField"),
+                    Boolean.parseBoolean(row.get("required"))))
             .toList();
 
     String explicitField =

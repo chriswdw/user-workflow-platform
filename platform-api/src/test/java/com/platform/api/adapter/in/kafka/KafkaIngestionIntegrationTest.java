@@ -158,14 +158,14 @@ class KafkaIngestionIntegrationTest {
   void missingRequiredField_isRoutedToDlq() throws Exception {
     String message =
         """
-                {
-                  "tenantId": "%s",
-                  "workflowType": "%s",
-                  "sourceRef": "topic-0-99",
-                  "rawFields": {},
-                  "makerUserId": "system"
-                }
-                """
+        {
+          "tenantId": "%s",
+          "workflowType": "%s",
+          "sourceRef": "topic-0-99",
+          "rawFields": {},
+          "makerUserId": "system"
+        }
+        """
             .formatted(TENANT, WORKFLOW_TYPE);
 
     kafkaTemplate.send(INGEST_TOPIC, message).get(5, TimeUnit.SECONDS);
@@ -180,17 +180,17 @@ class KafkaIngestionIntegrationTest {
 
   private static String ingestMessage(String tradeRef, String counterparty) {
     return """
-                {
-                  "tenantId": "%s",
-                  "workflowType": "%s",
-                  "sourceRef": "work-items.ingest-0-1",
-                  "rawFields": {
-                    "tradeRef": "%s",
-                    "counterparty": "%s"
-                  },
-                  "makerUserId": "system"
-                }
-                """
+    {
+      "tenantId": "%s",
+      "workflowType": "%s",
+      "sourceRef": "work-items.ingest-0-1",
+      "rawFields": {
+        "tradeRef": "%s",
+        "counterparty": "%s"
+      },
+      "makerUserId": "system"
+    }
+    """
         .formatted(TENANT, WORKFLOW_TYPE, tradeRef, counterparty);
   }
 

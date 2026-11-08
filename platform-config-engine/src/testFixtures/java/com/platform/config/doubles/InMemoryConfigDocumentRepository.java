@@ -18,11 +18,10 @@ public class InMemoryConfigDocumentRepository implements IConfigDocumentReposito
   public List<ConfigDocument> findByTenantAndWorkflowTypeAndType(
       String tenantId, String workflowType, ConfigType configType) {
     return store.stream()
-        .filter(
-            d ->
-                d.tenantId().equals(tenantId)
-                    && configType.equals(d.configType())
-                    && workflowTypeMatches(d.workflowType(), workflowType))
+        .filter(d ->
+            d.tenantId().equals(tenantId)
+                && configType.equals(d.configType())
+                && workflowTypeMatches(d.workflowType(), workflowType))
         .toList();
   }
 

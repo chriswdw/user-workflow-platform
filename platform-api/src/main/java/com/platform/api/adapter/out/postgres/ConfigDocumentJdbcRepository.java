@@ -28,11 +28,11 @@ public class ConfigDocumentJdbcRepository implements IConfigDocumentRepository {
       String tenantId, String workflowType, ConfigType configType) {
     String sql =
         """
-                SELECT * FROM config_documents
-                WHERE tenant_id = :tenantId
-                  AND workflow_type = :workflowType
-                  AND config_type = :configType
-                """;
+        SELECT * FROM config_documents
+        WHERE tenant_id = :tenantId
+          AND workflow_type = :workflowType
+          AND config_type = :configType
+        """;
     var params =
         new MapSqlParameterSource()
             .addValue("tenantId", tenantId)
@@ -45,9 +45,9 @@ public class ConfigDocumentJdbcRepository implements IConfigDocumentRepository {
   public List<ConfigDocument> findAllActiveByTenant(String tenantId) {
     String sql =
         """
-                SELECT * FROM config_documents
-                WHERE tenant_id = :tenantId AND active = true
-                """;
+        SELECT * FROM config_documents
+        WHERE tenant_id = :tenantId AND active = true
+        """;
     var params = new MapSqlParameterSource().addValue("tenantId", tenantId);
     return jdbc.query(sql, params, this::mapRow);
   }

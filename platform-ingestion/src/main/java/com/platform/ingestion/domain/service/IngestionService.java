@@ -76,12 +76,11 @@ public class IngestionService implements IIngestRecordUseCase {
         configRepository
             .findByTenantAndWorkflowTypeAndSourceType(
                 inboundRecord.tenantId(), inboundRecord.workflowType(), inboundRecord.sourceType())
-            .orElseThrow(
-                () ->
-                    new IngestionConfigNotFoundException(
-                        inboundRecord.tenantId(),
-                        inboundRecord.workflowType(),
-                        inboundRecord.sourceType()));
+            .orElseThrow(() ->
+                new IngestionConfigNotFoundException(
+                    inboundRecord.tenantId(),
+                    inboundRecord.workflowType(),
+                    inboundRecord.sourceType()));
 
     // Map fields and validate
     Set<String> declaredSourceFields =

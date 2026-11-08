@@ -120,19 +120,18 @@ public class ConfigService implements ILoadConfigUseCase, IValidateConfigsUseCas
 
     active.stream()
         .filter(d -> d.configType() == ConfigType.ROUTING_CONFIG)
-        .forEach(
-            routingDoc -> {
-              String defaultGroup = (String) routingDoc.content().get("defaultGroup");
-              if (defaultGroup != null && !activeGroupIds.contains(defaultGroup)) {
-                violations.add(
-                    new ConfigValidationViolation(
-                        "routing config defaultGroup '"
-                            + defaultGroup
-                            + "' does not reference an active resolution group",
-                        ConfigType.ROUTING_CONFIG,
-                        tenantId,
-                        routingDoc.workflowType()));
-              }
-            });
+        .forEach(routingDoc -> {
+          String defaultGroup = (String) routingDoc.content().get("defaultGroup");
+          if (defaultGroup != null && !activeGroupIds.contains(defaultGroup)) {
+            violations.add(
+                new ConfigValidationViolation(
+                    "routing config defaultGroup '"
+                        + defaultGroup
+                        + "' does not reference an active resolution group",
+                    ConfigType.ROUTING_CONFIG,
+                    tenantId,
+                    routingDoc.workflowType()));
+          }
+        });
   }
 }

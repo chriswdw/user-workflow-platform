@@ -58,8 +58,7 @@ public class InMemorySourceConnectionRepository implements ISourceConnectionRepo
   @Override
   public boolean hasAccess(String sourceConnectionId, String tenantId) {
     return accessGrants.stream()
-        .anyMatch(
-            a ->
-                a.sourceConnectionId().equals(sourceConnectionId) && a.tenantId().equals(tenantId));
+        .anyMatch(a ->
+            a.sourceConnectionId().equals(sourceConnectionId) && a.tenantId().equals(tenantId));
   }
 }
