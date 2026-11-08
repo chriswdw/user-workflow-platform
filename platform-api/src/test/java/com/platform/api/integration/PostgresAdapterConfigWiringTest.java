@@ -41,8 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Boots the real {@link PostgresAdapterConfig} and {@link DomainEventKafkaConfig} production wiring
  * against embedded PostgreSQL and embedded Kafka — the one conditional-config wiring path with no
  * coverage elsewhere. Neither class is touched by the Cucumber @SpringBootTest context (which runs
- * under profile "test" with no datasource/kafka properties, so DevConfig's no-op fallbacks win
- * instead) nor by any hand-rolled test config.
+ * under profile "test" with no datasource/kafka properties and uses in-memory test doubles) nor by
+ * any hand-rolled test config.
  */
 @SpringJUnitConfig(classes = PostgresAdapterConfigWiringTest.TestConfig.class)
 @EmbeddedKafka(
@@ -91,10 +91,10 @@ class PostgresAdapterConfigWiringTest {
     domainEventConsumer.close();
   }
 
-  // ── Real adapters wire in, not DevConfig fallbacks ────────────────────────
+  // ── Real adapters wire in ─────────────────────────────────────────────────
 
   @Test
-  void realAdaptersWireIn_notDevConfigFallbacks() {
+  void realAdaptersWireIn() {
     assertThat(domainEventPublisher).isInstanceOf(KafkaDomainEventPublisher.class);
     assertThat(workflowService).isNotNull();
     assertThat(configService).isNotNull();

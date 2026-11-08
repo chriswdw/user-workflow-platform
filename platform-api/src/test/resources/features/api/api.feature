@@ -49,6 +49,13 @@ Feature: Work item API
     When I GET /api/v1/work-items?workflowType=SETTLEMENT_EXCEPTION
     Then the response status is 200
     And the response is a non-empty JSON array
+    And the response lists work item "wi-100"
+
+  Scenario: Listing work items never returns another tenant's items
+    Given I am authenticated as user "user-9" with role "ANALYST" for tenant "tenant-2"
+    When I GET /api/v1/work-items?workflowType=SETTLEMENT_EXCEPTION
+    Then the response status is 200
+    And the response is an empty JSON array
 
   Scenario: Config endpoint returns detail view config for known workflow type
     Given a detail view config exists for workflow type "SETTLEMENT_EXCEPTION" and tenant "tenant-1"

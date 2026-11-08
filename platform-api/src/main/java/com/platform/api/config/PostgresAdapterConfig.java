@@ -26,8 +26,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Activated only when spring.datasource.url is configured. Each bean displaces the
- * corresponding @ConditionalOnMissingBean fallback in DevConfig.
+ * Activated only when spring.datasource.url is configured. There are deliberately no in-memory
+ * fallback beans: without a datasource the application fails at startup (missing beans) rather than
+ * silently serving fake data.
  */
 @Configuration
 @ConditionalOnProperty(name = "spring.datasource.url")

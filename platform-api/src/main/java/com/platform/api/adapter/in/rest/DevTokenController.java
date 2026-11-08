@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Issues JWTs without credentials, for any requested role — for local development only. Strictly
- * opt-in: the bean exists only when api.dev.token.enabled=true, which is set in the dev, local and
- * test profiles and must never be set in any production configuration.
+ * opt-in: the bean exists only when api.dev.token.enabled=true, which is set in the local and test
+ * profiles and must never be set in any production configuration.
  */
 @RestController
 @RequestMapping("/api/dev")

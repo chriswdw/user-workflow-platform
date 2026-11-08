@@ -82,26 +82,36 @@ Tests use embedded infrastructure and need no setup. To run the Spring Boot API 
        url: jdbc:postgresql://localhost:5432/platform_dev
        username: <your-os-username>
        password: localdev
+     kafka:
+       bootstrap-servers: localhost:9092   # required: domain events are published to Kafka
    api:
-     jwt:
-       # Throwaway local-only secret (base64, >= 32 bytes). Never reuse outside local dev.
-       secret: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLUhTMjU2
      dev:
        token:
          enabled: true   # opt-in /api/dev/token endpoint; never enable in production
    ```
 
-5. Start the API:
+   There are no in-memory fallbacks: without a datasource and a Kafka bootstrap server the API
+   refuses to start rather than serving fake data.
+
+5. Create a private env file holding the JWT secret (outside the repo, mode 600):
    ```bash
-   ./gradlew :platform-api:bootRun --args='--spring.profiles.active=local'
+   mkdir -p ~/.config/workflow-platform
+   ( umask 077; echo "API_JWT_SECRET=$(openssl rand -base64 32)" > ~/.config/workflow-platform/env )
    ```
 
-   Liquibase runs schema migrations and seeds config data automatically on first startup.
+6. Start the API (loads the env file, then runs `bootRun` with the `local` profile):
+   ```bash
+   ./scripts/run-local.sh
+   ```
+
+   Liquibase runs schema migrations and seeds config data, and the `local` profile loads five demo
+   work items with audit history on first startup (skipped once data exists). To start from a clean
+   slate, drop and recreate the `platform_dev` database.
    The API will be available at `http://localhost:8080`.
 
-6. Get a dev JWT (no credentials required). This endpoint is opt-in: it only exists when
-   `api.dev.token.enabled=true`, which the `local` and `dev` profiles set. It is never enabled in
-   `prod`.
+7. Get a dev JWT (no credentials required). This endpoint is opt-in: it only exists when
+   `api.dev.token.enabled=true`, which the `local` profile sets in your `application-local.yml`.
+   It is never enabled in `prod`.
    ```bash
    curl -s -X POST http://localhost:8080/api/dev/token \
      -H "Content-Type: application/json" \
@@ -109,9 +119,9 @@ Tests use embedded infrastructure and need no setup. To run the Spring Boot API 
      | jq -r .token
    ```
 
-   > **Secrets:** `api.jwt.secret` has no default in the base config. The `local`, `dev` and
-   > `test` profiles carry a throwaway value; every other environment must supply its own
-   > (e.g. the `API_JWT_SECRET` environment variable) or the app fails at startup.
+   > **Secrets:** `api.jwt.secret` has no default in the base config. Only the `test` profile
+   > carries a throwaway value; locally it comes from `API_JWT_SECRET` (step 5), and every other
+   > environment must supply its own the same way, or the app fails at startup.
 
 ---
 
