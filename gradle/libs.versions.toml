@@ -11,7 +11,7 @@ nimbus-jose-jwt       = "10.10"
 owasp-dependencycheck = "13.0.0"
 sonarqube             = "7.5.0.8588"
 spotless              = "8.11.0"
-spring-boot           = "4.1.2"
+spring-boot           = "4.2.0"
 spring-dependency-mgmt = "1.1.7"
 
 [libraries]
