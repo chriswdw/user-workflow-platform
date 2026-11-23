@@ -33,7 +33,7 @@ dependencies {
     testImplementation(libs.cucumber.junit.platform.engine)
     testImplementation(libs.junit.platform.suite)
     testImplementation(libs.nimbus.jose.jwt)
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test:4.1.2")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test:4.2.0")
 }
 
 tasks.register("cucumber") {
