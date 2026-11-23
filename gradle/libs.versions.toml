@@ -1,7 +1,7 @@
 [versions]
 assertj               = "3.27.7"
 bucket4j              = "8.10.1"
-cucumber              = "8.0.4"
+cucumber              = "8.1.0"
 embedded-postgres     = "2.2.2"
 jackson               = "3.3.0"
 junit-platform        = "6.1.3"
