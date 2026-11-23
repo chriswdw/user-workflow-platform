@@ -28,7 +28,7 @@
   "devDependencies": {
     "@cucumber/cucumber": "^13.3.0",
     "@playwright/test": "^1.65.0",
-    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.6.8",
     "@types/jest": "^30.0.0",
